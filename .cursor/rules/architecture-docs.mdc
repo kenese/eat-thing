@@ -1,0 +1,11 @@
+---
+description: Keep ARCHITECTURE.md accurate whenever code changes affect system structure
+alwaysApply: true
+---
+
+# Architecture Documentation
+
+- `ARCHITECTURE.md` must always describe the system as it currently exists.
+- When making changes that affect components, data flows, API endpoints, or architectural patterns, update `ARCHITECTURE.md` to reflect the new state.
+- Do not add historical notes to `ARCHITECTURE.md` — it is a snapshot of the current system, not a changelog.
+- If `DECISIONS.md` exists, append significant decisions there instead of keeping history.

@@ -1,0 +1,95 @@
+# Decisions
+
+A running log of decisions that shape eat-thing. New decisions append here with date and rationale. Reversals are recorded as new entries that supersede older ones — old entries stay for history.
+
+Each decision: short title, date, context, decision, rationale. Keep it terse — link to [ARCHITECTURE.md](./ARCHITECTURE.md) / [PLAN.md](./PLAN.md) for elaboration.
+
+---
+
+## D1 — OpenBrain is a sync target, not the system of record
+**Date:** 2026-05-07
+**Context:** Eat-thing needs structured, transactional data (inventory quantities, expiry dates, meal-plan entries). OpenBrain is a thoughts/notes store accessed via MCP.
+**Decision:** Eat-thing owns its own database. OpenBrain receives summaries via a sync adapter (`packages/openbrain`).
+**Rationale:** Modeling structured food data inside a thoughts store would slow every query and tangle two concerns. A clean adapter also lets us swap the brain later (or support multiple brains for multi-household).
+
+## D2 — Staged delivery: MVP → V2 → V3 → V4
+**Date:** 2026-05-07
+**Decision:** Build inventory + recipes + meal plan + shopping list (MVP) before recipe ingestion (V2), before read-only supermarket scraping (V3), before build-to-cart (V4).
+**Rationale:** MVP is useful on its own. The supermarket integration is the highest-risk piece (bot detection, ToS, scraping fragility) — defer until the rest is proven.
+
+## D3 — Supermarket integration ceiling: build-to-cart
+**Date:** 2026-05-07
+**Decision:** App will, at most, log in to NW / Pak'nSave / Woolworths and add items to cart. The user always clicks "place order".
+**Rationale:** Auto-placing orders crosses into financial-action territory and adds blast-radius risk we don't need. Build-to-cart captures most of the value at a fraction of the risk.
+
+## D4 — Hand-rolled food taxonomy + interactive cook prompts
+**Date:** 2026-05-07
+**Decision:** `packages/taxonomy` ships a small canonical food list (seeded from the user's first ~50 inventory items) and unit-conversion helpers. Cook events that produce ambiguous quantities prompt the user ("how many garlic bulbs are left?").
+**Rationale:** Off-the-shelf taxonomies (USDA, Open Food Facts) carry far more breadth than a household needs. The interactive prompt turns model gaps into data, instead of pretending precision we don't have.
+
+## D5 — Multi-tenant clean now, single household live
+**Date:** 2026-05-07
+**Decision:** Every domain row carries a `household_id`. Auth attaches the household to the session. Only one household exists at launch; design supports more.
+**Rationale:** Retro-fitting tenancy later is painful. The cost up front is one column and one filter clause per query. The OpenBrain sync story for additional households (which won't have one) is parked until a second household is real.
+
+## D6 — Mobile-first PWA
+**Date:** 2026-05-07
+**Decision:** `apps/web` is a mobile-first PWA (installable, service worker). Native shell deferred indefinitely.
+**Rationale:** Photo recipe upload, checking off cooked meals, pulling up the shopping list at the supermarket are all phone tasks. PWA covers them without app-store overhead.
+
+## D7 — Staples manual first, learned later
+**Date:** 2026-05-07
+**Decision:** MVP: user flags staples and a target threshold. V-later: derive staples + cadence from purchase history.
+**Rationale:** Manual list is one form. Trend-learning needs months of purchase data we don't have yet.
+
+## D8 — Database: Supabase (Postgres) + Drizzle
+**Date:** 2026-05-07
+**Decision:** Hosted Postgres on Supabase. Drizzle as the ORM.
+**Rationale:** Two phones, one shared DB. Free tier covers a household. Drizzle is TS-native and lighter than Prisma. Supabase also gives us object storage (recipe photos) without a second vendor.
+
+## D9 — Playwright worker runs on the home Mac mini
+**Date:** 2026-05-07
+**Decision:** `apps/scraper` runs on the user's always-on Mac mini, talking to the API over the network. Datacenter Playwright is not used.
+**Rationale:** Residential IP avoids bot detection on supermarket sites. The Mac mini is already there — no new ops surface.
+
+## D10 — Offline strategy: reads first, writes later
+**Date:** 2026-05-07
+**Decision:** MVP caches inventory, recipes, shopping list, and meal plan in IndexedDB for offline read. Writes require a connection. Offline write queue is a future task.
+**Rationale:** Supermarket-aisle case (no signal, need to check what we have) is real. Offline writes add conflict-resolution complexity we don't need on day one.
+
+## D11 — OpenBrain sync cadence
+**Date:** 2026-05-07
+**Decision:**
+- New recipes → synced to OpenBrain immediately on save.
+- Inventory snapshots → nightly.
+- Meal plans + cook log → cadence not yet decided; assumed nightly alongside inventory until reviewed.
+**Rationale:** Recipes are reference material the user might query Claude about anytime; live sync earns its complexity. Inventory changes too often and is too granular to live-mirror. Meal plans and cook log fall in between — flagged as an open question in PLAN.md.
+
+## D12 — Auth: Better-Auth + Google sign-in
+**Date:** 2026-05-07
+**Decision:** Better-Auth library, Google OAuth provider, session cookies. No password auth.
+**Rationale:** Two known users, both with Google accounts. Better-Auth is TS-native and avoids vendor lock-in (vs Clerk/Auth0).
+
+## D13 — Inventory + meal plan sync: debounced-live, not strictly nightly
+**Date:** 2026-05-07
+**Supersedes the inventory portion of:** D11
+**Decision:** Mutations to inventory and meal plans set a per-resource dirty flag. A debouncer (~5 min after the last change) writes a single snapshot thought per resource to OpenBrain. Cook log keeps the daily roll-up cadence.
+**Rationale:** Strictly nightly means stale-by-up-to-24-hours, which makes "ask Claude what's in the fridge" feel broken. Strictly live spams OpenBrain with diff churn (a single cook event can mutate 10+ rows). Debounce gives Claude a near-current view without flooding the brain. Within one request the writes are already one DB transaction → one dirty-flag update; the debounce coalesces across requests too.
+
+## D14 — Mac mini hosts all background workers
+**Date:** 2026-05-07
+**Decision:** The home Mac mini runs `apps/scraper`, the OpenBrain sync worker, and any future cron (backups, cook-log roll-up). Vercel handles only HTTP.
+**Rationale:** Vercel function timeouts and cron limits make long-running background work awkward. The Mac mini is already there, has a residential IP we need anyway for the scraper, and `launchd` supervises it for free. Workers poll the Vercel API outbound for pending jobs, so no inbound port is needed at home.
+
+## D15 — Photo storage: Supabase Storage
+**Date:** 2026-05-07
+**Decision:** Recipe and inventory photos live in Supabase Storage. Database rows store the storage path; URLs are signed on read.
+**Rationale:** Same vendor as the DB — no second auth surface, no second billing relationship. Free tier (1 GB) covers a household's recipe photos comfortably. Vercel Blob and R2 add vendors without solving anything Supabase Storage doesn't.
+
+## D16 — Hosting split: Vercel for HTTP, Mac mini for workers
+**Date:** 2026-05-07
+**Decision:**
+- `apps/web` and `apps/server` deployed to Vercel.
+- `apps/scraper` and the OpenBrain sync worker run on the home Mac mini, supervised by `launchd`.
+- Workers communicate with the API via outbound HTTPS polling for pending jobs.
+**Rationale:** Splitting the frontend/API from background work means the app stays available when the Mac mini is down (no fresh OpenBrain syncs, but reads/writes still work). Polling avoids exposing a port at home. If poll chatter ever feels excessive, swap in SSE later — the polling-vs-push detail is hidden behind the worker SDK.

@@ -1,0 +1,22 @@
+node_modules
+dist
+.turbo
+.pnpm-store/
+
+# Environment — never commit real keys
+.env
+.env.local
+apps/**/.env
+apps/**/.env.local
+
+*storybook.log
+storybook-static
+
+# Test results
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+playwright/.auth/
+coverage/
+*.lcov

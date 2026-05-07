@@ -1,0 +1,16 @@
+node_modules
+dist
+.turbo
+.pnpm-store/
+
+*storybook.log
+storybook-static
+
+# Test results
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+playwright/.auth/
+coverage/
+*.lcov

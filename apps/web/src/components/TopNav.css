@@ -1,0 +1,46 @@
+.topnav {
+    height: 52px;
+    min-height: 52px;
+    background: var(--bg-topnav);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    gap: 32px;
+}
+
+.topnav-brand {
+    font-size: 16px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #6366f1, #ec4899);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+}
+
+.topnav-links {
+    display: flex;
+    gap: 4px;
+}
+
+.topnav-link {
+    padding: 6px 16px;
+    border-radius: var(--radius);
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.15s ease;
+}
+
+.topnav-link:hover {
+    color: var(--text-primary);
+    background: var(--bg-hover);
+}
+
+.topnav-link--active {
+    color: white;
+    background: var(--bg-active);
+}
