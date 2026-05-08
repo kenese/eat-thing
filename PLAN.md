@@ -18,7 +18,7 @@ The starter project is a generic Turborepo. Get it from "blank" to "ready to bui
 - [x] Delete `extension/` (Discogs Cart+ — unrelated to eat-thing) — _2026-05-07_
 - [x] Rewrite `README.md` for eat-thing (still describes the starter) — _2026-05-07_
 - [x] Create Supabase project; store URL + anon/service keys in `.env` — _2026-05-07_
-- [ ] Add Drizzle + initial migration system
+- [x] Add Drizzle + initial migration system — _2026-05-08_
 - [ ] Define core schema: `households`, `users`, `memberships`, `canonical_foods`, `inventory_items`, `recipes`, `recipe_ingredients`, `meal_plans`, `meal_plan_entries`, `shopping_lists`, `shopping_list_items`, `staples`, `cook_events`, `supermarket_credentials`, `supermarket_products`, plus `sync_dirty` (per-resource dirty flag for debounced sync)
 - [ ] Create `packages/taxonomy` with seed list + unit-conversion helpers (g↔ml, tbsp↔ml, cloves↔g garlic, etc.)
 - [ ] Create `packages/openbrain` skeleton (stubbed `syncRecipe`, `syncInventorySnapshot`, `syncMealPlan`, `syncCookLog`)
@@ -105,3 +105,4 @@ Adds items to cart on the user's behalf. User always clicks "place order" — se
 - 2026-05-07 — Phase 0: wrote `CLAUDE.md` so any new Claude session starts warm.
 - 2026-05-07 — Phase 0: rebranded workspaces from `@starter/*` to `@eat/*`; rewrote `README.md` for eat-thing.
 - 2026-05-07 — Phase 0: Supabase project created; env files written for server + web; `.env` added to `.gitignore`.
+- 2026-05-08 — Phase 0: Drizzle ORM + drizzle-kit wired up; connected via Supabase transaction pooler (aws-1-ap-southeast-2, port 6543).
