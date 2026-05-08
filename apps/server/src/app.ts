@@ -8,6 +8,7 @@ import inventoryRouter from './routes/inventory.js';
 import recipesRouter from './routes/recipes.js';
 import mealPlansRouter from './routes/meal-plans.js';
 import staplesRouter from './routes/staples.js';
+import shoppingListsRouter from './routes/shopping-lists.js';
 
 const app: express.Express = express();
 
@@ -34,5 +35,6 @@ app.use('/api/inventory', inventoryRouter);
 app.use('/api/recipes', recipesRouter);
 app.use('/api/meal-plans', mealPlansRouter);
 app.use('/api/staples', staplesRouter);
+app.use('/api/shopping-lists', shoppingListsRouter);
 
 export default app;

@@ -1,0 +1,80 @@
+import { vi, describe, it, expect, beforeEach } from 'vitest';
+import express from 'express';
+import request from 'supertest';
+
+const mocks = vi.hoisted(() => ({
+  getSession: vi.fn(),
+  membershipLimit: vi.fn(),
+}));
+
+vi.mock('../auth.js', () => ({ auth: { api: { getSession: mocks.getSession } } }));
+vi.mock('better-auth/node', () => ({ fromNodeHeaders: (h: unknown) => h }));
+vi.mock('drizzle-orm', () => ({
+  and: (...args: unknown[]) => args,
+  eq: () => null,
+  asc: () => null,
+  desc: () => null,
+  sql: Object.assign((...args: unknown[]) => args, { template: () => null }),
+}));
+vi.mock('uuid', () => ({ v4: () => 'fixed-uuid' }));
+vi.mock('../db/index.js', () => {
+  const chain = { from: () => ({ where: () => ({ limit: mocks.membershipLimit }) }) };
+  return { db: { select: () => chain } };
+});
+vi.mock('../db/schema/index.js', () => ({
+  memberships: { householdId: 'householdId', userId: 'userId' },
+  mealPlans: {}, mealPlanEntries: {}, recipes: {}, recipeIngredients: {},
+  inventoryItems: {}, canonicalFoods: {}, staples: {},
+  shoppingLists: {}, shoppingListItems: {},
+}));
+
+const { default: shoppingListsRouter } = await import('./shopping-lists');
+
+describe('shopping-lists router', () => {
+  let app: express.Express;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    app = express();
+    app.use(express.json());
+    app.use('/api/shopping-lists', shoppingListsRouter);
+  });
+
+  it('returns 401 for unauthenticated requests', async () => {
+    mocks.getSession.mockResolvedValue(null);
+    const res = await request(app).post('/api/shopping-lists/generate').send({ weekStart: '2026-05-05' });
+    expect(res.status).toBe(401);
+  });
+
+  it('POST /generate rejects missing weekStart', async () => {
+    mocks.getSession.mockResolvedValue({ user: { id: 'u1' } });
+    mocks.membershipLimit.mockResolvedValue([{ householdId: 'hh-1' }]);
+    const res = await request(app).post('/api/shopping-lists/generate').send({});
+    expect(res.status).toBe(400);
+  });
+
+  it('POST /generate rejects malformed weekStart', async () => {
+    mocks.getSession.mockResolvedValue({ user: { id: 'u1' } });
+    mocks.membershipLimit.mockResolvedValue([{ householdId: 'hh-1' }]);
+    const res = await request(app).post('/api/shopping-lists/generate').send({ weekStart: 'not-a-date' });
+    expect(res.status).toBe(400);
+  });
+
+  it('PUT item rejects non-boolean checked', async () => {
+    mocks.getSession.mockResolvedValue({ user: { id: 'u1' } });
+    mocks.membershipLimit.mockResolvedValue([{ householdId: 'hh-1' }]);
+    const res = await request(app)
+      .put('/api/shopping-lists/list-id/items/item-id')
+      .send({ checked: 'yes' });
+    expect(res.status).toBe(400);
+  });
+
+  it('POST manual item rejects missing name', async () => {
+    mocks.getSession.mockResolvedValue({ user: { id: 'u1' } });
+    mocks.membershipLimit.mockResolvedValue([{ householdId: 'hh-1' }]);
+    const res = await request(app)
+      .post('/api/shopping-lists/list-id/items')
+      .send({ qty: 2, unit: 'count' });
+    expect(res.status).toBe(400);
+  });
+});
