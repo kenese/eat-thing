@@ -2,7 +2,8 @@
   "name": "eat-thing",
   "private": true,
   "scripts": {
-    "dev": "turbo dev",
+    "dev": "turbo dev --filter=!@eat/scraper",
+    "dev:scraper": "turbo dev --filter=@eat/scraper",
     "build": "turbo build",
     "lint": "turbo lint",
     "clean": "turbo clean",
