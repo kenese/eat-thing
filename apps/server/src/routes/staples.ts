@@ -1,6 +1,6 @@
 import { Router, type Router as ExpressRouter } from 'express';
 import { z } from 'zod';
-import { and, eq, asc, sql } from 'drizzle-orm';
+import { eq, asc, sql } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { withHousehold } from '../middleware/with-household.js';
 import { db } from '../db/index.js';
@@ -17,6 +17,8 @@ const createSchema = z.object({
 const updateSchema = z.object({
   thresholdQty: z.number().positive().optional(),
   thresholdUnit: z.enum(['g', 'ml', 'count']).optional(),
+}).refine(d => d.thresholdQty !== undefined || d.thresholdUnit !== undefined, {
+  message: 'At least one of thresholdQty or thresholdUnit must be provided',
 });
 
 const joinOn = sql`${staples.canonicalFoodId} = ${canonicalFoods.id}`;
@@ -62,6 +64,11 @@ router.post('/', withHousehold, async (req, res) => {
     const [full] = await db.select(cols).from(staples).innerJoin(canonicalFoods, joinOn).where(eq(staples.id, id));
     res.status(201).json(full);
   } catch (err) {
+    const e = err as { code?: string; constraint?: string };
+    if (e.code === '23505') {
+      res.status(409).json({ error: 'Staple already exists for this food' });
+      return;
+    }
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });
   }
