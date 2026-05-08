@@ -25,7 +25,7 @@ The starter project is a generic Turborepo. Get it from "blank" to "ready to bui
 - [x] Wire Better-Auth + Google provider into `apps/server` — _2026-05-08_
 - [x] Add `withHousehold` middleware (every domain query scoped by `household_id`) — _2026-05-08_
 - [x] Scaffold `apps/scraper` workspace and a worker SDK that handles HMAC-signed polling against the API — _2026-05-08_
-- [ ] Set up PWA basics in `apps/web` (manifest, service worker via `vite-plugin-pwa`, install prompt)
+- [x] Set up PWA basics in `apps/web` (manifest, service worker via `vite-plugin-pwa`, install prompt) — _2026-05-08_
 - [ ] Configure Vercel deployment for `apps/web` and `apps/server`
 - [x] Write `CLAUDE.md` so any new Claude session (CLI or otherwise) starts warm — _2026-05-07_
 
