@@ -5,6 +5,8 @@ import { useSession } from './hooks/useSession';
 import { LoginPage } from './pages/LoginPage';
 import { InventoryPage } from './pages/InventoryPage';
 import { RecipesPage } from './pages/RecipesPage';
+import { PlanPage } from './pages/PlanPage';
+import { ShoppingListPage } from './pages/ShoppingListPage/ShoppingListPage';
 import './index.css';
 
 function PlaceholderPage({ title }: { title: string }) {
@@ -39,8 +41,8 @@ function AppShell() {
           <Route path="/" element={<Navigate to="/inventory" replace />} />
           <Route path="/inventory" element={<InventoryPage />} />
           <Route path="/recipes" element={<RecipesPage />} />
-          <Route path="/plan" element={<PlaceholderPage title="Meal Plan" />} />
-          <Route path="/list" element={<PlaceholderPage title="Shopping List" />} />
+          <Route path="/plan" element={<PlanPage />} />
+          <Route path="/list" element={<ShoppingListPage />} />
           <Route path="*" element={<Navigate to="/inventory" replace />} />
         </Routes>
       </div>
