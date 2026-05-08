@@ -19,7 +19,7 @@ The starter project is a generic Turborepo. Get it from "blank" to "ready to bui
 - [x] Rewrite `README.md` for eat-thing (still describes the starter) — _2026-05-07_
 - [x] Create Supabase project; store URL + anon/service keys in `.env` — _2026-05-07_
 - [x] Add Drizzle + initial migration system — _2026-05-08_
-- [ ] Define core schema: `households`, `users`, `memberships`, `canonical_foods`, `inventory_items`, `recipes`, `recipe_ingredients`, `meal_plans`, `meal_plan_entries`, `shopping_lists`, `shopping_list_items`, `staples`, `cook_events`, `supermarket_credentials`, `supermarket_products`, plus `sync_dirty` (per-resource dirty flag for debounced sync)
+- [x] Define core schema: `households`, `users`, `memberships`, `canonical_foods`, `inventory_items`, `recipes`, `recipe_ingredients`, `meal_plans`, `meal_plan_entries`, `shopping_lists`, `shopping_list_items`, `staples`, `cook_events`, `supermarket_credentials`, `supermarket_products`, plus `sync_dirty` (per-resource dirty flag for debounced sync) — _2026-05-08_
 - [ ] Create `packages/taxonomy` with seed list + unit-conversion helpers (g↔ml, tbsp↔ml, cloves↔g garlic, etc.)
 - [ ] Create `packages/openbrain` skeleton (stubbed `syncRecipe`, `syncInventorySnapshot`, `syncMealPlan`, `syncCookLog`)
 - [ ] Wire Better-Auth + Google provider into `apps/server`

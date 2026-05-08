@@ -1,2 +1,10 @@
-// Schema tables are defined in separate files and re-exported here.
-// e.g.: export * from './households.js';
+export * from './enums.js';
+export * from './auth.js';
+export * from './households.js';
+export * from './foods.js';
+export * from './inventory.js';
+export * from './recipes.js';
+export * from './meal-plans.js';
+export * from './shopping.js';
+export * from './supermarket.js';
+export * from './sync.js';
