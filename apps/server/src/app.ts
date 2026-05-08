@@ -6,6 +6,8 @@ import { auth } from './auth.js';
 import foodsRouter from './routes/foods.js';
 import inventoryRouter from './routes/inventory.js';
 import recipesRouter from './routes/recipes.js';
+import mealPlansRouter from './routes/meal-plans.js';
+import staplesRouter from './routes/staples.js';
 
 const app: express.Express = express();
 
@@ -30,5 +32,7 @@ app.get('/api/health', (_req, res) => {
 app.use('/api/foods', foodsRouter);
 app.use('/api/inventory', inventoryRouter);
 app.use('/api/recipes', recipesRouter);
+app.use('/api/meal-plans', mealPlansRouter);
+app.use('/api/staples', staplesRouter);
 
 export default app;
