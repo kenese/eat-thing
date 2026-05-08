@@ -1,46 +1,40 @@
-import express from "express";
-import { createServer } from "http";
-import cors from "cors";
-import type { AppState } from "@eat/shared";
-import { INITIAL_APP_STATE } from "@eat/shared";
+import 'dotenv/config';
+import express from 'express';
+import { createServer } from 'http';
+import cors from 'cors';
+import { toNodeHandler } from 'better-auth/node';
+import { auth } from './auth.js';
 
 const app: express.Express = express();
-app.use(cors());
+
+app.use(cors({
+  origin: process.env.WEB_BASE_URL || 'http://localhost:5173',
+  credentials: true,
+}));
+
+// Better-Auth handles its own body parsing for auth routes
+app.all('/api/auth/*', toNodeHandler(auth));
+
 app.use(express.json());
 
-const httpServer = createServer(app);
+// ─── Health ─────────────────────────────────────────────────────
 
-// ─── In-memory storage ──────────────────────────────────────────
-
-let appState: AppState = { ...INITIAL_APP_STATE };
-
-// ─── REST API ───────────────────────────────────────────────────
-
-app.get("/api/health", (_req, res) => {
-    res.json({ status: "ok" });
+app.get('/api/health', (_req, res) => {
+  res.json({ status: 'ok' });
 });
 
-// Get current state
-app.get("/api/counter", (_req, res) => {
-    res.json(appState);
-});
-
-// Update state (e.g. increment)
-app.post("/api/counter", (req, res) => {
-    const update = req.body as Partial<AppState>;
-    appState = { ...appState, ...update };
-    res.json(appState);
-});
+// ─── Domain routes go here ──────────────────────────────────────
+// TODO: inventory, recipes, meal-plans, shopping-lists
 
 // ─── Start ──────────────────────────────────────────────────────
 
+const httpServer = createServer(app);
 const PORT = process.env.PORT || 3001;
 
-if (process.env.NODE_ENV !== "test") {
-    httpServer.listen(PORT, () => {
-        console.log(`🚀 Server running on http://localhost:${PORT}`);
-    });
+if (process.env.NODE_ENV !== 'test') {
+  httpServer.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
 }
 
 export { app };
-
