@@ -108,6 +108,39 @@ export interface UpdateRecipeInput {
   ingredients?: RecipeIngredientInput[];
 }
 
+// ─── Meal plans ───────────────────────────────────────────────────────────────
+
+export type MealStatus = 'planned' | 'cooked' | 'skipped';
+
+export interface MealPlanEntry {
+  id: string;
+  mealPlanId: string;
+  date: string; // YYYY-MM-DD
+  recipeId: string;
+  recipeName: string;
+  servings: number;
+  status: MealStatus;
+}
+
+export interface MealPlanWeek {
+  weekStart: string; // YYYY-MM-DD (Monday)
+  mealPlanId: string | null;
+  entries: MealPlanEntry[];
+}
+
+export interface CreateMealPlanEntryInput {
+  weekStart: string;
+  date: string;
+  recipeId: string;
+  servings: number;
+}
+
+export interface UpdateMealPlanEntryInput {
+  date?: string;
+  servings?: number;
+  status?: MealStatus;
+}
+
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
 export interface SessionUser {
@@ -120,4 +153,67 @@ export interface SessionUser {
 export interface Session {
   user: SessionUser;
   session: { id: string; userId: string; expiresAt: string };
+}
+
+// ─── Staples ──────────────────────────────────────────────────────────────────
+
+export interface Staple {
+  id: string;
+  householdId: string;
+  canonicalFoodId: string;
+  foodName: string;
+  thresholdQty: number;
+  thresholdUnit: CanonicalUnit;
+  createdAt: string;
+}
+
+export interface CreateStapleInput {
+  canonicalFoodId: string;
+  thresholdQty: number;
+  thresholdUnit: CanonicalUnit;
+}
+
+export interface UpdateStapleInput {
+  thresholdQty?: number;
+  thresholdUnit?: CanonicalUnit;
+}
+
+// ─── Shopping lists ───────────────────────────────────────────────────────────
+
+export type ShoppingSource = 'recipe' | 'staple' | 'manual';
+
+export interface ShoppingListItem {
+  id: string;
+  shoppingListId: string;
+  canonicalFoodId: string | null;
+  name: string;
+  qty: number;
+  unit: CanonicalUnit;
+  source: ShoppingSource;
+  checked: boolean;
+}
+
+export interface ShoppingList {
+  id: string;
+  householdId: string;
+  generatedFromMealPlanId: string | null;
+  createdAt: string;
+  finalizedAt: string | null;
+  items: ShoppingListItem[];
+}
+
+export interface GenerateShoppingListInput {
+  weekStart: string;
+}
+
+export interface AddShoppingListItemInput {
+  name: string;
+  qty: number;
+  unit: CanonicalUnit;
+  canonicalFoodId?: string | null;
+}
+
+export interface UpdateShoppingListItemInput {
+  checked?: boolean;
+  qty?: number;
 }
