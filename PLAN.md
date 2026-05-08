@@ -26,7 +26,7 @@ The starter project is a generic Turborepo. Get it from "blank" to "ready to bui
 - [x] Add `withHousehold` middleware (every domain query scoped by `household_id`) — _2026-05-08_
 - [x] Scaffold `apps/scraper` workspace and a worker SDK that handles HMAC-signed polling against the API — _2026-05-08_
 - [x] Set up PWA basics in `apps/web` (manifest, service worker via `vite-plugin-pwa`, install prompt) — _2026-05-08_
-- [ ] Configure Vercel deployment for `apps/web` and `apps/server`
+- [x] Configure Vercel deployment for `apps/web` and `apps/server` — _2026-05-08_
 - [x] Write `CLAUDE.md` so any new Claude session (CLI or otherwise) starts warm — _2026-05-07_
 
 ## Phase 1 — MVP
