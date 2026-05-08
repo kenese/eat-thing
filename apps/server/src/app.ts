@@ -3,6 +3,8 @@ import express from 'express';
 import cors from 'cors';
 import { toNodeHandler } from 'better-auth/node';
 import { auth } from './auth.js';
+import foodsRouter from './routes/foods.js';
+import inventoryRouter from './routes/inventory.js';
 
 const app: express.Express = express();
 
@@ -16,13 +18,15 @@ app.all('/api/auth/*', toNodeHandler(auth));
 
 app.use(express.json());
 
-// ─── Health ─────────────────────────────────────────────────────
+// ─── Health ──────────────────────────────────────────────────────────────────
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
 
-// ─── Domain routes go here ──────────────────────────────────────
-// TODO: inventory, recipes, meal-plans, shopping-lists
+// ─── Domain routes ────────────────────────────────────────────────────────────
+
+app.use('/api/foods', foodsRouter);
+app.use('/api/inventory', inventoryRouter);
 
 export default app;

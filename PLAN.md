@@ -4,7 +4,7 @@ Living plan for eat-thing. Tasks update as we go. New work appends; completed wo
 
 **Status legend:** `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` deferred / dropped
 
-**Currently on:** Phase 0 — Foundation
+**Currently on:** Phase 1 — MVP
 
 For per-decision rationale see [DECISIONS.md](./DECISIONS.md). For architecture see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
@@ -34,8 +34,8 @@ The starter project is a generic Turborepo. Get it from "blank" to "ready to bui
 
 Inventory + recipes + meal plan + shopping list. Useful on its own.
 
-- [ ] Inventory CRUD (list, add, edit, delete, search)
-- [ ] Inventory item detail: brand, qty, unit, location (fridge / pantry / freezer), purchased_at, expires_at
+- [x] Inventory CRUD (list, add, edit, delete, search) — _2026-05-08_
+- [x] Inventory item detail: brand, qty, unit, location (fridge / pantry / freezer), purchased_at, expires_at — _2026-05-08_
 - [ ] Recipe CRUD (manual entry only at this stage)
 - [ ] Weekly meal-plan view (drag recipe onto a day, set servings)
 - [ ] Shopping-list generator: Σ recipe ingredients − inventory + staples below threshold
@@ -107,3 +107,4 @@ Adds items to cart on the user's behalf. User always clicks "place order" — se
 - 2026-05-07 — Phase 0: rebranded workspaces from `@starter/*` to `@eat/*`; rewrote `README.md` for eat-thing.
 - 2026-05-07 — Phase 0: Supabase project created; env files written for server + web; `.env` added to `.gitignore`.
 - 2026-05-08 — Phase 0: Drizzle ORM + drizzle-kit wired up; connected via Supabase transaction pooler (aws-1-ap-southeast-2, port 6543).
+- 2026-05-08 — Phase 1: Inventory CRUD complete — server routes (GET/POST/PUT/DELETE /api/inventory, GET /api/foods), shared types, web UI (auth guard, login page, inventory list + location tabs + search, add/edit modal with food combobox, expiry badges). `packages/taxonomy` seeded into `canonical_foods` via `db:seed`.

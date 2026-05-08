@@ -3,8 +3,10 @@ import { NavLink } from "react-router-dom";
 import "./TopNav.css";
 
 const NAV_ITEMS = [
-    { label: "Route 1", path: "/" },
-    { label: "Route 2", path: "/route2" },
+    { label: 'Inventory', path: '/inventory' },
+    { label: 'Recipes', path: '/recipes' },
+    { label: 'Plan', path: '/plan' },
+    { label: 'List', path: '/list' },
 ];
 
 export const TopNav: React.FC = () => {
@@ -19,7 +21,6 @@ export const TopNav: React.FC = () => {
                         className={({ isActive }) =>
                             `topnav-link ${isActive ? "topnav-link--active" : ""}`
                         }
-                        end={item.path === "/"}
                     >
                         {item.label}
                     </NavLink>
