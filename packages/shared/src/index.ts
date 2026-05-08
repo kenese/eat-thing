@@ -49,6 +49,65 @@ export interface UpdateInventoryItemInput {
   expiresAt?: string | null;
 }
 
+// ─── Recipes ──────────────────────────────────────────────────────────────────
+
+export interface RecipeIngredient {
+  id: string;
+  recipeId: string;
+  canonicalFoodId: string;
+  foodName: string;
+  qty: number;
+  unit: CanonicalUnit;
+  optional: boolean;
+  sortOrder: number;
+}
+
+export interface RecipeSummary {
+  id: string;
+  name: string;
+  servings: number;
+  sourceUrl: string | null;
+  ingredientCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Recipe {
+  id: string;
+  householdId: string;
+  name: string;
+  servings: number;
+  sourceUrl: string | null;
+  sourceImage: string | null;
+  instructions: string | null;
+  ingredients: RecipeIngredient[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RecipeIngredientInput {
+  canonicalFoodId: string;
+  qty: number;
+  unit: CanonicalUnit;
+  optional?: boolean;
+}
+
+export interface CreateRecipeInput {
+  name: string;
+  servings: number;
+  sourceUrl?: string | null;
+  instructions?: string | null;
+  ingredients: RecipeIngredientInput[];
+}
+
+export interface UpdateRecipeInput {
+  name?: string;
+  servings?: number;
+  sourceUrl?: string | null;
+  instructions?: string | null;
+  ingredients?: RecipeIngredientInput[];
+}
+
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
 export interface SessionUser {

@@ -36,7 +36,7 @@ Inventory + recipes + meal plan + shopping list. Useful on its own.
 
 - [x] Inventory CRUD (list, add, edit, delete, search) — _2026-05-08_
 - [x] Inventory item detail: brand, qty, unit, location (fridge / pantry / freezer), purchased_at, expires_at — _2026-05-08_
-- [ ] Recipe CRUD (manual entry only at this stage)
+- [x] Recipe CRUD (manual entry only at this stage) — _2026-05-08_
 - [ ] Weekly meal-plan view (drag recipe onto a day, set servings)
 - [ ] Shopping-list generator: Σ recipe ingredients − inventory + staples below threshold
 - [ ] Mark recipe cooked → cook event → deduct ingredients from inventory
@@ -108,3 +108,4 @@ Adds items to cart on the user's behalf. User always clicks "place order" — se
 - 2026-05-07 — Phase 0: Supabase project created; env files written for server + web; `.env` added to `.gitignore`.
 - 2026-05-08 — Phase 0: Drizzle ORM + drizzle-kit wired up; connected via Supabase transaction pooler (aws-1-ap-southeast-2, port 6543).
 - 2026-05-08 — Phase 1: Inventory CRUD complete — server routes (GET/POST/PUT/DELETE /api/inventory, GET /api/foods), shared types, web UI (auth guard, login page, inventory list + location tabs + search, add/edit modal with food combobox, expiry badges). `packages/taxonomy` seeded into `canonical_foods` via `db:seed`.
+- 2026-05-08 — Phase 1: Recipe CRUD complete — server routes (GET list/detail, POST, PUT, DELETE /api/recipes) replacing recipe + recipe_ingredients in one transaction; shared `Recipe`/`RecipeSummary` types; web UI (`RecipesPage` list + search, `RecipeForm` modal with name/servings/source URL/instructions and an ingredient picker reusing `useFoodSearch`). Manual entry only — URL/photo ingestion lands in Phase 2.
