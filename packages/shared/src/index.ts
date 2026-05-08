@@ -217,3 +217,53 @@ export interface UpdateShoppingListItemInput {
   checked?: boolean;
   qty?: number;
 }
+
+// ─── Cook events ──────────────────────────────────────────────────────────────
+
+export interface CookDeduction {
+  inventoryItemId: string;
+  canonicalFoodId: string;
+  foodName: string;
+  qty: number;
+  unit: CanonicalUnit;
+}
+
+export interface CookPrompt {
+  question: string;
+  canonicalFoodId: string;
+  foodName: string;
+  inventoryItemId?: string;
+  inventoryQty?: number;
+  inventoryUnit?: CanonicalUnit;
+}
+
+export interface CookEventPreview {
+  mealPlanEntryId: string | null;
+  recipeId: string;
+  servings: number;
+  deductions: CookDeduction[];
+  prompts: CookPrompt[];
+}
+
+export interface CookPromptResponse {
+  question: string;
+  answer: string;
+  inventoryItemId?: string;
+}
+
+export interface CreateCookEventInput {
+  mealPlanEntryId?: string;
+  recipeId: string;
+  servings: number;
+  deductions: CookDeduction[];
+  promptResponses: CookPromptResponse[];
+}
+
+export interface CookEvent {
+  id: string;
+  householdId: string;
+  mealPlanEntryId: string | null;
+  cookedAt: string;
+  deductions: CookDeduction[];
+  promptsResolved: CookPromptResponse[];
+}
