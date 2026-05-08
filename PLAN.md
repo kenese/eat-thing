@@ -21,7 +21,7 @@ The starter project is a generic Turborepo. Get it from "blank" to "ready to bui
 - [x] Add Drizzle + initial migration system — _2026-05-08_
 - [x] Define core schema: `households`, `users`, `memberships`, `canonical_foods`, `inventory_items`, `recipes`, `recipe_ingredients`, `meal_plans`, `meal_plan_entries`, `shopping_lists`, `shopping_list_items`, `staples`, `cook_events`, `supermarket_credentials`, `supermarket_products`, plus `sync_dirty` (per-resource dirty flag for debounced sync) — _2026-05-08_
 - [x] Create `packages/taxonomy` with seed list + unit-conversion helpers (g↔ml, tbsp↔ml, cloves↔g garlic, etc.) — _2026-05-08_
-- [ ] Create `packages/openbrain` skeleton (stubbed `syncRecipe`, `syncInventorySnapshot`, `syncMealPlan`, `syncCookLog`)
+- [x] Create `packages/openbrain` skeleton (stubbed `syncRecipe`, `syncInventorySnapshot`, `syncMealPlan`, `syncCookLog`) — _2026-05-08_
 - [ ] Wire Better-Auth + Google provider into `apps/server`
 - [ ] Add `withHousehold` middleware (every domain query scoped by `household_id`)
 - [ ] Scaffold `apps/scraper` workspace and a worker SDK that handles HMAC-signed polling against the API
