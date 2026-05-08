@@ -28,6 +28,7 @@ The starter project is a generic Turborepo. Get it from "blank" to "ready to bui
 - [x] Set up PWA basics in `apps/web` (manifest, service worker via `vite-plugin-pwa`, install prompt) — _2026-05-08_
 - [x] Configure Vercel deployment for `apps/web` and `apps/server` — _2026-05-08_
 - [x] Write `CLAUDE.md` so any new Claude session (CLI or otherwise) starts warm — _2026-05-07_
+- [x] Add unit + E2E tests for all Phase 0 functionality; strip starter tests — _2026-05-08_
 
 ## Phase 1 — MVP
 

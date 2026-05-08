@@ -1,30 +1,18 @@
-import { describe, it, expect } from "vitest";
-import request from "supertest";
-import { app } from "./index";
+import { describe, it, expect } from 'vitest';
+import request from 'supertest';
+import app from './app';
 
-describe("Express REST API", () => {
-    it("should return ok for GET /api/health", async () => {
-        const response = await request(app).get("/api/health");
-        expect(response.status).toBe(200);
-        expect(response.body).toEqual({ status: "ok" });
-    });
+describe('GET /api/health', () => {
+  it('returns 200 with status ok', async () => {
+    const res = await request(app).get('/api/health');
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ status: 'ok' });
+  });
+});
 
-    it("should return the initial counter state for GET /api/counter", async () => {
-        const response = await request(app).get("/api/counter");
-        expect(response.status).toBe(200);
-        expect(response.body.counter).toBe(0);
-    });
-
-    it("should update the counter state for POST /api/counter", async () => {
-        const response = await request(app)
-            .post("/api/counter")
-            .send({ counter: 5 });
-            
-        expect(response.status).toBe(200);
-        expect(response.body.counter).toBe(5);
-
-        // Verify the state persisted
-        const getResponse = await request(app).get("/api/counter");
-        expect(getResponse.body.counter).toBe(5);
-    });
+describe('unknown routes', () => {
+  it('returns 404 for unregistered API paths', async () => {
+    const res = await request(app).get('/api/does-not-exist');
+    expect(res.status).toBe(404);
+  });
 });

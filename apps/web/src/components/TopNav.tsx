@@ -10,7 +10,7 @@ const NAV_ITEMS = [
 export const TopNav: React.FC = () => {
     return (
         <header className="topnav">
-            <div className="topnav-brand">Starter App</div>
+            <div className="topnav-brand">eat-thing</div>
             <nav className="topnav-links">
                 {NAV_ITEMS.map((item) => (
                     <NavLink
