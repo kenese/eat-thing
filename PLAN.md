@@ -23,7 +23,7 @@ The starter project is a generic Turborepo. Get it from "blank" to "ready to bui
 - [x] Create `packages/taxonomy` with seed list + unit-conversion helpers (g↔ml, tbsp↔ml, cloves↔g garlic, etc.) — _2026-05-08_
 - [x] Create `packages/openbrain` skeleton (stubbed `syncRecipe`, `syncInventorySnapshot`, `syncMealPlan`, `syncCookLog`) — _2026-05-08_
 - [x] Wire Better-Auth + Google provider into `apps/server` — _2026-05-08_
-- [ ] Add `withHousehold` middleware (every domain query scoped by `household_id`)
+- [x] Add `withHousehold` middleware (every domain query scoped by `household_id`) — _2026-05-08_
 - [ ] Scaffold `apps/scraper` workspace and a worker SDK that handles HMAC-signed polling against the API
 - [ ] Set up PWA basics in `apps/web` (manifest, service worker via `vite-plugin-pwa`, install prompt)
 - [ ] Configure Vercel deployment for `apps/web` and `apps/server`
