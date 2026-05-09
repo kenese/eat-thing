@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.eat-thing.openbrain-sync</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/local/bin/node</string>
+    <string>/path/to/eat-thing/apps/server/dist/workers/openbrain-worker.js</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>NODE_ENV</key>
+    <string>production</string>
+    <key>API_BASE_URL</key>
+    <string>https://your-app.vercel.app</string>
+    <key>WORKER_HMAC_KEY</key>
+    <string>REPLACE_ME</string>
+    <key>OPENBRAIN_BASE_URL</key>
+    <string>REPLACE_ME</string>
+    <key>OPENBRAIN_API_KEY</key>
+    <string>REPLACE_ME</string>
+    <key>POLL_INTERVAL_MS</key>
+    <string>60000</string>
+  </dict>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>/tmp/eat-thing-openbrain-sync.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/eat-thing-openbrain-sync.err</string>
+</dict>
+</plist>

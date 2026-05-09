@@ -1,37 +1,60 @@
 export interface SyncResult {
   ok: boolean;
-  thoughtId?: string;
   error?: string;
 }
 
-// Minimal shapes the sync functions need — not full DB row types.
-// Keep this package free of @eat/shared or DB dependencies.
+export interface RecipeIngredientPayload {
+  foodName: string;
+  qty: number;
+  unit: string;
+  optional: boolean;
+}
 
 export interface RecipePayload {
   id: string;
-  householdId: string;
   name: string;
   servings: number;
-  sourceUrl?: string;
-  ingredients: { food: string; qty: number; unit: string }[];
-  instructions?: string;
+  sourceUrl: string | null | undefined;
+  instructions: string | null | undefined;
+  ingredients: RecipeIngredientPayload[];
+}
+
+export interface InventoryItemPayload {
+  foodName: string;
+  qty: number;
+  unit: string;
+  brand: string | null;
+  location: string;
+  expiresAt: Date | string | null;
 }
 
 export interface InventorySnapshot {
   householdId: string;
-  snapshotAt: Date;
-  items: { food: string; qty: number; unit: string; location: string; expiresAt?: Date }[];
+  items: InventoryItemPayload[];
+  snapshotAt: string;
+}
+
+export interface MealPlanEntryPayload {
+  date: string;
+  recipeName: string;
+  servings: number;
+  status: string;
 }
 
 export interface MealPlanPayload {
-  id: string;
-  householdId: string;
-  weekStart: string; // ISO date
-  entries: { date: string; recipeName: string; servings: number; status: string }[];
+  mealPlanId: string;
+  weekStart: string;
+  entries: MealPlanEntryPayload[];
+}
+
+export interface CookEventPayload {
+  recipeName: string;
+  servings: number;
+  cookedAt: string;
 }
 
 export interface CookLogEntry {
   householdId: string;
-  date: string; // ISO date of the roll-up day
-  events: { cookedAt: Date; recipeName: string; deductions: { food: string; qty: number; unit: string }[] }[];
+  date: string;
+  events: CookEventPayload[];
 }

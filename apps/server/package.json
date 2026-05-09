@@ -13,9 +13,11 @@
         "db:migrate": "drizzle-kit migrate",
         "db:push": "drizzle-kit push",
         "db:studio": "drizzle-kit studio",
-        "db:seed": "tsx src/db/seed.ts"
+        "db:seed": "tsx src/db/seed.ts",
+        "worker:openbrain": "tsx src/workers/openbrain-worker.ts"
     },
     "dependencies": {
+        "@eat/openbrain": "workspace:*",
         "@eat/shared": "workspace:*",
         "@eat/taxonomy": "workspace:*",
         "@types/uuid": "^10.0.0",

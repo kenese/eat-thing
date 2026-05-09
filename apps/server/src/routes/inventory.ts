@@ -8,6 +8,15 @@ import { inventoryItems, canonicalFoods } from '../db/schema/index.js';
 
 const router: ExpressRouter = Router();
 
+async function markInventoryDirty(householdId: string) {
+  await db.execute(
+    sql`INSERT INTO sync_dirty (id, household_id, resource_type, resource_id, dirty_since)
+        VALUES (${uuidv4()}, ${householdId}, 'inventory', ${householdId}, now())
+        ON CONFLICT (household_id, resource_type, resource_id)
+        DO UPDATE SET dirty_since = now(), claimed_at = null`,
+  );
+}
+
 type Location = 'fridge' | 'pantry' | 'freezer' | 'other';
 const LOCATIONS: Location[] = ['fridge', 'pantry', 'freezer', 'other'];
 
@@ -106,6 +115,7 @@ router.post('/', withHousehold, async (req, res) => {
       .where(eq(inventoryItems.id, newId));
 
     res.status(201).json(full);
+    markInventoryDirty(req.householdId).catch(err => console.error('sync_dirty write failed', err));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });
@@ -154,6 +164,7 @@ router.put('/:id', withHousehold, async (req, res) => {
       .where(eq(inventoryItems.id, id));
 
     res.json(full);
+    markInventoryDirty(req.householdId).catch(err => console.error('sync_dirty write failed', err));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });
@@ -176,6 +187,7 @@ router.delete('/:id', withHousehold, async (req, res) => {
 
     await db.delete(inventoryItems).where(eq(inventoryItems.id, id));
     res.json({ id });
+    markInventoryDirty(req.householdId).catch(err => console.error('sync_dirty write failed', err));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });
