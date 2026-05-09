@@ -1,5 +1,10 @@
 import { test, expect, type Page } from '@playwright/test';
 
+function isoDate(d: Date) { return d.toISOString().slice(0, 10); }
+function mondayOf(d: Date) { const day = d.getDay(); const diff = (day + 6) % 7; const m = new Date(d); m.setDate(m.getDate() - diff); return m; }
+const thisMonday = isoDate(mondayOf(new Date()));
+const thisTuesday = isoDate(new Date(new Date(thisMonday).setDate(new Date(thisMonday).getDate() + 1)));
+
 const FAKE_SESSION = {
   user: {
     id: 'test-user',
@@ -30,7 +35,26 @@ async function stubAuthedShell(page: Page) {
     route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ weekStart: '2026-01-05', mealPlanId: null, entries: [] }),
+      body: JSON.stringify({
+        weekStart: thisMonday,
+        mealPlanId: 'plan-1',
+        entries: [
+          { id: 'entry-1', mealPlanId: 'plan-1', date: thisTuesday, recipeId: 'recipe-1', recipeName: 'Pasta', servings: 4, status: 'planned' },
+        ],
+      }),
+    }),
+  );
+  await page.route('**/api/cook-events/preview*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        mealPlanEntryId: 'entry-1',
+        recipeId: 'recipe-1',
+        servings: 4,
+        deductions: [{ inventoryItemId: 'inv-1', canonicalFoodId: 'food-1', foodName: 'Pasta', qty: 400, unit: 'g' }],
+        prompts: [],
+      }),
     }),
   );
   await page.route('**/api/shopping-lists*', (route) =>
@@ -108,6 +132,13 @@ test.describe('authenticated routes load', () => {
   test('unknown route redirects to inventory', async ({ page }) => {
     await page.goto('/this-route-does-not-exist');
     await expect(page).toHaveURL(/\/inventory$/);
+  });
+
+  test('plan page shows cook modal when mark cooked is clicked', async ({ page }) => {
+    await page.goto('/plan');
+    await page.getByTitle('Mark cooked').first().click();
+    await expect(page.getByRole('heading', { name: /mark.*cooked/i })).toBeVisible();
+    await expect(page.getByText('Will deduct from inventory')).toBeVisible();
   });
 
   test('top nav links navigate between routes', async ({ page }) => {

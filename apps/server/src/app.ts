@@ -9,6 +9,7 @@ import recipesRouter from './routes/recipes.js';
 import mealPlansRouter from './routes/meal-plans.js';
 import staplesRouter from './routes/staples.js';
 import shoppingListsRouter from './routes/shopping-lists.js';
+import cookEventsRouter from './routes/cook-events.js';
 
 const app: express.Express = express();
 
@@ -36,5 +37,6 @@ app.use('/api/recipes', recipesRouter);
 app.use('/api/meal-plans', mealPlansRouter);
 app.use('/api/staples', staplesRouter);
 app.use('/api/shopping-lists', shoppingListsRouter);
+app.use('/api/cook-events', cookEventsRouter);
 
 export default app;
