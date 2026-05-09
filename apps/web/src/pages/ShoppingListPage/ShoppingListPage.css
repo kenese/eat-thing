@@ -175,3 +175,25 @@
 .food-option-unit { font-size: 0.75rem; color: var(--color-muted, #94a3b8); }
 
 .staples-qty-row { margin-top: 0; }
+
+@media (max-width: 480px) {
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .page-header-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .add-item-form {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    grid-template-rows: auto auto;
+  }
+
+  .add-item-form .form-input:first-child {
+    grid-column: 1 / -1;
+  }
+}

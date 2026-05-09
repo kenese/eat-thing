@@ -307,3 +307,63 @@
 }
 
 .plan-status.empty { padding: 16px; }
+
+/* ── Mobile: horizontal-scroll week grid ──────────────────────────────────── */
+@media (max-width: 767px) {
+  .plan-page {
+    padding: 0;
+  }
+
+  .plan-header {
+    padding: 0.75rem 1rem;
+  }
+
+  .plan-body {
+    flex-direction: column;
+  }
+
+  .plan-sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    padding: 0.75rem 1rem;
+    max-height: none;
+  }
+
+  .plan-recipe-list {
+    display: flex;
+    flex-direction: row;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+  }
+
+  .plan-recipe-item {
+    flex-shrink: 0;
+    min-width: 120px;
+  }
+
+  .plan-week {
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+    gap: 0;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    grid-template-columns: none;
+    background: transparent;
+  }
+
+  .day-col {
+    flex-shrink: 0;
+    width: 72vw;
+    max-width: 260px;
+    scroll-snap-align: start;
+    border-right: 1px solid var(--border);
+    min-height: 200px;
+  }
+
+  .day-col:last-child {
+    border-right: none;
+  }
+}

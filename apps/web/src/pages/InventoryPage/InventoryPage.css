@@ -208,3 +208,32 @@
 .btn-icon:hover { color: var(--text-primary); background: var(--bg-hover); }
 .btn-icon.danger { color: #f87171; }
 .btn-icon.ghost-danger:hover { color: #f87171; background: rgba(248, 113, 113, 0.1); }
+
+@media (max-width: 767px) {
+  .inventory-page {
+    padding: 0;
+  }
+
+  .inv-header {
+    padding: 0.75rem 1rem;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .inv-list {
+    padding: 0 0.75rem;
+  }
+
+  .inv-item {
+    padding: 0.75rem 0;
+    min-height: 48px;
+  }
+
+  .inv-item-actions .btn-icon {
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
