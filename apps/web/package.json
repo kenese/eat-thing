@@ -16,6 +16,7 @@
   "dependencies": {
     "@eat/shared": "workspace:*",
     "@tanstack/react-query": "^5.90.21",
+    "better-auth": "^1.6.9",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.0.0",

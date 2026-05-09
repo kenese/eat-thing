@@ -1,0 +1,309 @@
+.plan-page {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-primary);
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+
+.plan-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.plan-header-center {
+  text-align: center;
+  flex: 1;
+}
+
+.plan-header h1 { font-size: 18px; font-weight: 700; }
+
+.plan-week-range {
+  display: block;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.plan-nav {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-primary);
+  font-size: 18px;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+
+.plan-nav:hover { background: var(--bg-hover); border-color: var(--text-secondary); }
+
+/* ── Body layout ─────────────────────────────────────────────────────────── */
+
+.plan-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+@media (max-width: 800px) {
+  .plan-body { flex-direction: column; }
+}
+
+/* ── Recipe sidebar ──────────────────────────────────────────────────────── */
+
+.plan-sidebar {
+  width: 260px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-secondary);
+}
+
+@media (max-width: 800px) {
+  .plan-sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    max-height: 35vh;
+  }
+}
+
+.plan-sidebar.picking {
+  outline: 2px solid var(--bg-active);
+  outline-offset: -2px;
+}
+
+.plan-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 8px;
+}
+
+.plan-sidebar-header h2 { font-size: 14px; font-weight: 600; }
+
+.plan-cancel-pick {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  border-radius: var(--radius);
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.plan-cancel-pick:hover { color: var(--text-primary); }
+
+.plan-pick-hint {
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 0 16px 8px;
+}
+
+.plan-pick-hint.subtle { opacity: 0.7; }
+
+.plan-recipe-list {
+  list-style: none;
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 8px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.plan-recipe-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: grab;
+  font-size: 14px;
+  user-select: none;
+  transition: all 0.15s;
+}
+
+.plan-recipe-item:hover { border-color: var(--text-secondary); }
+.plan-recipe-item:active { cursor: grabbing; }
+
+.plan-recipe-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.plan-recipe-meta {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-left: 8px;
+}
+
+/* ── Week grid ───────────────────────────────────────────────────────────── */
+
+.plan-week {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(120px, 1fr));
+  gap: 1px;
+  background: var(--border);
+  overflow: auto;
+}
+
+@media (max-width: 800px) {
+  .plan-week {
+    grid-template-columns: 1fr;
+    background: transparent;
+  }
+}
+
+.day-col {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+  min-height: 0;
+  transition: background 0.15s;
+}
+
+.day-col.today { background: var(--bg-secondary); }
+.day-col.drag-over { background: rgba(99, 102, 241, 0.12); }
+
+.day-col-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.day-col-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.day-col-add {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 6px;
+  border-radius: 4px;
+}
+
+.day-col-add:hover { color: var(--text-primary); background: var(--bg-hover); }
+
+.day-col-entries {
+  flex: 1;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+}
+
+.day-col-empty {
+  font-size: 11px;
+  color: var(--text-secondary);
+  opacity: 0.5;
+  text-align: center;
+  padding: 12px 4px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+}
+
+/* ── Entry card ──────────────────────────────────────────────────────────── */
+
+.entry-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 13px;
+}
+
+.entry-card.status-cooked { opacity: 0.5; text-decoration: line-through; }
+.entry-card.status-skipped { opacity: 0.5; }
+
+.entry-card-name {
+  font-weight: 500;
+  color: var(--text-primary);
+  word-break: break-word;
+}
+
+.entry-card-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.entry-servings {
+  background: transparent;
+  border: none;
+  padding: 2px 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.entry-servings:hover { color: var(--text-primary); }
+
+.entry-servings-input {
+  width: 60px;
+  background: var(--bg-primary);
+  border: 1px solid var(--bg-active);
+  border-radius: 4px;
+  padding: 2px 4px;
+  color: var(--text-primary);
+  font-size: 12px;
+}
+
+.entry-servings-input:focus { outline: none; }
+
+.entry-delete {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  line-height: 1;
+}
+
+.entry-delete:hover { color: #f87171; background: rgba(248, 113, 113, 0.1); }
+
+/* ── Status ──────────────────────────────────────────────────────────────── */
+
+.plan-status {
+  padding: 32px 20px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.plan-status.empty { padding: 16px; }
