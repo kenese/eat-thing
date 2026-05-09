@@ -4,7 +4,7 @@ Living plan for eat-thing. Tasks update as we go. New work appends; completed wo
 
 **Status legend:** `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` deferred / dropped
 
-**Currently on:** Phase 2 — Recipe ingestion (Phase 1 MVP complete 2026-05-09)
+**Currently on:** Phase 3 — Read-only supermarket integration (Phase 2 complete 2026-05-10)
 
 For per-decision rationale see [DECISIONS.md](./DECISIONS.md). For architecture see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
@@ -56,11 +56,11 @@ Inventory + recipes + meal plan + shopping list. Useful on its own.
 
 Make adding recipes effortless.
 
-- [ ] URL ingestion: fetch HTML → schema.org Recipe microdata if present, else LLM extract
-- [ ] Photo ingestion: upload → multimodal LLM → structured recipe JSON
-- [ ] In-app recipe search: integrate one external recipe API (Spoonacular / TheMealDB — TBD)
-- [ ] Ingredient → canonical_food matching with confidence + manual override
-- [ ] Edit-and-confirm step before save (no silent imports)
+- [x] URL ingestion: fetch HTML → schema.org Recipe microdata if present, else LLM extract — _2026-05-10_
+- [x] Photo ingestion: upload → multimodal LLM → structured recipe JSON — _2026-05-10_
+- [x] In-app recipe search: TheMealDB (free, no key, 300+ recipes) — _2026-05-10_
+- [x] Ingredient → canonical_food matching with confidence + manual override — _2026-05-10_
+- [x] Edit-and-confirm step before save (no silent imports) — _2026-05-10_
 
 ## Phase 3 — Read-only supermarket integration
 
@@ -114,4 +114,5 @@ Adds items to cart on the user's behalf. User always clicks "place order" — se
 - 2026-05-09 — Phase 1: Cook events complete — server routes (GET/POST /api/cook-events); `CookModal` in `PlanPage` walks through each recipe ingredient with current inventory qty shown and optional per-ingredient override; emits a `cook_event` row and deducts quantities. Interactive deduct prompt handles ambiguous units inline.
 - 2026-05-09 — Phase 1: Offline read cache complete — `idb-keyval` IDB persister wired to TanStack Query via `persistQueryClient` (background restore, no query blocking); 24 h gcTime + maxAge; `@tanstack/react-query-persist-client` upgraded to 5.100.x to match peer dep.
 - 2026-05-09 — Phase 1: Mobile layouts complete — responsive CSS added for `PlanPage` (horizontal scroll-snap day columns, sidebar becomes horizontal row), `InventoryPage` (stacked header/actions), `ShoppingListPage` (column header, grid add-form).
-- 2026-05-09 — Phase 1: OpenBrain sync complete — `sync_dirty` table with INSERT…ON CONFLICT debounce; inventory/meal-plan/recipe routes fire markDirty after writes; `/api/sync` endpoints (pending, claim, complete, snapshots) gated by HMAC-SHA256 using `req.originalUrl`; `packages/openbrain` MCP client singleton + typed sync functions with `eat-thing:` external-ID scheme; `openbrain-worker` poller + `launchd` plist template for Mac mini.
+- 2026-05-09 — Phase 1: OpenBrain sync complete
+- 2026-05-10 — Phase 2: Recipe ingestion complete — /api/ingest/url (schema.org ld+json → Claude haiku fallback), /api/ingest/photo (Claude haiku multimodal), /api/ingest/search (TheMealDB); food-matcher with exact/alias/contains/LLM tiers returning confidence; ImportModal with URL/Photo/Search tabs + edit-and-confirm step prefilling RecipeForm; low-confidence ingredients highlighted in amber. Photos saved to Supabase Storage (eat-thing bucket) on recipe save. @anthropic-ai/sdk added to server. — `sync_dirty` table with INSERT…ON CONFLICT debounce; inventory/meal-plan/recipe routes fire markDirty after writes; `/api/sync` endpoints (pending, claim, complete, snapshots) gated by HMAC-SHA256 using `req.originalUrl`; `packages/openbrain` MCP client singleton + typed sync functions with `eat-thing:` external-ID scheme; `openbrain-worker` poller + `launchd` plist template for Mac mini.
