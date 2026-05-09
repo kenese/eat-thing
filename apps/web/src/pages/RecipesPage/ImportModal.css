@@ -1,0 +1,122 @@
+.import-modal {
+  max-width: 520px;
+}
+
+.import-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+
+.import-tab {
+  flex: 1;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--text-secondary, #666);
+  font-weight: 500;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.import-tab.active {
+  color: var(--primary, #2563eb);
+  border-bottom-color: var(--primary, #2563eb);
+}
+
+.import-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.import-hint {
+  font-size: 0.85rem;
+  color: var(--text-secondary, #666);
+  margin: 0;
+}
+
+.photo-drop-zone {
+  border: 2px dashed var(--border, #ddd);
+  border-radius: 8px;
+  padding: 32px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  min-height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.photo-drop-zone:hover {
+  border-color: var(--primary, #2563eb);
+}
+
+.photo-drop-hint {
+  color: var(--text-secondary, #999);
+  font-size: 0.9rem;
+}
+
+.photo-preview {
+  max-height: 200px;
+  max-width: 100%;
+  border-radius: 6px;
+  object-fit: contain;
+}
+
+.search-row {
+  display: flex;
+  gap: 8px;
+}
+
+.search-row .form-input {
+  flex: 1;
+}
+
+.search-results {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 340px;
+  overflow-y: auto;
+}
+
+.search-result-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border, #eee);
+  border-radius: 6px;
+}
+
+.search-result-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.search-result-info strong {
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search-result-info span {
+  font-size: 0.8rem;
+  color: var(--text-secondary, #888);
+}
+
+.ingredient-row--unmatched .ingredient-name {
+  color: var(--warning, #d97706);
+}

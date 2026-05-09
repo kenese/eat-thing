@@ -141,6 +141,19 @@ test.describe('authenticated routes load', () => {
     await expect(page.getByText('Will deduct from inventory')).toBeVisible();
   });
 
+  test('recipes page shows Import button that opens import modal', async ({ page }) => {
+    await page.goto('/recipes');
+    const importBtn = page.getByRole('button', { name: /import/i });
+    await expect(importBtn).toBeVisible();
+    await importBtn.click();
+    await expect(page.getByRole('heading', { name: /import recipe/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'URL' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Photo' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Search' })).toBeVisible();
+    // close modal
+    await page.keyboard.press('Escape');
+  });
+
   test('top nav links navigate between routes', async ({ page }) => {
     await page.goto('/inventory');
     await page.getByRole('link', { name: 'Recipes' }).click();

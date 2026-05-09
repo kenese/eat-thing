@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useRecipes, useDeleteRecipe } from '../../hooks/useRecipes';
 import { RecipeForm } from './RecipeForm';
+import { ImportModal } from './ImportModal';
 import type { RecipeSummary } from '@eat/shared';
 import './RecipesPage.css';
 
@@ -44,7 +45,7 @@ export function RecipesPage() {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [modal, setModal] = useState<
-    { mode: 'add' } | { mode: 'edit'; id: string } | null
+    { mode: 'add' } | { mode: 'edit'; id: string } | { mode: 'import' } | null
   >(null);
 
   const deleteMutation = useDeleteRecipe();
@@ -62,7 +63,10 @@ export function RecipesPage() {
     <div className="recipes-page">
       <div className="recipes-header">
         <h1>Recipes</h1>
-        <button className="btn-primary" onClick={() => setModal({ mode: 'add' })}>+ Add</button>
+        <div className="recipes-header-actions">
+          <button className="btn-secondary" onClick={() => setModal({ mode: 'import' })}>↓ Import</button>
+          <button className="btn-primary" onClick={() => setModal({ mode: 'add' })}>+ Add</button>
+        </div>
       </div>
 
       <div className="recipes-search">
@@ -96,7 +100,10 @@ export function RecipesPage() {
         )}
       </div>
 
-      {modal && (
+      {modal && modal.mode === 'import' && (
+        <ImportModal onClose={() => setModal(null)} />
+      )}
+      {modal && modal.mode !== 'import' && (
         <RecipeForm
           mode={modal.mode}
           recipeId={modal.mode === 'edit' ? modal.id : undefined}

@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useFoodSearch } from '../../hooks/useFoodSearch';
 import { useRecipe, useAddRecipe, useUpdateRecipe } from '../../hooks/useRecipes';
-import type { CanonicalFood, CanonicalUnit, RecipeIngredientInput } from '@eat/shared';
+import type { CanonicalFood, CanonicalUnit, RecipeIngredientInput, ImportedRecipe } from '@eat/shared';
 import '../InventoryPage/ItemForm.css';
+import './RecipesPage.css';
 
 interface IngredientDraft extends RecipeIngredientInput {
   foodName: string;
+  lowConfidence?: boolean;
 }
 
 interface IngredientRowProps {
@@ -16,9 +18,9 @@ interface IngredientRowProps {
 
 function IngredientRow({ draft, onChange, onRemove }: IngredientRowProps) {
   return (
-    <li className="ingredient-row">
-      <span className="ingredient-name">
-        {draft.foodName}{draft.optional ? ' (optional)' : ''}
+    <li className={`ingredient-row${draft.lowConfidence ? ' ingredient-row--unmatched' : ''}`}>
+      <span className="ingredient-name" title={draft.lowConfidence ? `Unmatched: "${draft.foodName ?? 'unknown'}" — please reassign` : undefined}>
+        {draft.foodName ?? '⚠ unmatched'}{draft.optional ? ' (optional)' : ''}
       </span>
       <input
         className="form-input"
@@ -95,19 +97,34 @@ function IngredientPicker({ onPick }: IngredientPickerProps) {
 interface RecipeFormProps {
   mode: 'add' | 'edit';
   recipeId?: string;
+  initialData?: ImportedRecipe;
+  pendingPhoto?: { base64: string; mimeType: string };
   onClose: () => void;
 }
 
-export function RecipeForm({ mode, recipeId, onClose }: RecipeFormProps) {
+export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose }: RecipeFormProps) {
   const { data: existing, isLoading: isLoadingExisting } = useRecipe(mode === 'edit' && recipeId ? recipeId : null);
 
-  const [name, setName] = useState('');
-  const [servings, setServings] = useState('4');
-  const [sourceUrl, setSourceUrl] = useState('');
-  const [instructions, setInstructions] = useState('');
-  const [ingredients, setIngredients] = useState<IngredientDraft[]>([]);
+  const [name, setName] = useState(initialData?.name ?? '');
+  const [servings, setServings] = useState(initialData ? String(initialData.servings) : '4');
+  const [sourceUrl, setSourceUrl] = useState(initialData?.sourceUrl ?? '');
+  const [instructions, setInstructions] = useState(initialData?.instructions ?? '');
+  const [ingredients, setIngredients] = useState<IngredientDraft[]>(
+    initialData
+      ? initialData.ingredients
+          .filter(i => i.canonicalFoodId)
+          .map(i => ({
+            canonicalFoodId: i.canonicalFoodId!,
+            foodName: i.foodName!,
+            qty: i.qty,
+            unit: i.unit,
+            optional: i.optional,
+            lowConfidence: i.confidence === 'low',
+          }))
+      : [],
+  );
   const [error, setError] = useState('');
-  const [hydrated, setHydrated] = useState(mode === 'add');
+  const [hydrated, setHydrated] = useState(mode === 'add' || !!initialData);
 
   useEffect(() => {
     if (mode === 'edit' && existing && !hydrated) {
@@ -165,8 +182,10 @@ export function RecipeForm({ mode, recipeId, onClose }: RecipeFormProps) {
       name: name.trim(),
       servings: servingsNum,
       sourceUrl: sourceUrl.trim() || null,
+      sourceImage: initialData?.sourceImage ?? null,
       instructions: instructions.trim() || null,
-      ingredients: ingredients.map(({ foodName: _foodName, ...rest }) => rest),
+      ingredients: ingredients.map(({ foodName: _fn, lowConfidence: _lc, ...rest }) => rest),
+      ...(pendingPhoto && { photoBase64: pendingPhoto.base64, photoMimeType: pendingPhoto.mimeType }),
     };
 
     try {
@@ -188,7 +207,7 @@ export function RecipeForm({ mode, recipeId, onClose }: RecipeFormProps) {
     >
       <div className="modal-panel" role="dialog" aria-modal="true">
         <div className="modal-header">
-          <h2>{mode === 'add' ? 'Add recipe' : 'Edit recipe'}</h2>
+          <h2>{initialData ? 'Review imported recipe' : mode === 'add' ? 'Add recipe' : 'Edit recipe'}</h2>
           <button className="modal-close" onClick={onClose} aria-label="Close">✕</button>
         </div>
 
@@ -269,7 +288,7 @@ export function RecipeForm({ mode, recipeId, onClose }: RecipeFormProps) {
             <div className="form-actions">
               <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
               <button type="submit" className="btn-primary" disabled={isPending}>
-                {isPending ? 'Saving…' : mode === 'add' ? 'Add recipe' : 'Save changes'}
+                {isPending ? 'Saving…' : initialData ? 'Save imported recipe' : mode === 'add' ? 'Add recipe' : 'Save changes'}
               </button>
             </div>
           </form>

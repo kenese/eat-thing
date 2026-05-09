@@ -4,6 +4,7 @@ import { and, eq, ilike, asc, sql } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { withHousehold } from '../middleware/with-household.js';
 import { syncRecipe } from '@eat/openbrain';
+import { uploadPhoto } from '../lib/supabase-storage.js';
 import { db } from '../db/index.js';
 import { recipes, recipeIngredients, canonicalFoods } from '../db/schema/index.js';
 
@@ -20,16 +21,22 @@ const createSchema = z.object({
   name: z.string().trim().min(1).max(200),
   servings: z.number().positive().max(100),
   sourceUrl: z.string().trim().url().nullable().optional(),
+  sourceImage: z.string().nullable().optional(),
   instructions: z.string().nullable().optional(),
   ingredients: z.array(ingredientSchema).min(1),
+  photoBase64: z.string().optional(),
+  photoMimeType: z.string().optional(),
 });
 
 const updateSchema = z.object({
   name: z.string().trim().min(1).max(200).optional(),
   servings: z.number().positive().max(100).optional(),
   sourceUrl: z.string().trim().url().nullable().optional(),
+  sourceImage: z.string().nullable().optional(),
   instructions: z.string().nullable().optional(),
   ingredients: z.array(ingredientSchema).min(1).optional(),
+  photoBase64: z.string().optional(),
+  photoMimeType: z.string().optional(),
 });
 
 const ingredientCols = {
@@ -115,8 +122,17 @@ router.post('/', withHousehold, async (req, res) => {
     return;
   }
 
-  const { name, servings, sourceUrl, instructions, ingredients } = parse.data;
+  const { name, servings, sourceUrl, sourceImage, instructions, ingredients, photoBase64, photoMimeType } = parse.data;
   const recipeId = uuidv4();
+
+  let resolvedImage: string | null = sourceImage ?? null;
+  if (photoBase64 && photoMimeType) {
+    try {
+      resolvedImage = await uploadPhoto(photoBase64, photoMimeType);
+    } catch (err) {
+      console.error('[recipes] photo upload failed', err);
+    }
+  }
 
   try {
     await db.transaction(async tx => {
@@ -126,6 +142,7 @@ router.post('/', withHousehold, async (req, res) => {
         name,
         servings,
         sourceUrl: sourceUrl ?? null,
+        sourceImage: resolvedImage,
         instructions: instructions ?? null,
       });
 

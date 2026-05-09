@@ -96,16 +96,43 @@ export interface CreateRecipeInput {
   name: string;
   servings: number;
   sourceUrl?: string | null;
+  sourceImage?: string | null;
   instructions?: string | null;
   ingredients: RecipeIngredientInput[];
+  photoBase64?: string;
+  photoMimeType?: string;
 }
 
 export interface UpdateRecipeInput {
   name?: string;
   servings?: number;
   sourceUrl?: string | null;
+  sourceImage?: string | null;
   instructions?: string | null;
   ingredients?: RecipeIngredientInput[];
+  photoBase64?: string;
+  photoMimeType?: string;
+}
+
+// ─── Recipe import ───────────────────────────────────────────────────────────
+
+export interface ImportedIngredient {
+  rawText: string;
+  canonicalFoodId: string | null;
+  foodName: string | null;
+  qty: number;
+  unit: CanonicalUnit;
+  optional: boolean;
+  confidence: 'high' | 'low';
+}
+
+export interface ImportedRecipe {
+  name: string;
+  servings: number;
+  sourceUrl: string | null;
+  sourceImage: string | null;
+  instructions: string | null;
+  ingredients: ImportedIngredient[];
 }
 
 // ─── Meal plans ───────────────────────────────────────────────────────────────

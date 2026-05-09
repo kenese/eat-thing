@@ -17,6 +17,7 @@
         "worker:openbrain": "tsx src/workers/openbrain-worker.ts"
     },
     "dependencies": {
+        "@anthropic-ai/sdk": "^0.95.1",
         "@eat/openbrain": "workspace:*",
         "@eat/shared": "workspace:*",
         "@eat/taxonomy": "workspace:*",
