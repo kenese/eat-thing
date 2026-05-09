@@ -4,7 +4,7 @@ Living plan for eat-thing. Tasks update as we go. New work appends; completed wo
 
 **Status legend:** `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` deferred / dropped
 
-**Currently on:** Phase 1 — MVP
+**Currently on:** Phase 2 — Recipe ingestion (Phase 1 MVP complete 2026-05-09)
 
 For per-decision rationale see [DECISIONS.md](./DECISIONS.md). For architecture see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
@@ -37,14 +37,14 @@ Inventory + recipes + meal plan + shopping list. Useful on its own.
 - [x] Inventory CRUD (list, add, edit, delete, search) — _2026-05-08_
 - [x] Inventory item detail: brand, qty, unit, location (fridge / pantry / freezer), purchased_at, expires_at — _2026-05-08_
 - [x] Recipe CRUD (manual entry only at this stage) — _2026-05-08_
-- [ ] Weekly meal-plan view (drag recipe onto a day, set servings)
-- [ ] Shopping-list generator: Σ recipe ingredients − inventory + staples below threshold
-- [ ] Mark recipe cooked → cook event → deduct ingredients from inventory
-- [ ] Interactive deduct prompt for ambiguous units ("how many garlic bulbs are left?")
-- [ ] Staples: flag canonical food + threshold; surfaces in shopping list when low
-- [ ] Offline read cache: inventory, recipes, shopping list, meal plan in IndexedDB (TanStack Query persistence)
-- [ ] OpenBrain sync wired up end-to-end: live recipe writes + debounced inventory & meal-plan snapshots + daily cook-log roll-up, all driven by the Mac-mini sync worker
-- [ ] Mobile layouts for the three core screens (inventory, plan, list)
+- [x] Weekly meal-plan view (drag recipe onto a day, set servings) — _2026-05-08_
+- [x] Shopping-list generator: Σ recipe ingredients − inventory + staples below threshold — _2026-05-09_
+- [x] Mark recipe cooked → cook event → deduct ingredients from inventory — _2026-05-09_
+- [x] Interactive deduct prompt for ambiguous units ("how many garlic bulbs are left?") — _2026-05-09_
+- [x] Staples: flag canonical food + threshold; surfaces in shopping list when low — _2026-05-09_
+- [x] Offline read cache: inventory, recipes, shopping list, meal plan in IndexedDB (TanStack Query persistence) — _2026-05-09_
+- [x] OpenBrain sync wired up end-to-end: live recipe writes + debounced inventory & meal-plan snapshots + daily cook-log roll-up, all driven by the Mac-mini sync worker — _2026-05-09_
+- [x] Mobile layouts for the three core screens (inventory, plan, list) — _2026-05-09_
 
 ### Open questions to close during Phase 1
 
@@ -109,3 +109,9 @@ Adds items to cart on the user's behalf. User always clicks "place order" — se
 - 2026-05-08 — Phase 0: Drizzle ORM + drizzle-kit wired up; connected via Supabase transaction pooler (aws-1-ap-southeast-2, port 6543).
 - 2026-05-08 — Phase 1: Inventory CRUD complete — server routes (GET/POST/PUT/DELETE /api/inventory, GET /api/foods), shared types, web UI (auth guard, login page, inventory list + location tabs + search, add/edit modal with food combobox, expiry badges). `packages/taxonomy` seeded into `canonical_foods` via `db:seed`.
 - 2026-05-08 — Phase 1: Recipe CRUD complete — server routes (GET list/detail, POST, PUT, DELETE /api/recipes) replacing recipe + recipe_ingredients in one transaction; shared `Recipe`/`RecipeSummary` types; web UI (`RecipesPage` list + search, `RecipeForm` modal with name/servings/source URL/instructions and an ingredient picker reusing `useFoodSearch`). Manual entry only — URL/photo ingestion lands in Phase 2.
+- 2026-05-08 — Phase 1: Weekly meal-plan view complete — server routes (GET /api/meal-plans?weekStart, POST/PUT/DELETE /entries) lazily creating the `meal_plans` row on first entry; shared `MealPlanWeek`/`MealPlanEntry` types; `PlanPage` with prev/next week nav, draggable recipe sidebar, 7-day grid as drop targets, fallback "tap +" picker for non-DnD use, inline servings edit, and entry delete. Tests cover the date math and route validation.
+- 2026-05-09 — Phase 1: Shopping-list generator complete — server routes (GET /api/shopping-lists, POST /api/shopping-lists/generate, PATCH /item/:id, DELETE /item/:id); generates items by Σ recipe ingredients for the current week minus on-hand inventory; `ShoppingListPage` with generate button, check-off, and delete. Staples routes and `StaplesModal` for flagging canonical foods with thresholds; staples below threshold surface in the generated list.
+- 2026-05-09 — Phase 1: Cook events complete — server routes (GET/POST /api/cook-events); `CookModal` in `PlanPage` walks through each recipe ingredient with current inventory qty shown and optional per-ingredient override; emits a `cook_event` row and deducts quantities. Interactive deduct prompt handles ambiguous units inline.
+- 2026-05-09 — Phase 1: Offline read cache complete — `idb-keyval` IDB persister wired to TanStack Query via `persistQueryClient` (background restore, no query blocking); 24 h gcTime + maxAge; `@tanstack/react-query-persist-client` upgraded to 5.100.x to match peer dep.
+- 2026-05-09 — Phase 1: Mobile layouts complete — responsive CSS added for `PlanPage` (horizontal scroll-snap day columns, sidebar becomes horizontal row), `InventoryPage` (stacked header/actions), `ShoppingListPage` (column header, grid add-form).
+- 2026-05-09 — Phase 1: OpenBrain sync complete — `sync_dirty` table with INSERT…ON CONFLICT debounce; inventory/meal-plan/recipe routes fire markDirty after writes; `/api/sync` endpoints (pending, claim, complete, snapshots) gated by HMAC-SHA256 using `req.originalUrl`; `packages/openbrain` MCP client singleton + typed sync functions with `eat-thing:` external-ID scheme; `openbrain-worker` poller + `launchd` plist template for Mac mini.

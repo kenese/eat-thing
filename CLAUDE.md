@@ -26,3 +26,12 @@ Household food management app. Inventory ↔ recipes ↔ meal plans ↔ shopping
 - CSS Modules / plain CSS, co-located with components.
 - Vitest + React Testing Library for components. Playwright for app-level E2E (separate from the scraper Playwright).
 - Storybook for the component library.
+
+## Testing — required before calling work done
+- **Update tests alongside the change.** Any task that adds, changes, or removes behaviour must update the relevant unit tests (Vitest) and E2E tests (Playwright) in the same change. New behaviour → new tests. Changed behaviour → updated assertions. Removed behaviour → deleted tests. If a change genuinely needs no test update, say so explicitly in the summary.
+- **Run the full suite before declaring a task complete.** From the repo root:
+  - `pnpm test` — runs all unit tests across the monorepo via Turbo.
+  - `pnpm test:e2e` — runs Playwright E2E.
+  Both must pass. Do not mark a task done, write a "✅ complete" summary, or commit on the user's behalf while either is failing or unrun.
+- **If tests can't be run** (missing env, broken local setup, out-of-scope failure), state that explicitly with the reason — do not claim success.
+- This rule applies to every task in PLAN.md unless the task itself is purely docs/config with no runtime effect.
