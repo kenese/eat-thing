@@ -4,6 +4,6 @@ import type { StoreAdapter } from './base.js';
 export const woolworthsAdapter: StoreAdapter = {
   async handle(job) {
     console.log(`[woolworths] job ${job.id} (${job.type}) — not yet implemented`);
-    return { jobId: job.id, ok: false, error: 'not implemented' };
+    return { ok: false, error: 'not implemented' };
   },
 };
