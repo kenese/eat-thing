@@ -176,6 +176,24 @@
 
 .staples-qty-row { margin-top: 0; }
 
+.list-item-price {
+  margin-left: 0.5rem;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.85rem;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+.list-item-price--loading { color: #6366f1; font-style: italic; }
+.list-item-price--missing { color: #f59e0b; }
+.list-item-price--oos     { color: #ef4444; }
+
+.list-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
 @media (max-width: 480px) {
   .page-header {
     flex-direction: column;

@@ -3,8 +3,9 @@ import {
   useCurrentShoppingList, useGenerateShoppingList,
   useUpdateShoppingListItem, useAddShoppingListItem, useDeleteShoppingListItem,
 } from '../../hooks/useShoppingList';
+import { usePricesForList, useRefreshPrices } from '../../hooks/usePricesForList';
 import { StaplesModal } from './StaplesModal';
-import type { ShoppingList, ShoppingListItem, CanonicalUnit } from '@eat/shared';
+import type { ShoppingList, ShoppingListItem, ShoppingListPrice, CanonicalUnit } from '@eat/shared';
 import { mondayOf, toIsoDate } from '../PlanPage/dateUtils';
 import './ShoppingListPage.css';
 
@@ -16,11 +17,21 @@ const SOURCE_LABELS: Record<string, string> = {
 
 interface ItemRowProps {
   item: ShoppingListItem;
+  price: ShoppingListPrice | undefined;
+  refreshing: boolean;
   onToggle: (checked: boolean) => void;
   onDelete: () => void;
 }
 
-function ItemRow({ item, onToggle, onDelete }: ItemRowProps) {
+function priceCell(price: ShoppingListPrice | undefined, refreshing: boolean) {
+  if (!price && refreshing) return <span className="list-item-price list-item-price--loading">…</span>;
+  if (!price) return null;
+  if (!price.matched) return <span className="list-item-price list-item-price--missing">no match</span>;
+  if (!price.inStock) return <span className="list-item-price list-item-price--oos">out of stock</span>;
+  return <span className="list-item-price">${price.price?.toFixed(2)}</span>;
+}
+
+function ItemRow({ item, price, refreshing, onToggle, onDelete }: ItemRowProps) {
   return (
     <li className={`list-item${item.checked ? ' checked' : ''}`}>
       <input
@@ -34,6 +45,7 @@ function ItemRow({ item, onToggle, onDelete }: ItemRowProps) {
         <span className="list-item-name">{item.name}</span>
         <span className="list-item-qty">{Math.ceil(item.qty * 10) / 10} {item.unit}</span>
       </label>
+      {priceCell(price, refreshing)}
       <button className="list-item-delete" onClick={onDelete} aria-label={`Remove ${item.name}`}>✕</button>
     </li>
   );
@@ -94,11 +106,16 @@ interface ListViewProps {
 function ListView({ list }: ListViewProps) {
   const updateItem = useUpdateShoppingListItem(list.id);
   const deleteItem = useDeleteShoppingListItem(list.id);
+  const { data: pricesData } = usePricesForList(list.id);
+  const refresh = useRefreshPrices(list.id);
+
+  const priceByItemId = new Map<string, ShoppingListPrice>();
+  for (const p of pricesData?.prices ?? []) priceByItemId.set(p.shoppingListItemId, p);
+
+  const refreshing = pricesData?.job?.status === 'pending' || pricesData?.job?.status === 'in_progress' || refresh.isPending;
 
   const groups: Record<string, ShoppingListItem[]> = { recipe: [], staple: [], manual: [] };
-  for (const item of list.items) {
-    (groups[item.source] ??= []).push(item);
-  }
+  for (const item of list.items) (groups[item.source] ??= []).push(item);
 
   const uncheckedCount = list.items.filter(i => !i.checked).length;
 
@@ -108,6 +125,14 @@ function ListView({ list }: ListViewProps) {
         {uncheckedCount === 0
           ? <span className="list-done">All done!</span>
           : <span>{uncheckedCount} item{uncheckedCount !== 1 ? 's' : ''} remaining</span>}
+        <button
+          className="btn btn-ghost"
+          onClick={() => refresh.mutate()}
+          disabled={refreshing}
+          aria-label="Refresh prices"
+        >
+          {refreshing ? 'Checking prices…' : 'Refresh prices'}
+        </button>
       </div>
 
       {(['recipe', 'staple', 'manual'] as const).map(source => {
@@ -121,6 +146,8 @@ function ListView({ list }: ListViewProps) {
                 <ItemRow
                   key={item.id}
                   item={item}
+                  price={priceByItemId.get(item.id)}
+                  refreshing={refreshing}
                   onToggle={checked => updateItem.mutate({ itemId: item.id, checked })}
                   onDelete={() => deleteItem.mutate(item.id)}
                 />
