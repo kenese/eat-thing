@@ -2,15 +2,10 @@
   "buildCommand": "pnpm turbo build --filter=@eat/web",
   "outputDirectory": "apps/web/dist",
   "installCommand": "pnpm install --frozen-lockfile",
-  "functions": {
-    "apps/server/src/app.ts": {
-      "includeFiles": "apps/server/src/**"
-    }
-  },
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "/apps/server/src/app.ts"
+      "source": "/api/(.*)",
+      "destination": "/api/index.ts"
     },
     {
       "source": "/:path*",
