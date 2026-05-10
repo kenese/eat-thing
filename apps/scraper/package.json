@@ -8,7 +8,10 @@
         "start": "node dist/index.js",
         "build": "tsc",
         "clean": "rm -rf dist",
-        "test": "vitest run"
+        "test": "vitest run",
+        "bootstrap:newworld": "tsx src/bootstrap/newworld-login.ts",
+        "bootstrap:ingest": "tsx src/bootstrap/ingest.ts",
+        "smoke:newworld": "tsx src/smoke/newworld.ts"
     },
     "dependencies": {
         "cheerio": "^1.2.0",
