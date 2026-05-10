@@ -26,6 +26,7 @@ vi.mock('../db/schema/index.js', () => ({
   mealPlans: {}, mealPlanEntries: {}, recipes: {}, recipeIngredients: {},
   inventoryItems: {}, canonicalFoods: {}, staples: {},
   shoppingLists: {}, shoppingListItems: {},
+  scraperJobs: { id: 'id' }, shoppingListPrices: {},
 }));
 
 const { default: shoppingListsRouter } = await import('./shopping-lists');
@@ -76,5 +77,17 @@ describe('shopping-lists router', () => {
       .post('/api/shopping-lists/list-id/items')
       .send({ qty: 2, unit: 'count' });
     expect(res.status).toBe(400);
+  });
+
+  it('POST /:id/refresh-prices returns 401 unauthenticated', async () => {
+    mocks.getSession.mockResolvedValue(null);
+    const res = await request(app).post('/api/shopping-lists/list-1/refresh-prices');
+    expect(res.status).toBe(401);
+  });
+
+  it('GET /:id/prices returns 401 unauthenticated', async () => {
+    mocks.getSession.mockResolvedValue(null);
+    const res = await request(app).get('/api/shopping-lists/list-1/prices');
+    expect(res.status).toBe(401);
   });
 });

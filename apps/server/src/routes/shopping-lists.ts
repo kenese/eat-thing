@@ -8,6 +8,7 @@ import {
   mealPlans, mealPlanEntries, recipes, recipeIngredients,
   inventoryItems, canonicalFoods, staples,
   shoppingLists, shoppingListItems,
+  scraperJobs, shoppingListPrices,
 } from '../db/schema/index.js';
 
 const router: ExpressRouter = Router();
@@ -286,6 +287,74 @@ router.delete('/:listId/items/:itemId', withHousehold, async (req, res) => {
     if (existing.householdId !== req.householdId) { res.status(403).json({ error: 'Forbidden' }); return; }
     await db.delete(shoppingListItems).where(eq(shoppingListItems.id, itemId));
     res.json({ id: itemId });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ─── Price comparison (Phase 3) ───────────────────────────────────────────────
+
+router.post('/:id/refresh-prices', withHousehold, async (req, res) => {
+  const listId = req.params['id'] as string;
+  try {
+    const inserted = await db
+      .insert(scraperJobs)
+      .values({
+        householdId: req.householdId,
+        store: 'new_world',
+        type: 'compare_prices',
+        payload: { shoppingListId: listId },
+        status: 'pending',
+      })
+      .returning({ id: scraperJobs.id });
+
+    res.json({ jobId: inserted[0]?.id });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.get('/:id/prices', withHousehold, async (req, res) => {
+  const listId = req.params['id'] as string;
+  try {
+    const priceRows = await db
+      .select({
+        id: shoppingListPrices.id,
+        shoppingListItemId: shoppingListPrices.shoppingListItemId,
+        store: shoppingListPrices.store,
+        sku: shoppingListPrices.sku,
+        name: shoppingListPrices.name,
+        price: shoppingListPrices.price,
+        inStock: shoppingListPrices.inStock,
+        matched: shoppingListPrices.matched,
+        checkedAt: shoppingListPrices.checkedAt,
+      })
+      .from(shoppingListPrices)
+      .innerJoin(shoppingListItems, eq(shoppingListPrices.shoppingListItemId, shoppingListItems.id))
+      .where(eq(shoppingListItems.shoppingListId, listId));
+
+    const jobRows = await db
+      .select({ id: scraperJobs.id, status: scraperJobs.status, error: scraperJobs.error, payload: scraperJobs.payload })
+      .from(scraperJobs)
+      .where(and(eq(scraperJobs.householdId, req.householdId), eq(scraperJobs.type, 'compare_prices')))
+      .orderBy(desc(scraperJobs.createdAt))
+      .limit(5);
+
+    const job = jobRows.find(j => {
+      const p = j.payload as Record<string, unknown> | null;
+      return p && p['shoppingListId'] === listId;
+    }) ?? null;
+
+    res.json({
+      prices: priceRows.map(r => ({
+        ...r,
+        price: r.price !== null ? Number(r.price) : null,
+        checkedAt: r.checkedAt instanceof Date ? r.checkedAt.toISOString() : r.checkedAt,
+      })),
+      job: job ? { id: job.id, status: job.status, error: job.error } : null,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });

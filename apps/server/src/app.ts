@@ -12,6 +12,7 @@ import shoppingListsRouter from './routes/shopping-lists.js';
 import cookEventsRouter from './routes/cook-events.js';
 import syncRouter from './routes/sync.js';
 import ingestRouter from './routes/ingest.js';
+import scraperRouter from './routes/scraper.js';
 
 const app: express.Express = express();
 
@@ -42,5 +43,6 @@ app.use('/api/shopping-lists', shoppingListsRouter);
 app.use('/api/cook-events', cookEventsRouter);
 app.use('/api/sync', syncRouter);
 app.use('/api/ingest', ingestRouter);
+app.use('/api/scraper', scraperRouter);
 
 export default app;
