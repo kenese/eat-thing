@@ -64,14 +64,23 @@ Make adding recipes effortless.
 
 ## Phase 3 — Read-only supermarket integration
 
-Scraper on Mac mini. Logs in, reads. No writes to the supermarket account.
+Scraper on Mac mini. Logs in, reads. No writes to the supermarket account. Built one store at a time so the architecture is shaped by real adapters, not guesses.
 
-- [ ] Playwright session bootstrap: headed first-run for each store to capture login cookies
-- [ ] Encrypted credential / session storage (`supermarket_credentials`); encryption key lives only on the server
-- [ ] Per-store adapters: New World NZ, Pak'nSave, Woolworths NZ
-- [ ] Past-orders scrape → builds preferred-brand map (`supermarket_products.preferred`)
-- [ ] Match shopping list against current store catalog → cost + availability per store
-- [ ] Recommendation UI: cheapest store, convenient store, optional split across stores
+### Slice 1 — New World vertical (in progress)
+
+- [x] Encrypted credential storage; AES-256-GCM, key on the Mac mini only — _2026-05-10_
+- [x] Bootstrap: headed `bootstrap:newworld` (laptop) + `bootstrap:ingest` (mini) — _2026-05-10_
+- [x] `scraper_jobs` queue + lifecycle endpoints (pending / claim / result), aligned to existing OpenBrain HMAC scheme — _2026-05-10_
+- [x] New World adapter: search + past-orders parsers + `handle()` dispatch — _2026-05-10_
+- [x] Hybrid catalog matching with preferred-brand bias — _2026-05-10_
+- [x] Inline price + availability column on the existing `ShoppingListPage` — _2026-05-10_
+- [ ] First-run login (user at browser) + smoke test against live New World
+
+### Slice 2 — Pak'nSave + Woolworths + recommendation UI (next)
+
+- [ ] Pak'nSave adapter (parser, fixtures, smoke command)
+- [ ] Woolworths adapter (parser, fixtures, smoke command)
+- [ ] Multi-store recommendation UI: cheapest store, convenient store, optional split shop
 - [ ] Robustness: detect logged-out state and prompt user; retry/backoff for transient failures
 - [ ] `launchd` plists so both the scraper and the OpenBrain sync worker auto-start on the Mac mini
 
@@ -116,3 +125,4 @@ Adds items to cart on the user's behalf. User always clicks "place order" — se
 - 2026-05-09 — Phase 1: Mobile layouts complete — responsive CSS added for `PlanPage` (horizontal scroll-snap day columns, sidebar becomes horizontal row), `InventoryPage` (stacked header/actions), `ShoppingListPage` (column header, grid add-form).
 - 2026-05-09 — Phase 1: OpenBrain sync complete
 - 2026-05-10 — Phase 2: Recipe ingestion complete — /api/ingest/url (schema.org ld+json → Claude haiku fallback), /api/ingest/photo (Claude haiku multimodal), /api/ingest/search (TheMealDB); food-matcher with exact/alias/contains/LLM tiers returning confidence; ImportModal with URL/Photo/Search tabs + edit-and-confirm step prefilling RecipeForm; low-confidence ingredients highlighted in amber. Photos saved to Supabase Storage (eat-thing bucket) on recipe save. @anthropic-ai/sdk added to server. — `sync_dirty` table with INSERT…ON CONFLICT debounce; inventory/meal-plan/recipe routes fire markDirty after writes; `/api/sync` endpoints (pending, claim, complete, snapshots) gated by HMAC-SHA256 using `req.originalUrl`; `packages/openbrain` MCP client singleton + typed sync functions with `eat-thing:` external-ID scheme; `openbrain-worker` poller + `launchd` plist template for Mac mini.
+- 2026-05-10 — Phase 3 slice 1: New World vertical landed (encrypted sessions + jobs lifecycle + parser + matcher + price column). Headed bootstrap and live smoke pending user.

@@ -93,3 +93,9 @@ Each decision: short title, date, context, decision, rationale. Keep it terse �
 - `apps/scraper` and the OpenBrain sync worker run on the home Mac mini, supervised by `launchd`.
 - Workers communicate with the API via outbound HTTPS polling for pending jobs.
 **Rationale:** Splitting the frontend/API from background work means the app stays available when the Mac mini is down (no fresh OpenBrain syncs, but reads/writes still work). Polling avoids exposing a port at home. If poll chatter ever feels excessive, swap in SSE later — the polling-vs-push detail is hidden behind the worker SDK.
+
+## D17 — Supermarket session encryption key lives on the Mac mini only
+**Date:** 2026-05-10
+**Context:** PLAN.md and ARCHITECTURE.md disagreed on where the AES key for `supermarket_credentials.encrypted_session_blob` lives. Need a single home that the bootstrap and worker scripts can read.
+**Decision:** The key (`SUPERMARKET_ENC_KEY`, 32 bytes base64) lives only on the Mac mini. The server stores ciphertext as opaque bytes and never decrypts. Bootstrap is split: a headed login script runs on the user's laptop and writes plaintext `storageState` to disk; the user transfers the file to the mini; an ingest script on the mini encrypts and POSTs.
+**Rationale:** A server compromise should not leak supermarket sessions, since they're not data the server's HTTP surface ever needs. Two-step bootstrap keeps the key off any other machine. Rotation cost is one re-bootstrap per store — acceptable for a two-user household.

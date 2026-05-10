@@ -127,7 +127,9 @@ Within a single request the writes are already one DB transaction → one dirty-
 - Runs on the home Mac mini (residential IP, always on).
 - Pulls jobs from the API over an authenticated channel (signed requests).
 - Per-store adapters live in `apps/scraper/src/stores/{newworld,paknsave,woolworths}.ts`.
-- Sessions persisted as encrypted cookie blobs in `supermarket_credentials`. First login per store is headed (user logs in once); subsequent runs are headless.
+- Sessions persisted as encrypted cookie blobs in `supermarket_credentials` (AES-256-GCM, key on the mini only). First login per store is two-step: a headed `bootstrap:newworld` runs on the user's laptop and writes a plaintext `storageState`; the user copies it to the mini, where `bootstrap:ingest` encrypts and POSTs. Subsequent runs are headless and decrypt on the mini.
+- Job model: `scraper_jobs` (pending → in_progress → done | failed) with type-specific payloads. Two types in slice 1: `import_past_orders` (one-shot per store) and `compare_prices` (per shopping list).
+- Per-item price snapshots in `shopping_list_prices` (one row per (item, store), upserted on each comparison).
 - Read-only V3, build-to-cart V4. Never places orders.
 
 ## Frontend conventions (kept from starter)
