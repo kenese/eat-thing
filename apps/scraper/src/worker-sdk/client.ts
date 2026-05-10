@@ -1,38 +1,44 @@
 import 'dotenv/config';
-import { signRequest, buildAuthHeader } from './sign.js';
-import type { JobResult, ScraperJob } from './types.js';
+import { signedHeaders } from './sign.js';
+import type { JobResult, ScraperJob, SessionEnvelope, Store } from './types.js';
 
 const API_BASE = process.env.API_BASE_URL ?? 'http://localhost:3001';
-const SECRET = process.env.SCRAPER_HMAC_SECRET ?? '';
+const SECRET = process.env.WORKER_HMAC_KEY ?? '';
 
-async function signedFetch(path: string, init: RequestInit = {}): Promise<Response> {
-  const method = (init.method ?? 'GET').toUpperCase();
-  const body = typeof init.body === 'string' ? init.body : '';
-  const { timestamp, signature } = signRequest(method, path, body, SECRET);
-
+async function workerFetch(method: string, path: string, body?: unknown): Promise<Response> {
+  const bodyStr = body ? JSON.stringify(body) : '';
   return fetch(`${API_BASE}${path}`, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: buildAuthHeader(timestamp, signature),
-      ...(init.headers as Record<string, string> | undefined),
-    },
+    method,
+    headers: signedHeaders(method, path, bodyStr, SECRET),
+    body: bodyStr || undefined,
   });
 }
 
-/** Fetch all pending jobs assigned to this scraper. */
 export async function fetchPendingJobs(): Promise<ScraperJob[]> {
-  const res = await signedFetch('/api/scraper/jobs/pending');
+  const res = await workerFetch('GET', '/api/scraper/jobs/pending');
   if (!res.ok) throw new Error(`Failed to fetch jobs: ${res.status}`);
-  return res.json() as Promise<ScraperJob[]>;
+  const json = (await res.json()) as { jobs: ScraperJob[] };
+  return json.jobs;
 }
 
-/** Report a job result back to the server. */
-export async function reportJobResult(result: JobResult): Promise<void> {
-  const body = JSON.stringify(result);
-  const res = await signedFetch(`/api/scraper/jobs/${result.jobId}/result`, {
-    method: 'POST',
-    body,
-  });
-  if (!res.ok) throw new Error(`Failed to report job result: ${res.status}`);
+export async function claimJob(jobId: string): Promise<void> {
+  const res = await workerFetch('POST', `/api/scraper/jobs/${jobId}/claim`);
+  if (!res.ok) throw new Error(`Failed to claim job ${jobId}: ${res.status}`);
+}
+
+export async function reportJobResult(jobId: string, result: JobResult): Promise<void> {
+  const res = await workerFetch('POST', `/api/scraper/jobs/${jobId}/result`, result);
+  if (!res.ok) throw new Error(`Failed to report job result ${jobId}: ${res.status}`);
+}
+
+export async function fetchSession(householdId: string, store: Store): Promise<SessionEnvelope | null> {
+  const res = await workerFetch('GET', `/api/scraper/session/${householdId}/${store}`);
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`Failed to fetch session: ${res.status}`);
+  return (await res.json()) as SessionEnvelope;
+}
+
+export async function postSession(householdId: string, store: Store, encryptedBlob: string): Promise<void> {
+  const res = await workerFetch('POST', '/api/scraper/session', { householdId, store, encryptedBlob });
+  if (!res.ok) throw new Error(`Failed to post session: ${res.status}`);
 }
