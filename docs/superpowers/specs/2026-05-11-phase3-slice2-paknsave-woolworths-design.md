@@ -24,18 +24,28 @@ Slice 1 landed New World as a vertical (encrypted sessions, jobs lifecycle, pars
 
 ```
 apps/scraper/src/stores/
-  paknsave.ts                   ← clone of newworld.ts, ~130 lines
-  paknsave.test.ts              ← clone of newworld.test.ts, synthetic HTML inline
-  woolworths.ts                 ← same shape
-  woolworths.test.ts            ← same shape
+  paknsave.ts                       ← clone of newworld.ts, ~130 lines
+  paknsave.test.ts                  ← clone of newworld.test.ts, reads fixtures
+  woolworths.ts                     ← same shape
+  woolworths.test.ts                ← same shape
+apps/scraper/test/fixtures/paknsave/
+  README.md                         ← documents selectors + how to refresh
+  search.html                       ← synthetic search-results HTML
+  orders.html                       ← synthetic past-orders HTML
+  logged-out.html                   ← synthetic logged-out marker page
+apps/scraper/test/fixtures/woolworths/
+  README.md
+  search.html
+  orders.html
+  logged-out.html
 apps/scraper/src/bootstrap/
-  paknsave.ts                   ← headed login → ~/.eat-thing/paknsave-storage.json
-  woolworths.ts                 ← headed login → ~/.eat-thing/woolworths-storage.json
+  paknsave-login.ts                 ← headed login → ~/.eat-thing/paknsave-storage.json
+  woolworths-login.ts               ← headed login → ~/.eat-thing/woolworths-storage.json
 apps/scraper/src/smoke/
-  paknsave.ts                   ← CLI: argv → JSON match
-  woolworths.ts                 ← CLI: argv → JSON match
-apps/scraper/package.json       ← add scripts: bootstrap:paknsave, bootstrap:woolworths,
-                                  smoke:paknsave, smoke:woolworths
+  paknsave.ts                       ← CLI: argv → JSON match
+  woolworths.ts                     ← CLI: argv → JSON match
+apps/scraper/package.json           ← add scripts: bootstrap:paknsave, bootstrap:woolworths,
+                                      smoke:paknsave, smoke:woolworths
 ```
 
 ### Files to remove (replace stubs)
@@ -94,14 +104,16 @@ Real selectors get tuned at smoke time when the user runs `smoke:<store>` agains
 
 ## Tests
 
-Each `<store>.test.ts` mirrors `newworld.test.ts` (4 tests):
+Each `<store>.test.ts` mirrors `newworld.test.ts` exactly (4 tests, parser-only):
 
-1. `parseSearchResults` — synthetic HTML with three products, asserts shape + `inStock` parsing + missing-brand handling.
-2. `parsePastOrders` — synthetic HTML with repeats of one SKU, asserts `timesPurchased` accumulation.
-3. `isLoggedOutPage` — true for HTML containing the marker, false otherwise.
-4. `handle({ type: 'compare_prices', ... })` end-to-end with mocked `Browser`/`Page` returning canned HTML — asserts the resulting `JobResult.data.items` shape and that `pickMatch` was used (preferred-brand bias verified by a real `match.test.ts`, no need to retest here).
+1. `parseSearchResults` — reads `search.html` fixture; asserts shape, `inStock` parsing, three results.
+2. `parsePastOrders` — reads `orders.html` fixture; asserts dedupe + `timesPurchased` accumulation across two orders.
+3. `isLoggedOutPage` true case — reads `logged-out.html` fixture; expects `true`.
+4. `isLoggedOutPage` false case — reads `search.html` fixture; expects `false`.
 
-Inline HTML strings, no external fixtures.
+`handle()` is **not** unit-tested. End-to-end exercise of `handle()` happens at smoke time with a real Chromium against captured HTML. This matches slice 1.
+
+Tests read fixtures via `readFileSync(join(here, '..', '..', 'test', 'fixtures', '<store>', name))`, identical to `newworld.test.ts:7-9`.
 
 ## Bootstrap commands
 
@@ -111,7 +123,7 @@ pnpm --filter @eat/scraper bootstrap:paknsave
 pnpm --filter @eat/scraper bootstrap:woolworths
 ```
 
-Each opens Chromium pointed at the store's login page, waits for the user to complete login, then writes `storageState` to `~/.eat-thing/<store>-storage.json`. Identical structure to `bootstrap/newworld.ts:1-30`.
+Each opens Chromium pointed at the store's login page, waits for the user to complete login (detected via URL no longer containing `/login`), then writes `storageState` to `~/.eat-thing/<store>-storage.json`. Identical structure to `bootstrap/newworld-login.ts`.
 
 The user then runs the existing `bootstrap:ingest` command (no changes needed) to encrypt + POST the storage state to the server, just with a different `--store` and `--file` for each.
 
@@ -136,7 +148,8 @@ Each instantiates the right adapter, builds a synthetic `compare_prices` job for
 
 ## Test surface this slice adds
 
-- 8 new unit tests (4 per adapter)
+- 8 new unit tests (4 per adapter — all parser/marker tests, no `handle()` tests)
+- 8 new fixture files (4 per adapter: search.html, orders.html, logged-out.html, README.md)
 - 0 new E2E
 - All 163 existing unit tests stay green
 - All 13 existing E2E stay green
