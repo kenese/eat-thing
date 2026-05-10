@@ -294,3 +294,70 @@ export interface CookEvent {
   deductions: CookDeduction[];
   promptsResolved: CookPromptResponse[];
 }
+
+// ─── Supermarket / scraper ───────────────────────────────────────────────────
+
+export type Store = 'new_world' | 'paknsave' | 'woolworths';
+
+export type ScraperJobType = 'import_past_orders' | 'compare_prices';
+export type ScraperJobStatus = 'pending' | 'in_progress' | 'done' | 'failed';
+
+export interface ScraperJob {
+  id: string;
+  householdId: string;
+  store: Store;
+  type: ScraperJobType;
+  payload: Record<string, unknown> | null;
+  status: ScraperJobStatus;
+  attempts: number;
+  createdAt: string;
+  claimedAt: string | null;
+  completedAt: string | null;
+  error: string | null;
+}
+
+export interface ShoppingListPrice {
+  id: string;
+  shoppingListItemId: string;
+  store: Store;
+  sku: string | null;
+  name: string | null;
+  price: number | null;
+  inStock: boolean;
+  matched: boolean;
+  checkedAt: string;
+}
+
+export interface PricesForListResponse {
+  prices: ShoppingListPrice[];
+  job: { id: string; status: ScraperJobStatus; error: string | null } | null;
+}
+
+export interface RefreshPricesResponse {
+  jobId: string;
+}
+
+export interface ImportPastOrdersInput {
+  store: Store;
+}
+
+export interface ComparePricesResult {
+  items: Array<{
+    shoppingListItemId: string;
+    sku: string | null;
+    name: string | null;
+    brand: string | null;
+    price: number | null;
+    inStock: boolean;
+    matched: boolean;
+  }>;
+}
+
+export interface ImportPastOrdersResult {
+  products: Array<{
+    sku: string;
+    name: string;
+    brand: string | null;
+    canonicalFoodHint: string | null;
+  }>;
+}
