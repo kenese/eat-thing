@@ -8,3 +8,4 @@ export * from './meal-plans.js';
 export * from './shopping.js';
 export * from './supermarket.js';
 export * from './sync.js';
+export * from './prices.js';
