@@ -33,3 +33,13 @@
   border: 1px dashed var(--mute);
   padding: 2px 8px;
 }
+
+/* Paper-on-green variant for use on the today-hero card in MealsStrip. */
+.status-chip--cook.status-chip--on-hero {
+  background: var(--paper);
+  color: var(--green);
+}
+.status-chip--cook.status-chip--on-hero .status-chip-dot {
+  background: var(--green);
+  opacity: 1;
+}

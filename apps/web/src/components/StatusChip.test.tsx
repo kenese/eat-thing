@@ -22,4 +22,10 @@ describe('StatusChip', () => {
     render(<StatusChip kind="shop" />);
     expect(screen.getByText('needs shop')).toBeInTheDocument();
   });
+
+  it('applies the --on-hero modifier class when onHero is true', () => {
+    const { container } = render(<StatusChip kind="cook" onHero />);
+    const chip = container.querySelector('.status-chip');
+    expect(chip).toHaveClass('status-chip--on-hero');
+  });
 });
