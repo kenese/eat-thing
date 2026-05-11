@@ -3,6 +3,10 @@
 export type CanonicalUnit = 'g' | 'ml' | 'count';
 export type InventoryLocation = 'fridge' | 'pantry' | 'freezer' | 'other';
 
+// ─── Food categories ─────────────────────────────────────────────────────────
+
+export type Category = 'produce' | 'meat' | 'dairy' | 'pantry' | 'frozen' | 'drinks' | 'other';
+
 // ─── Canonical foods ─────────────────────────────────────────────────────────
 
 export interface CanonicalFood {
@@ -219,6 +223,7 @@ export interface ShoppingListItem {
   unit: CanonicalUnit;
   source: ShoppingSource;
   checked: boolean;
+  category: Category;
 }
 
 export interface ShoppingList {

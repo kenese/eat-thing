@@ -30,6 +30,8 @@ const updateItemSchema = z.object({
   message: 'At least one of checked or qty must be provided',
 });
 
+type Category = 'produce' | 'meat' | 'dairy' | 'pantry' | 'frozen' | 'drinks' | 'other';
+
 const listItemCols = {
   id: shoppingListItems.id,
   shoppingListId: shoppingListItems.shoppingListId,
@@ -39,7 +41,13 @@ const listItemCols = {
   unit: shoppingListItems.unit,
   source: shoppingListItems.source,
   checked: shoppingListItems.checked,
+  category: canonicalFoods.category,
 };
+
+function withCategory<T extends { category: string | null }>(row: T): Omit<T, 'category'> & { category: Category } {
+  const { category, ...rest } = row;
+  return { ...rest, category: ((category ?? 'other') as Category) };
+}
 
 const listCols = {
   id: shoppingLists.id,
@@ -50,11 +58,13 @@ const listCols = {
 };
 
 async function itemsForList(listId: string) {
-  return db
+  const rows = await db
     .select(listItemCols)
     .from(shoppingListItems)
+    .leftJoin(canonicalFoods, eq(canonicalFoods.id, shoppingListItems.canonicalFoodId))
     .where(eq(shoppingListItems.shoppingListId, listId))
     .orderBy(asc(shoppingListItems.source), asc(shoppingListItems.name));
+  return rows.map(withCategory);
 }
 
 // POST /api/shopping-lists/generate
@@ -234,8 +244,12 @@ router.put('/:listId/items/:itemId', withHousehold, async (req, res) => {
         ...(d.qty !== undefined && { qty: d.qty }),
       })
       .where(eq(shoppingListItems.id, itemId));
-    const [full] = await db.select(listItemCols).from(shoppingListItems).where(eq(shoppingListItems.id, itemId));
-    res.json(full);
+    const [full] = await db
+      .select(listItemCols)
+      .from(shoppingListItems)
+      .leftJoin(canonicalFoods, eq(canonicalFoods.id, shoppingListItems.canonicalFoodId))
+      .where(eq(shoppingListItems.id, itemId));
+    res.json(full ? withCategory(full) : null);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });
@@ -266,8 +280,12 @@ router.post('/:listId/items', withHousehold, async (req, res) => {
       name: parse.data.name, qty: parse.data.qty, unit: parse.data.unit,
       source: 'manual', checked: false,
     });
-    const [full] = await db.select(listItemCols).from(shoppingListItems).where(eq(shoppingListItems.id, id));
-    res.status(201).json(full);
+    const [full] = await db
+      .select(listItemCols)
+      .from(shoppingListItems)
+      .leftJoin(canonicalFoods, eq(canonicalFoods.id, shoppingListItems.canonicalFoodId))
+      .where(eq(shoppingListItems.id, id));
+    res.status(201).json(full ? withCategory(full) : null);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });
