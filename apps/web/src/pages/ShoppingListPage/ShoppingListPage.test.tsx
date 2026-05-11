@@ -34,8 +34,8 @@ const baseList = {
   id: 'list-1', householdId: 'h', generatedFromMealPlanId: null,
   createdAt: '2026-05-10T00:00:00Z', finalizedAt: null,
   items: [
-    { id: 'i1', shoppingListId: 'list-1', canonicalFoodId: 'cf1', name: 'Eggs',  qty: 1, unit: 'count', source: 'recipe', checked: false },
-    { id: 'i2', shoppingListId: 'list-1', canonicalFoodId: 'cf2', name: 'Bread', qty: 1, unit: 'count', source: 'staple', checked: false },
+    { id: 'i1', shoppingListId: 'list-1', canonicalFoodId: 'cf1', name: 'Eggs',  qty: 1, unit: 'count', source: 'recipe', checked: false, category: 'dairy' },
+    { id: 'i2', shoppingListId: 'list-1', canonicalFoodId: 'cf2', name: 'Bread', qty: 1, unit: 'count', source: 'staple', checked: false, category: 'pantry' },
   ],
 };
 
@@ -49,6 +49,23 @@ describe('ShoppingListPage prices', () => {
     hooks.useDeleteShoppingListItem.mockReturnValue({ mutate: vi.fn() });
   });
 
+  it('renders the new page title', () => {
+    hooks.usePricesForList.mockReturnValue({ data: { prices: [], job: null } });
+    hooks.useRefreshPrices.mockReturnValue({ mutate: vi.fn(), isPending: false });
+    renderPage();
+    expect(screen.getByText('The list')).toBeInTheDocument();
+  });
+
+  it('renders category section headings', () => {
+    hooks.usePricesForList.mockReturnValue({ data: { prices: [], job: null } });
+    hooks.useRefreshPrices.mockReturnValue({ mutate: vi.fn(), isPending: false });
+    renderPage();
+    // Eggs → dairy category → "Dairy & eggs" heading
+    expect(screen.getByText('Dairy & eggs')).toBeInTheDocument();
+    // Bread → pantry category → "Pantry & dry goods" heading
+    expect(screen.getByText('Pantry & dry goods')).toBeInTheDocument();
+  });
+
   it('renders matched price', () => {
     hooks.usePricesForList.mockReturnValue({
       data: {
@@ -58,7 +75,11 @@ describe('ShoppingListPage prices', () => {
     });
     hooks.useRefreshPrices.mockReturnValue({ mutate: vi.fn(), isPending: false });
     renderPage();
-    expect(screen.getByText('$7.49')).toBeInTheDocument();
+    // The price appears in the row cell, section subtotal, and sidebar totals
+    const priceEls = screen.getAllByText('$7.49');
+    expect(priceEls.length).toBeGreaterThanOrEqual(1);
+    // Confirm the per-item price cell is present
+    expect(priceEls.some((el) => el.classList.contains('sl-row-price'))).toBe(true);
   });
 
   it('renders out-of-stock', () => {
@@ -91,6 +112,7 @@ describe('ShoppingListPage prices', () => {
     });
     hooks.useRefreshPrices.mockReturnValue({ mutate: vi.fn(), isPending: false });
     renderPage();
+    // Sidebar refresh button shows "Checking prices…" when job is in_progress
     expect(screen.getByText('Checking prices…')).toBeInTheDocument();
   });
 
@@ -101,5 +123,13 @@ describe('ShoppingListPage prices', () => {
     renderPage();
     fireEvent.click(screen.getByRole('button', { name: /refresh prices/i }));
     await waitFor(() => expect(refreshMutate).toHaveBeenCalled());
+  });
+
+  it('send to store button is disabled', () => {
+    hooks.usePricesForList.mockReturnValue({ data: { prices: [], job: null } });
+    hooks.useRefreshPrices.mockReturnValue({ mutate: vi.fn(), isPending: false });
+    renderPage();
+    const sendBtn = screen.getByRole('button', { name: /send to/i });
+    expect(sendBtn).toBeDisabled();
   });
 });

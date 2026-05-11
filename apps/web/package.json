@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@eat/shared": "workspace:*",
+    "@eat/taxonomy": "workspace:*",
     "@tanstack/react-query": "^5.100.9",
     "@tanstack/react-query-persist-client": "^5.100.9",
     "better-auth": "^1.6.9",
