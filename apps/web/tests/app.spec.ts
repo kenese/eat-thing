@@ -121,12 +121,12 @@ test.describe('authenticated routes load', () => {
 
   test('plan route loads', async ({ page }) => {
     await page.goto('/plan');
-    await expect(page.getByRole('heading', { level: 1, name: 'Meal plan' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'This week' })).toBeVisible();
   });
 
   test('list route loads', async ({ page }) => {
     await page.goto('/list');
-    await expect(page.getByRole('heading', { level: 1, name: 'Shopping list' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'The list' })).toBeVisible();
   });
 
   test('unknown route redirects to inventory', async ({ page }) => {
@@ -147,22 +147,22 @@ test.describe('authenticated routes load', () => {
     await expect(importBtn).toBeVisible();
     await importBtn.click();
     await expect(page.getByRole('heading', { name: /import recipe/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'URL' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Photo' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Search' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'URL', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Photo', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Search', exact: true })).toBeVisible();
     // close modal
     await page.keyboard.press('Escape');
   });
 
   test('top nav links navigate between routes', async ({ page }) => {
     await page.goto('/inventory');
-    await page.getByRole('link', { name: 'Recipes' }).click();
+    await page.getByRole('link', { name: 'recipes' }).click();
     await expect(page).toHaveURL(/\/recipes$/);
-    await page.getByRole('link', { name: 'Plan' }).click();
+    await page.getByRole('link', { name: 'plan' }).click();
     await expect(page).toHaveURL(/\/plan$/);
-    await page.getByRole('link', { name: 'List' }).click();
+    await page.getByRole('link', { name: 'list' }).click();
     await expect(page).toHaveURL(/\/list$/);
-    await page.getByRole('link', { name: 'Inventory' }).click();
+    await page.getByRole('link', { name: 'inventory' }).click();
     await expect(page).toHaveURL(/\/inventory$/);
   });
 });

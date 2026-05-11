@@ -99,6 +99,18 @@ Adds items to cart on the user's behalf. User always clicks "place order" — se
 - [ ] Cart-link handoff: deep link or QR back to phone for checkout
 - [ ] Audit log of every scraper action (what was added, when, in which session)
 
+## Frontend restyle (complete) — _2026-05-11_
+
+Pure restyle to the Crisp + Persimmon system; behaviour preserved.
+
+- [x] Tokens + Google Fonts + global chrome (TopNav, page shell, PageTitle, FilterStrip, StatusChip, AgentStatusCard, Wordmark)
+- [x] Inventory: tabular ledger + use-this-week strip + sectioned by location
+- [x] Recipes: inventory-aware sections + editorial hero (lite) + image-top cards
+- [x] Meal plan: proportion strip + redesigned day cards + fill-day suggestions
+- [x] Shopping list: categories migration + two-pane layout + reason chips + agent status
+
+Deferred (own specs): Home dashboard, Shops nav destination, scan-receipt, print, delivery-window picker, per-meal reason pills, send-to-store CTA, `time`/`tags` on recipes, mobile re-cut.
+
 ## Cross-cutting / ongoing
 
 - [ ] Telemetry: structured logs + lightweight error reporting (Sentry free tier?)
