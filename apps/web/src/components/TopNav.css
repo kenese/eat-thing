@@ -1,46 +1,74 @@
 .topnav {
-    height: 52px;
-    min-height: 52px;
-    background: var(--bg-topnav);
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    padding: 0 20px;
-    gap: 32px;
+  background: var(--ink);
+  color: var(--paper);
+  padding: 14px var(--gutter);
+  display: flex;
+  align-items: center;
+  gap: 24px;
 }
 
 .topnav-brand {
-    font-size: 16px;
-    font-weight: 700;
-    background: linear-gradient(135deg, #6366f1, #ec4899);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    letter-spacing: -0.02em;
-    white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .topnav-links {
-    display: flex;
-    gap: 4px;
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  gap: 22px;
 }
 
 .topnav-link {
-    padding: 6px 16px;
-    border-radius: var(--radius);
-    color: var(--text-secondary);
-    text-decoration: none;
-    font-size: 14px;
-    font-weight: 500;
-    transition: all 0.15s ease;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: rgba(243, 245, 242, 0.6);
+  text-decoration: none;
+  padding-bottom: 3px;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s ease;
 }
 
 .topnav-link:hover {
-    color: var(--text-primary);
-    background: var(--bg-hover);
+  color: var(--paper);
 }
 
 .topnav-link--active {
-    color: white;
-    background: var(--bg-active);
+  color: var(--paper);
+  border-bottom-color: var(--persimmon);
+}
+
+.topnav-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.topnav-date {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(243, 245, 242, 0.7);
+}
+
+.topnav-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--persimmon);
+  color: var(--paper);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+@media (max-width: 768px) {
+  .topnav { padding: 12px var(--gutter-mobile); gap: 12px; }
+  .topnav-links { gap: 14px; }
+  .topnav-date { display: none; }
 }

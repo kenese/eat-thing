@@ -1,24 +1,23 @@
 import type { Meta, StoryObj } from '@storybook/react';
+import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { TopNav } from './TopNav';
-import { BrowserRouter } from 'react-router-dom';
 
-const meta = {
-    title: 'Components/TopNav',
-    component: TopNav,
-    parameters: {
-        layout: 'fullscreen',
-    },
-    decorators: [
-        (Story) => (
-            <BrowserRouter>
-                <Story />
-            </BrowserRouter>
-        ),
-    ],
-    tags: ['autodocs'],
-} satisfies Meta<typeof TopNav>;
+const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
+const meta: Meta<typeof TopNav> = {
+  title: 'Chrome/TopNav',
+  component: TopNav,
+  decorators: [
+    (Story) => (
+      <QueryClientProvider client={qc}>
+        <MemoryRouter><Story /></MemoryRouter>
+      </QueryClientProvider>
+    ),
+  ],
+};
 export default meta;
-type Story = StoryObj<typeof meta>;
+
+type Story = StoryObj<typeof TopNav>;
 
 export const Default: Story = {};
