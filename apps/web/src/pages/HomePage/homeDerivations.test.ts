@@ -135,6 +135,107 @@ describe('computeMeals', () => {
   });
 });
 
+import { computeShopSummary } from './homeDerivations';
+import type { ShoppingList, ShoppingListPrice, Category } from '@eat/shared';
+
+function listItem(partial: { name: string; category: Category; qty?: number; checked?: boolean; id?: string }) {
+  return {
+    id: partial.id ?? `i-${partial.name}`,
+    shoppingListId: 'sl-1',
+    canonicalFoodId: 'cf-1',
+    name: partial.name,
+    qty: partial.qty ?? 1,
+    unit: 'count' as const,
+    source: 'recipe' as const,
+    checked: partial.checked ?? false,
+    category: partial.category,
+  };
+}
+
+describe('computeShopSummary', () => {
+  it('returns empty state when list is null', () => {
+    const r = computeShopSummary(null, [], new Date('2026-05-12T08:00:00'));
+    expect(r.state).toBe('empty');
+    expect(r.aisles).toEqual([]);
+    expect(r.total).toBeNull();
+    expect(r.builtLabel).toBeNull();
+  });
+
+  it('returns empty state when list has no items', () => {
+    const list: ShoppingList = {
+      id: 'sl-1', householdId: 'h-1', generatedFromMealPlanId: null,
+      createdAt: '2026-05-11T09:14:00Z', finalizedAt: null, items: [],
+    };
+    const r = computeShopSummary(list, [], new Date('2026-05-12T08:00:00'));
+    expect(r.state).toBe('empty');
+  });
+
+  it('groups items by category and caps aisles at 4 by count desc', () => {
+    const list: ShoppingList = {
+      id: 'sl-1', householdId: 'h-1', generatedFromMealPlanId: null,
+      createdAt: '2026-05-11T09:14:00Z', finalizedAt: null,
+      items: [
+        listItem({ name: 'apple',   category: 'produce' }),
+        listItem({ name: 'kale',    category: 'produce' }),
+        listItem({ name: 'carrot',  category: 'produce' }),
+        listItem({ name: 'onion',   category: 'produce' }),
+        listItem({ name: 'milk',    category: 'dairy' }),
+        listItem({ name: 'butter',  category: 'dairy' }),
+        listItem({ name: 'chicken', category: 'meat' }),
+        listItem({ name: 'pasta',   category: 'pantry' }),
+        listItem({ name: 'beer',    category: 'drinks' }),
+      ],
+    };
+    const r = computeShopSummary(list, [], new Date('2026-05-12T08:00:00'));
+    expect(r.state).toBe('ready');
+    expect(r.aisles).toHaveLength(4);
+    expect(r.aisles[0]).toMatchObject({ name: 'produce', count: 4 });
+    expect(r.aisles[0].sampleItems).toEqual(['apple', 'kale', 'carrot']); // first 3
+    expect(r.aisles.map((a) => a.name)).toEqual(['produce', 'dairy', 'meat', 'pantry']);
+  });
+
+  it('sums unchecked-item prices for total', () => {
+    const list: ShoppingList = {
+      id: 'sl-1', householdId: 'h-1', generatedFromMealPlanId: null,
+      createdAt: '2026-05-11T09:14:00Z', finalizedAt: null,
+      items: [
+        listItem({ id: 'a', name: 'apple', category: 'produce', qty: 2 }),
+        listItem({ id: 'b', name: 'kale',  category: 'produce', checked: true }),
+        listItem({ id: 'c', name: 'milk',  category: 'dairy' }),
+      ],
+    };
+    const prices: ShoppingListPrice[] = [
+      { id: 'p1', shoppingListItemId: 'a', store: 'new_world', sku: null, name: null, price: 5.00, inStock: true, matched: true, checkedAt: '' },
+      { id: 'p2', shoppingListItemId: 'b', store: 'new_world', sku: null, name: null, price: 3.00, inStock: true, matched: true, checkedAt: '' },
+      { id: 'p3', shoppingListItemId: 'c', store: 'new_world', sku: null, name: null, price: 4.50, inStock: true, matched: true, checkedAt: '' },
+    ];
+    const r = computeShopSummary(list, prices, new Date('2026-05-12T08:00:00'));
+    // apple = 5 * 2, milk = 4.5 * 1, kale checked = ignored
+    expect(r.total).toBe(14.5);
+  });
+
+  it('returns null total when no prices exist', () => {
+    const list: ShoppingList = {
+      id: 'sl-1', householdId: 'h-1', generatedFromMealPlanId: null,
+      createdAt: '2026-05-11T09:14:00Z', finalizedAt: null,
+      items: [listItem({ name: 'apple', category: 'produce' })],
+    };
+    const r = computeShopSummary(list, [], new Date('2026-05-12T08:00:00'));
+    expect(r.total).toBeNull();
+  });
+
+  it('formats the built timestamp as short-day + lowercase am/pm', () => {
+    const list: ShoppingList = {
+      id: 'sl-1', householdId: 'h-1', generatedFromMealPlanId: null,
+      createdAt: '2026-05-10T09:14:00', // local time, Sunday 9:14 am
+      finalizedAt: null,
+      items: [listItem({ name: 'apple', category: 'produce' })],
+    };
+    const r = computeShopSummary(list, [], new Date('2026-05-12T08:00:00'));
+    expect(r.builtLabel).toBe('built sun 9:14 am');
+  });
+});
+
 import { coveragePill } from './homeDerivations';
 import type { MealCellStatus } from './homeDerivations';
 

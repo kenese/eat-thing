@@ -3,6 +3,7 @@ import type {
   MealPlanEntry,
   Recipe,
   ShoppingList,
+  ShoppingListPrice,
   CanonicalUnit,
   Category,
 } from '@eat/shared';
@@ -157,4 +158,60 @@ export function computeExpiring(items: InventoryRow[], today: Date): ExpiringSum
     }))
     .sort((a, b) => a.daysLeft - b.daysLeft);
   return { rows: all.slice(0, 4), totalCount: all.length };
+}
+
+// ─── Shop summary ────────────────────────────────────────────────────────────
+
+function formatBuiltLabel(createdAt: string): string {
+  // createdAt comes either as ISO with Z or as a naive local string. Date handles both.
+  const d = new Date(createdAt);
+  const dow = SHORT_DAYS[d.getDay()];
+  const hours24 = d.getHours();
+  const hours12 = hours24 % 12 || 12;
+  const mins = String(d.getMinutes()).padStart(2, '0');
+  const ampm = hours24 < 12 ? 'am' : 'pm';
+  return `built ${dow} ${hours12}:${mins} ${ampm}`;
+}
+
+export function computeShopSummary(
+  list: ShoppingList | null,
+  prices: ShoppingListPrice[],
+  _today: Date,
+): ShopSummary {
+  if (!list || list.items.length === 0) {
+    return { state: 'empty', total: null, builtLabel: null, aisles: [] };
+  }
+
+  // Group by category, count, collect first 3 sample names.
+  const byCat = new Map<Category, { count: number; sample: string[] }>();
+  for (const it of list.items) {
+    const bucket = byCat.get(it.category) ?? { count: 0, sample: [] };
+    bucket.count += 1;
+    if (bucket.sample.length < 3) bucket.sample.push(it.name);
+    byCat.set(it.category, bucket);
+  }
+  const aisles: AisleSummary[] = [...byCat.entries()]
+    .map(([name, v]) => ({ name, sampleItems: v.sample, count: v.count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 4);
+
+  // Total = Σ price × qty for unchecked items, only if any price exists.
+  const priceByItem = new Map(prices.map((p) => [p.shoppingListItemId, p.price]));
+  let total = 0;
+  let anyPrice = false;
+  for (const it of list.items) {
+    if (it.checked) continue;
+    const price = priceByItem.get(it.id);
+    if (price != null) {
+      total += price * it.qty;
+      anyPrice = true;
+    }
+  }
+
+  return {
+    state: 'ready',
+    total: anyPrice ? Math.round(total * 100) / 100 : null,
+    builtLabel: formatBuiltLabel(list.createdAt),
+    aisles,
+  };
 }
