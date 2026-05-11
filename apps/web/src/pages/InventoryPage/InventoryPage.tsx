@@ -1,67 +1,135 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useInventory, useDeleteInventoryItem } from '../../hooks/useInventory';
 import { ItemForm } from './ItemForm';
+import { PageTitle } from '../../components/PageTitle';
+import { FilterStrip } from '../../components/FilterStrip';
 import type { InventoryRow, InventoryLocation } from '@eat/shared';
 import './InventoryPage.css';
 
-const LOCATION_TABS = [
-  { key: 'all' as const, label: 'All' },
-  { key: 'fridge' as const, label: 'Fridge' },
-  { key: 'pantry' as const, label: 'Pantry' },
-  { key: 'freezer' as const, label: 'Freezer' },
-  { key: 'other' as const, label: 'Other' },
-];
-
 type LocationFilter = 'all' | InventoryLocation;
 
-function ExpiryBadge({ expiresAt }: { expiresAt: string | null }) {
-  if (!expiresAt) return null;
-  const days = Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 86_400_000);
-  if (days < 0) return <span className="expiry-badge expired">Expired</span>;
-  if (days <= 7) return <span className="expiry-badge soon">Expires {days}d</span>;
-  return null;
+const LOCATIONS: { key: InventoryLocation; label: string }[] = [
+  { key: 'fridge',  label: 'Fridge' },
+  { key: 'pantry',  label: 'Pantry' },
+  { key: 'freezer', label: 'Freezer' },
+  { key: 'other',   label: 'Other' },
+];
+
+function daysUntil(iso: string | null): number | null {
+  if (!iso) return null;
+  return Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000);
 }
 
-interface ItemRowProps {
-  item: InventoryRow;
-  onEdit: () => void;
-  onDelete: () => void;
+type Urgency = 'expired' | 'soon' | 'thisweek' | 'fresh' | 'none';
+function urgencyOf(days: number | null): Urgency {
+  if (days === null) return 'none';
+  if (days < 0) return 'expired';
+  if (days <= 3) return 'soon';
+  if (days <= 7) return 'thisweek';
+  return 'fresh';
 }
 
-function ItemRow({ item, onEdit, onDelete }: ItemRowProps) {
-  const [confirming, setConfirming] = useState(false);
+function fmtQty(qty: number, unit: string): string {
+  const n = qty % 1 === 0 ? qty.toString() : qty.toFixed(qty < 1 ? 2 : 1);
+  return `${n} ${unit}`;
+}
 
+function ExpiryCell({ days }: { days: number | null }) {
+  const u = urgencyOf(days);
+  const label =
+    days === null ? 'no exp'
+    : days < 0    ? `${-days}d ago`
+    : `${days}d`;
   return (
-    <li className="inv-item">
-      <div className="inv-item-main">
-        <div className="inv-item-name">
-          {item.foodName}
-          {item.brand && <span className="inv-item-brand">{item.brand}</span>}
-        </div>
-        <div className="inv-item-qty">
-          {item.qty % 1 === 0 ? item.qty : item.qty.toFixed(1)} {item.unit}
-        </div>
+    <div className={`inv-row-expires inv-row-expires--${u}`}>
+      <span className="inv-row-expires-dot" aria-hidden />
+      <span className="inv-row-expires-label">{label}</span>
+    </div>
+  );
+}
+
+function UseThisWeek({ items }: { items: InventoryRow[] }) {
+  const soon = items
+    .map((i) => ({ ...i, d: daysUntil(i.expiresAt) }))
+    .filter((i) => i.d !== null && i.d <= 3)
+    .sort((a, b) => (a.d ?? 0) - (b.d ?? 0))
+    .slice(0, 5);
+  if (soon.length === 0) return null;
+  return (
+    <div className="inv-use-week">
+      <div>
+        <div className="inv-use-week-title">use this week</div>
+        <div className="inv-use-week-meta">soonest to expire · {soon.length}</div>
       </div>
-      <div className="inv-item-footer">
-        <div className="inv-item-badges">
-          <span className={`loc-badge loc-${item.location}`}>{item.location}</span>
-          <ExpiryBadge expiresAt={item.expiresAt} />
+      {soon.map((it) => (
+        <div key={it.id} className="inv-use-cell">
+          <div className={`inv-use-cell-days${(it.d ?? 0) <= 1 ? ' inv-use-cell-days--urgent' : ''}`}>
+            {it.d}<span style={{ fontSize: 13, marginLeft: 2 }}>d</span>
+          </div>
+          <div className="inv-use-cell-name">{it.foodName}</div>
+          <div className="inv-use-cell-sub">{fmtQty(it.qty, it.unit)}</div>
         </div>
-        <div className="inv-item-actions">
-          {confirming ? (
-            <>
-              <button className="btn-icon danger" onClick={() => { onDelete(); setConfirming(false); }} title="Confirm">✓</button>
-              <button className="btn-icon" onClick={() => setConfirming(false)} title="Cancel">✕</button>
-            </>
-          ) : (
-            <>
-              <button className="btn-icon" onClick={onEdit} title="Edit">✎</button>
-              <button className="btn-icon ghost-danger" onClick={() => setConfirming(true)} title="Delete">🗑</button>
-            </>
-          )}
-        </div>
+      ))}
+    </div>
+  );
+}
+
+function ItemRow({ item, onEdit, onDelete }: { item: InventoryRow; onEdit: () => void; onDelete: () => void }) {
+  const [confirming, setConfirming] = useState(false);
+  const days = daysUntil(item.expiresAt);
+  return (
+    <div className="inv-row">
+      <div className="inv-row-qty">{fmtQty(item.qty, item.unit)}</div>
+      <div className="inv-row-item">
+        <div className="inv-row-item-name">{item.foodName}</div>
+        {item.brand && <div className="inv-row-item-brand">{item.brand}</div>}
       </div>
-    </li>
+      <div className="inv-row-added">{(() => {
+        const da = daysUntil(item.purchasedAt);
+        if (da === null) return '—';
+        if (da >= 0) return 'today';
+        return `${-da}d ago`;
+      })()}</div>
+      <ExpiryCell days={days} />
+      <div className="inv-row-actions">
+        {confirming ? (
+          <>
+            <button className="inv-row-action inv-row-action--danger" onClick={() => { onDelete(); setConfirming(false); }}>confirm</button>
+            <button className="inv-row-action" onClick={() => setConfirming(false)}>cancel</button>
+          </>
+        ) : (
+          <>
+            <button className="inv-row-action" onClick={onEdit}>edit</button>
+            <button className="inv-row-action inv-row-action--danger" onClick={() => setConfirming(true)}>delete</button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function LocationGroup({ label, items, onEdit, onDelete }: {
+  label: string;
+  items: InventoryRow[];
+  onEdit: (it: InventoryRow) => void;
+  onDelete: (it: InventoryRow) => void;
+}) {
+  if (items.length === 0) return null;
+  return (
+    <div className="inv-group">
+      <div className="inv-group-header">
+        <span className="inv-group-label">{label}</span>
+        <span className="inv-group-count">{items.length} items</span>
+      </div>
+      {items.map((it) => (
+        <ItemRow
+          key={it.id}
+          item={it}
+          onEdit={() => onEdit(it)}
+          onDelete={() => onDelete(it)}
+        />
+      ))}
+    </div>
   );
 }
 
@@ -69,9 +137,7 @@ export function InventoryPage() {
   const [locationFilter, setLocationFilter] = useState<LocationFilter>('all');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [modal, setModal] = useState<
-    { mode: 'add' } | { mode: 'edit'; item: InventoryRow } | null
-  >(null);
+  const [modal, setModal] = useState<{ mode: 'add' } | { mode: 'edit'; item: InventoryRow } | null>(null);
 
   const deleteMutation = useDeleteInventoryItem();
 
@@ -85,55 +151,111 @@ export function InventoryPage() {
     q: debouncedSearch || undefined,
   });
 
+  // Sort within each location by expiry ascending (nulls last).
+  const sortedByLocation = useMemo(() => {
+    const buckets: Record<InventoryLocation, InventoryRow[]> = {
+      fridge: [], pantry: [], freezer: [], other: [],
+    };
+    for (const it of items) buckets[it.location].push(it);
+    for (const k of Object.keys(buckets) as InventoryLocation[]) {
+      buckets[k].sort((a, b) => {
+        const da = daysUntil(a.expiresAt);
+        const db = daysUntil(b.expiresAt);
+        if (da === null && db === null) return 0;
+        if (da === null) return 1;
+        if (db === null) return -1;
+        return da - db;
+      });
+    }
+    return buckets;
+  }, [items]);
+
+  const expSoon = items.filter((i) => {
+    const d = daysUntil(i.expiresAt);
+    return d !== null && d <= 7;
+  }).length;
+
+  const now = new Date();
+  const eyebrow = `THE KITCHEN · ${now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }).toLowerCase()}`;
+
+  const tabs = [
+    { key: 'all', label: 'All', count: items.length },
+    ...LOCATIONS.map((l) => ({
+      key: l.key,
+      label: l.label,
+      count: sortedByLocation[l.key].length,
+    })),
+  ];
+
+  const locationsToRender: InventoryLocation[] =
+    locationFilter === 'all' ? ['fridge', 'pantry', 'freezer', 'other'] : [locationFilter];
+
   return (
     <div className="inventory-page">
-      <div className="inv-header">
-        <h1>Inventory</h1>
-        <button className="btn-primary" onClick={() => setModal({ mode: 'add' })}>+ Add</button>
-      </div>
-
-      <div className="loc-tabs">
-        {LOCATION_TABS.map(({ key, label }) => (
-          <button
-            key={key}
-            className={`loc-tab${locationFilter === key ? ' active' : ''}`}
-            onClick={() => setLocationFilter(key)}
-          >
-            {label}
+      <PageTitle
+        eyebrow={eyebrow}
+        title="Inventory"
+        summary={
+          <>
+            <strong>{items.length} items</strong> on hand
+            {expSoon > 0 && (
+              <>
+                {' · '}
+                <span style={{ color: 'var(--persim-deep)', fontWeight: 600 }}>
+                  {expSoon} expiring this week
+                </span>
+              </>
+            )}
+          </>
+        }
+        actions={
+          <button className="btn-primary" onClick={() => setModal({ mode: 'add' })}>
+            <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> add item
           </button>
-        ))}
-      </div>
+        }
+      />
 
-      <div className="inv-search">
-        <input
-          type="search"
-          placeholder="Search items…"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
-      </div>
+      <UseThisWeek items={items} />
 
-      <div className="inv-list-wrap">
-        {isLoading && <p className="inv-status">Loading…</p>}
-        {isError && <p className="inv-status error">Failed to load. Check your connection.</p>}
-        {!isLoading && !isError && items.length === 0 && (
-          <p className="inv-status empty">
-            {search ? 'No items match your search.' : 'No items yet — tap + Add to get started.'}
-          </p>
-        )}
-        {!isLoading && items.length > 0 && (
-          <ul className="inv-list">
-            {items.map(item => (
-              <ItemRow
-                key={item.id}
-                item={item}
-                onEdit={() => setModal({ mode: 'edit', item })}
-                onDelete={() => deleteMutation.mutate(item.id)}
-              />
-            ))}
-          </ul>
-        )}
-      </div>
+      <FilterStrip
+        tabs={tabs}
+        activeTab={locationFilter}
+        onTabChange={(k) => setLocationFilter(k as LocationFilter)}
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search items, brands…"
+        trailing={<><span>sort by</span><span style={{ fontWeight: 600 }}>expiry ↑</span></>}
+      />
+
+      {isLoading && <p className="inv-status">Loading…</p>}
+      {isError && <p className="inv-status error">Failed to load. Check your connection.</p>}
+
+      {!isLoading && !isError && items.length === 0 && (
+        <p className="inv-status">
+          {search ? 'No items match your search.' : 'No items yet — tap + add item to get started.'}
+        </p>
+      )}
+
+      {!isLoading && items.length > 0 && (
+        <>
+          <div className="inv-col-header">
+            <div>qty</div>
+            <div>item</div>
+            <div>added</div>
+            <div>expires</div>
+            <div></div>
+          </div>
+          {locationsToRender.map((loc) => (
+            <LocationGroup
+              key={loc}
+              label={loc}
+              items={sortedByLocation[loc]}
+              onEdit={(item) => setModal({ mode: 'edit', item })}
+              onDelete={(item) => deleteMutation.mutate(item.id)}
+            />
+          ))}
+        </>
+      )}
 
       {modal && (
         <ItemForm
