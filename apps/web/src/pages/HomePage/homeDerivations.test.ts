@@ -282,3 +282,12 @@ describe('coveragePill', () => {
     );
   });
 });
+
+import { subcopyDay } from './homeDerivations';
+
+describe('subcopyDay', () => {
+  it('returns the long day name 3 days from today', () => {
+    expect(subcopyDay(new Date('2026-05-10T00:00:00'))).toBe('wednesday'); // sun + 3 = wed
+    expect(subcopyDay(new Date('2026-05-12T00:00:00'))).toBe('friday');    // tue + 3 = fri
+  });
+});

@@ -145,6 +145,14 @@ export function coveragePill(meals: MealCellStatus[]): string | null {
 
 export { LONG_DAYS };
 
+// ─── Sub-copy ───────────────────────────────────────────────────────────────
+
+export function subcopyDay(today: Date): string {
+  const d = new Date(today);
+  d.setDate(d.getDate() + 3);
+  return LONG_DAYS[d.getDay()];
+}
+
 // ─── Expiring ───────────────────────────────────────────────────────────────
 
 export function computeExpiring(items: InventoryRow[], today: Date): ExpiringSummary {
