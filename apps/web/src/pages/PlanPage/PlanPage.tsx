@@ -12,7 +12,7 @@ import { PageTitle } from '../../components/PageTitle';
 import { StatusChip } from '../../components/StatusChip';
 import { computeMissing } from '../../lib/recipeMatch';
 import type { MealPlanEntry, RecipeSummary, Recipe } from '@eat/shared';
-import { mondayOf, addDays, toIsoDate, weekDays, formatWeekRange } from './dateUtils';
+import { mondayOf, addDays, toIsoDate, weekDays, formatWeekRange } from '../../lib/dateUtils';
 import { useNavigate } from 'react-router-dom';
 import './PlanPage.css';
 

@@ -12,7 +12,7 @@ import type {
   ShoppingList, ShoppingListItem, ShoppingListPrice, CanonicalUnit, Category, ShoppingSource,
 } from '@eat/shared';
 import { CATEGORY_LABEL, CATEGORY_ORDER } from '@eat/taxonomy';
-import { mondayOf, toIsoDate } from '../PlanPage/dateUtils';
+import { mondayOf, toIsoDate } from '../../lib/dateUtils';
 import './ShoppingListPage.css';
 
 type SourceTab = 'all' | ShoppingSource;
