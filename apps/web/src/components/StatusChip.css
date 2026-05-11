@@ -1,0 +1,35 @@
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.status-chip-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.9;
+  flex-shrink: 0;
+}
+
+.status-chip--cook     { background: var(--fresh);     color: var(--paper); }
+.status-chip--shop     { background: var(--persimmon); color: var(--paper); }
+.status-chip--leftover { background: var(--ink);       color: var(--paper); }
+.status-chip--expired  { background: var(--warn);      color: var(--paper); }
+.status-chip--soon     { background: var(--cream);     color: var(--persim-deep); }
+
+.status-chip--open {
+  background: transparent;
+  color: var(--mute);
+  border: 1px dashed var(--mute);
+  padding: 2px 8px;
+}
