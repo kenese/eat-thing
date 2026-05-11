@@ -1,10 +1,10 @@
 import React, { useRef, useState } from 'react';
-import { useIngestUrl, useIngestPhoto, useIngestSearch } from '../../hooks/useIngest';
+import { useIngestUrl, useIngestPhoto, useIngestSearch, useIngestOpenBrainList, useIngestOpenBrainParse } from '../../hooks/useIngest';
 import { RecipeForm } from './RecipeForm';
 import type { ImportedRecipe } from '@eat/shared';
 import './ImportModal.css';
 
-type Tab = 'url' | 'photo' | 'search';
+type Tab = 'url' | 'photo' | 'search' | 'openbrain';
 
 interface ImportModalProps {
   onClose: () => void;
@@ -27,6 +27,8 @@ export function ImportModal({ onClose }: ImportModalProps) {
   const urlMutation = useIngestUrl();
   const photoMutation = useIngestPhoto();
   const searchMutation = useIngestSearch();
+  const openBrainList = useIngestOpenBrainList(tab === 'openbrain');
+  const openBrainParse = useIngestOpenBrainParse();
 
   // ─── URL tab ──────────────────────────────────────────────────────────────
 
@@ -85,11 +87,12 @@ export function ImportModal({ onClose }: ImportModalProps) {
     );
   }
 
-  const isLoading = urlMutation.isPending || photoMutation.isPending || searchMutation.isPending;
+  const isLoading = urlMutation.isPending || photoMutation.isPending || searchMutation.isPending || openBrainParse.isPending;
   const error =
     (urlMutation.error as Error | null)?.message ||
     (photoMutation.error as Error | null)?.message ||
     (searchMutation.error as Error | null)?.message ||
+    (openBrainParse.error as Error | null)?.message ||
     null;
 
   return (
@@ -101,13 +104,13 @@ export function ImportModal({ onClose }: ImportModalProps) {
         </div>
 
         <div className="import-tabs">
-          {(['url', 'photo', 'search'] as Tab[]).map(t => (
+          {(['url', 'photo', 'search', 'openbrain'] as Tab[]).map(t => (
             <button
               key={t}
               className={`import-tab${tab === t ? ' active' : ''}`}
               onClick={() => setTab(t)}
             >
-              {t === 'url' ? 'URL' : t === 'photo' ? 'Photo' : 'Search'}
+              {t === 'url' ? 'URL' : t === 'photo' ? 'Photo' : t === 'search' ? 'Search' : 'OpenBrain'}
             </button>
           ))}
         </div>
@@ -158,6 +161,43 @@ export function ImportModal({ onClose }: ImportModalProps) {
               {isLoading ? 'Extracting…' : 'Extract recipe'}
             </button>
           </form>
+        )}
+
+        {tab === 'openbrain' && (
+          <div className="import-form">
+            <p className="import-hint">Import recipes stored in your OpenBrain account. Already-imported recipes are marked.</p>
+            {openBrainList.isLoading && <p className="recipes-status">Loading from OpenBrain…</p>}
+            {openBrainList.isError && (
+              <p className="form-error">{(openBrainList.error as Error).message}</p>
+            )}
+            {error && <p className="form-error">{error}</p>}
+            {openBrainList.data && openBrainList.data.length === 0 && (
+              <p className="recipes-status empty">No recipe thoughts found in OpenBrain.</p>
+            )}
+            {openBrainList.data && openBrainList.data.length > 0 && (
+              <ul className="search-results">
+                {openBrainList.data.map(r => (
+                  <li key={r.id} className="search-result-item">
+                    <div className="search-result-info">
+                      <strong>{r.title}</strong>
+                      <span>{r.preview || 'No preview'}</span>
+                      {r.alreadyImported && <span className="openbrain-badge">Already in eat-thing</span>}
+                    </div>
+                    <button
+                      className="btn-secondary"
+                      disabled={isLoading}
+                      onClick={async () => {
+                        const result = await openBrainParse.mutateAsync(r.id);
+                        setImported(result);
+                      }}
+                    >
+                      {openBrainParse.isPending ? 'Importing…' : 'Import'}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         )}
 
         {tab === 'search' && (

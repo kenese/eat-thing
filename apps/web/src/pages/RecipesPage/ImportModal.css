@@ -120,3 +120,13 @@
 .ingredient-row--unmatched .ingredient-name {
   color: var(--warning, #d97706);
 }
+
+.openbrain-badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: var(--surface-2, #f0f0f0);
+  color: var(--text-secondary, #888);
+  font-weight: 500;
+}

@@ -1,9 +1,13 @@
 import { Router, type Router as ExpressRouter } from 'express';
 import { z } from 'zod';
+import { eq } from 'drizzle-orm';
 import { withHousehold } from '../middleware/with-household.js';
 import { extractFromUrl } from '../lib/recipe-extractor.js';
 import { extractFromPhoto } from '../lib/photo-extractor.js';
 import { searchMealDb } from '../lib/themealdb.js';
+import { listOpenBrainRecipes, parseOpenBrainThought } from '../lib/openbrain-importer.js';
+import { db } from '../db/index.js';
+import { recipes } from '../db/schema/index.js';
 
 const router: ExpressRouter = Router();
 
@@ -64,6 +68,42 @@ router.get('/search', withHousehold, async (req, res) => {
   } catch (err) {
     console.error('[ingest/search]', err);
     res.status(502).json({ error: 'Search failed' });
+  }
+});
+
+// GET /api/ingest/openbrain — list recipe thoughts from the household OpenBrain account
+router.get('/openbrain', withHousehold, async (req, res) => {
+  try {
+    const rows = await db
+      .select({ name: recipes.name })
+      .from(recipes)
+      .where(eq(recipes.householdId, req.householdId));
+    const existingNames = new Set(rows.map(r => r.name.toLowerCase()));
+
+    const previews = await listOpenBrainRecipes(existingNames);
+    res.json(previews);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Failed to list OpenBrain recipes';
+    console.error('[ingest/openbrain]', err);
+    res.status(502).json({ error: msg });
+  }
+});
+
+// POST /api/ingest/openbrain/parse — parse a specific OpenBrain thought into a structured recipe draft
+router.post('/openbrain/parse', withHousehold, async (req, res) => {
+  const parse = z.object({ id: z.string().min(1) }).safeParse(req.body);
+  if (!parse.success) {
+    res.status(400).json({ error: 'id is required' });
+    return;
+  }
+
+  try {
+    const recipe = await parseOpenBrainThought(parse.data.id);
+    res.json(recipe);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Failed to parse thought';
+    console.error('[ingest/openbrain/parse]', err);
+    res.status(422).json({ error: msg });
   }
 });
 

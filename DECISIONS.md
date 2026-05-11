@@ -94,6 +94,12 @@ Each decision: short title, date, context, decision, rationale. Keep it terse �
 - Workers communicate with the API via outbound HTTPS polling for pending jobs.
 **Rationale:** Splitting the frontend/API from background work means the app stays available when the Mac mini is down (no fresh OpenBrain syncs, but reads/writes still work). Polling avoids exposing a port at home. If poll chatter ever feels excessive, swap in SSE later — the polling-vs-push detail is hidden behind the worker SDK.
 
+## D18 — OpenBrain bulk recipe import: single household account, per-user deferred
+**Date:** 2026-05-11
+**Context:** User wants to import recipes already stored in OpenBrain into eat-thing. D1 established OpenBrain as a sync target (eat-thing → OpenBrain). Reading back from OpenBrain for a one-off import is a different concern — migration, not ongoing app logic.
+**Decision:** The import feature reads from the single OpenBrain account configured on the Mac mini (same account the sync worker already writes to). Per-user OpenBrain accounts are not supported yet.
+**Rationale:** Supporting per-user accounts requires storing an API key per user in the DB, creating per-request MCP client instances, and adding a key-management UI — meaningful work with no current demand (two-user household, one OpenBrain account). The single-account implementation re-uses the existing singleton client. Per-user support is a named follow-up; a `// TODO(per-user-openbrain)` comment marks the extension point.
+
 ## D17 — Supermarket session encryption key lives on the Mac mini only
 **Date:** 2026-05-10
 **Context:** PLAN.md and ARCHITECTURE.md disagreed on where the AES key for `supermarket_credentials.encrypted_session_blob` lives. Need a single home that the bootstrap and worker scripts can read.
