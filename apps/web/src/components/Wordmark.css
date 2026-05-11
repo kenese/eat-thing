@@ -1,0 +1,26 @@
+.wordmark {
+  display: inline-flex;
+  align-items: baseline;
+  font-family: var(--font-sans);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.wordmark-italic {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 400;
+  margin-left: 4px;
+  color: var(--persimmon);
+}
+
+.wordmark--sm { font-size: 16px; }
+.wordmark--sm .wordmark-italic { font-size: 20px; }
+.wordmark--md { font-size: 22px; }
+.wordmark--md .wordmark-italic { font-size: 28px; }
+.wordmark--lg { font-size: 32px; }
+.wordmark--lg .wordmark-italic { font-size: 40px; }
+
+.wordmark--on-ink { color: var(--paper); }
+.wordmark--on-paper { color: var(--ink); }
