@@ -1,0 +1,3 @@
+-- baseline: full schema was applied via drizzle db:push prior to migration tracking.
+-- This empty migration establishes the drizzle migration baseline so subsequent
+-- migrations can be tracked as diffs against this snapshot.
