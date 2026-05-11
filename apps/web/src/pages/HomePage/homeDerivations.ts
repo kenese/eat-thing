@@ -117,6 +117,33 @@ export function computeMeals(
   return cells;
 }
 
+// ─── Coverage pill ──────────────────────────────────────────────────────────
+
+// Long day names indexed by Date.getDay() (0 = Sunday).
+const LONG_DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
+
+// Map short label ('mon') used in MealCellStatus to long ('monday').
+const SHORT_TO_LONG: Record<string, string> = {
+  sun: 'sunday', mon: 'monday', tue: 'tuesday', wed: 'wednesday',
+  thu: 'thursday', fri: 'friday', sat: 'saturday',
+};
+
+export function coveragePill(meals: MealCellStatus[]): string | null {
+  if (meals.length === 0 || meals[0].kind !== 'cook') return null;
+
+  let runEnd = 0;
+  for (let i = 0; i < meals.length; i++) {
+    if (meals[i].kind === 'cook') runEnd = i;
+    else break;
+  }
+  const first = SHORT_TO_LONG[meals[0].dayLabel] ?? meals[0].dayLabel;
+  if (runEnd === 0) return `you have what you need for ${first}`;
+  const last = SHORT_TO_LONG[meals[runEnd].dayLabel] ?? meals[runEnd].dayLabel;
+  return `you have what you need for ${first} & ${last}`;
+}
+
+export { LONG_DAYS };
+
 // ─── Expiring ───────────────────────────────────────────────────────────────
 
 export function computeExpiring(items: InventoryRow[], today: Date): ExpiringSummary {

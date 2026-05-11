@@ -134,3 +134,50 @@ describe('computeMeals', () => {
     expect(meals[0].kind).toBe('open');
   });
 });
+
+import { coveragePill } from './homeDerivations';
+import type { MealCellStatus } from './homeDerivations';
+
+describe('coveragePill', () => {
+  const mk = (kinds: ('cook' | 'shop' | 'open')[]): MealCellStatus[] => {
+    const longDays = ['mon', 'tue', 'wed', 'thu', 'fri'];
+    return kinds.map((k, i) => {
+      const base = { isToday: i === 0, dayLabel: longDays[i] };
+      if (k === 'cook') return { kind: 'cook', recipe: { id: `r${i}`, name: 'r' }, ...base };
+      if (k === 'shop') return { kind: 'shop', recipe: { id: `r${i}`, name: 'r' }, missingCount: 1, ...base };
+      return { kind: 'open', ...base };
+    });
+  };
+
+  it('returns null when day 1 is not cook (hidden)', () => {
+    expect(coveragePill(mk(['shop', 'cook', 'cook', 'cook', 'cook']))).toBeNull();
+    expect(coveragePill(mk(['open', 'cook', 'cook', 'cook', 'cook']))).toBeNull();
+  });
+
+  it('uses long form for a single-day run', () => {
+    expect(coveragePill(mk(['cook', 'shop', 'open', 'open', 'open']))).toBe(
+      'you have what you need for monday',
+    );
+  });
+
+  it('joins first & last with & for a 2+ day run', () => {
+    expect(coveragePill(mk(['cook', 'cook', 'shop', 'open', 'open']))).toBe(
+      'you have what you need for monday & tuesday',
+    );
+    expect(coveragePill(mk(['cook', 'cook', 'cook', 'shop', 'open']))).toBe(
+      'you have what you need for monday & wednesday',
+    );
+  });
+
+  it('stops the run at the first open day', () => {
+    expect(coveragePill(mk(['cook', 'open', 'cook', 'cook', 'cook']))).toBe(
+      'you have what you need for monday',
+    );
+  });
+
+  it('covers a 5-day all-cook run', () => {
+    expect(coveragePill(mk(['cook', 'cook', 'cook', 'cook', 'cook']))).toBe(
+      'you have what you need for monday & friday',
+    );
+  });
+});
