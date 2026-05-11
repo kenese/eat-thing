@@ -58,6 +58,65 @@ function formatQty(qty: number, unit: CanonicalUnit): string {
   return `${rounded} ${unit}`;
 }
 
+// ─── Meals ──────────────────────────────────────────────────────────────────
+
+const SHORT_DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
+
+function isoDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+export function computeMeals(
+  entries: MealPlanEntry[],
+  recipesById: Record<string, Recipe>,
+  inventory: InventoryRow[],
+  today: Date,
+): MealCellStatus[] {
+  const cells: MealCellStatus[] = [];
+  for (let i = 0; i < 5; i++) {
+    const date = new Date(today);
+    date.setDate(today.getDate() + i);
+    const iso = isoDate(date);
+    const dayLabel = SHORT_DAYS[date.getDay()];
+    const isToday = i === 0;
+
+    const dayEntry = entries.find((e) => e.date === iso);
+    if (!dayEntry) {
+      cells.push({ kind: 'open', isToday, dayLabel });
+      continue;
+    }
+
+    const recipe = recipesById[dayEntry.recipeId];
+    if (!recipe) {
+      // Still loading the full recipe — fall back to open rather than guess.
+      cells.push({ kind: 'open', isToday, dayLabel });
+      continue;
+    }
+
+    const missing = computeMissing(recipe, inventory);
+    if (missing.length === 0) {
+      cells.push({
+        kind: 'cook',
+        recipe: { id: recipe.id, name: recipe.name },
+        isToday,
+        dayLabel,
+      });
+    } else {
+      cells.push({
+        kind: 'shop',
+        recipe: { id: recipe.id, name: recipe.name },
+        missingCount: missing.length,
+        isToday,
+        dayLabel,
+      });
+    }
+  }
+  return cells;
+}
+
 // ─── Expiring ───────────────────────────────────────────────────────────────
 
 export function computeExpiring(items: InventoryRow[], today: Date): ExpiringSummary {

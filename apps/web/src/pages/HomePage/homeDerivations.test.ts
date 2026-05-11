@@ -50,3 +50,87 @@ describe('computeExpiring', () => {
     expect(result.rows[0].daysLeft).toBe(1);
   });
 });
+
+import { computeMeals } from './homeDerivations';
+import type { MealPlanEntry, Recipe } from '@eat/shared';
+
+function recipe(id: string, ingredients: { name: string; canonicalFoodId: string; qty: number }[]): Recipe {
+  return {
+    id,
+    householdId: 'h-1',
+    name: `Recipe ${id}`,
+    servings: 4,
+    sourceUrl: null,
+    sourceImage: null,
+    instructions: null,
+    ingredients: ingredients.map((ing, i) => ({
+      id: `${id}-ing-${i}`,
+      recipeId: id,
+      canonicalFoodId: ing.canonicalFoodId,
+      foodName: ing.name,
+      qty: ing.qty,
+      unit: 'count',
+      optional: false,
+      sortOrder: i,
+    })),
+    createdAt: '2026-05-12T00:00:00Z',
+    updatedAt: '2026-05-12T00:00:00Z',
+  };
+}
+
+function entry(date: string, recipeId: string): MealPlanEntry {
+  return {
+    id: `entry-${date}`,
+    mealPlanId: 'plan-1',
+    date,
+    recipeId,
+    recipeName: `Recipe ${recipeId}`,
+    servings: 4,
+    status: 'planned',
+  };
+}
+
+describe('computeMeals', () => {
+  // Anchor today to a known weekday so day labels are deterministic.
+  const today = new Date('2026-05-11T08:00:00'); // Monday
+
+  it('returns 5 cells starting today with correct short day labels', () => {
+    const meals = computeMeals([], {}, [], today);
+    expect(meals.map((m) => m.dayLabel)).toEqual(['mon', 'tue', 'wed', 'thu', 'fri']);
+    expect(meals[0].isToday).toBe(true);
+    expect(meals[1].isToday).toBe(false);
+  });
+
+  it('marks days with no entry as open', () => {
+    const meals = computeMeals([], {}, [], today);
+    expect(meals.every((m) => m.kind === 'open')).toBe(true);
+  });
+
+  it('marks a day cook when inventory covers every ingredient', () => {
+    const r = recipe('r1', [{ name: 'salt', canonicalFoodId: 'cf-salt', qty: 1 }]);
+    const inv = [{
+      id: 'i1', householdId: 'h-1', canonicalFoodId: 'cf-salt', foodName: 'salt',
+      qty: 100, unit: 'g' as const, brand: null, location: 'pantry' as const,
+      purchasedAt: null, expiresAt: null,
+      createdAt: '2026-05-12T00:00:00Z', updatedAt: '2026-05-12T00:00:00Z',
+    }];
+    const meals = computeMeals([entry('2026-05-11', 'r1')], { r1: r }, inv, today);
+    expect(meals[0].kind).toBe('cook');
+  });
+
+  it('marks a day shop with missingCount when ingredients are missing', () => {
+    const r = recipe('r1', [
+      { name: 'salt',  canonicalFoodId: 'cf-salt',  qty: 1 },
+      { name: 'flour', canonicalFoodId: 'cf-flour', qty: 1 },
+    ]);
+    const meals = computeMeals([entry('2026-05-11', 'r1')], { r1: r }, [], today);
+    expect(meals[0].kind).toBe('shop');
+    if (meals[0].kind === 'shop') expect(meals[0].missingCount).toBe(2);
+  });
+
+  it('falls back to open when the recipe is not in the recipesById map yet', () => {
+    // Happens while individual useRecipe queries are still loading.
+    const meals = computeMeals([entry('2026-05-11', 'r1')], {}, [], today);
+    expect(meals[0].kind).toBe('open');
+  });
+});
