@@ -11,9 +11,11 @@
         "test": "vitest run",
         "bootstrap:newworld": "tsx src/bootstrap/newworld-login.ts",
         "bootstrap:paknsave": "tsx src/bootstrap/paknsave-login.ts",
+        "bootstrap:woolworths": "tsx src/bootstrap/woolworths-login.ts",
         "bootstrap:ingest": "tsx src/bootstrap/ingest.ts",
         "smoke:newworld": "tsx src/smoke/newworld.ts",
-        "smoke:paknsave": "tsx src/smoke/paknsave.ts"
+        "smoke:paknsave": "tsx src/smoke/paknsave.ts",
+        "smoke:woolworths": "tsx src/smoke/woolworths.ts"
     },
     "dependencies": {
         "cheerio": "^1.2.0",
