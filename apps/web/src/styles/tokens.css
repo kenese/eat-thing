@@ -1,0 +1,29 @@
+:root {
+  /* ── Color (Crisp + Persimmon, from design_handoff_eat_thing/README.md) ── */
+  --paper: #f3f5f2;
+  --paper2: #eaeee7;
+  --cream: #e6ebe4;
+  --ink: #0d1714;
+  --ink2: #3a443e;
+  --ink3: #5a6359;
+  --mute: #6e7872;
+  --green: #1f5d33;
+  --fresh: #5aa758;
+  --persimmon: #d96e2e;
+  --persim-deep: #b6541d;
+  --warn: #c2412e;
+  --rule: rgba(13, 23, 20, 0.08);
+  --rule2: rgba(13, 23, 20, 0.04);
+
+  /* ── Typography ── */
+  --font-sans: "Schibsted Grotesk", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-serif: "Lora", Georgia, serif;
+
+  /* ── Shape ── */
+  --gutter: 36px;
+  --gutter-mobile: 20px;
+  --radius-card: 12px;
+  --radius-card-lg: 14px;
+  --radius-control: 8px;
+  --radius-pill: 999px;
+}

@@ -1,16 +1,4 @@
-:root {
-  --bg-primary: #0f0f1a;
-  --bg-secondary: #1a1a2e;
-  --bg-sidebar: #16162a;
-  --bg-topnav: #12122a;
-  --bg-hover: #252545;
-  --bg-active: #6366f1;
-  --text-primary: #e2e8f0;
-  --text-secondary: #94a3b8;
-  --text-accent: #a5b4fc;
-  --border: #2d2d50;
-  --radius: 8px;
-}
+@import "./styles/tokens.css";
 
 * {
   margin: 0;
@@ -18,45 +6,37 @@
   box-sizing: border-box;
 }
 
-body {
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  overflow: hidden;
-  height: 100vh;
-  width: 100vw;
+html, body, #root {
+  height: 100%;
 }
 
-#root {
-  height: 100vh;
-  width: 100vw;
+body {
+  font-family: var(--font-sans);
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 .app {
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  width: 100vw;
+  min-height: 100vh;
 }
 
 .app-body {
   flex: 1;
   display: flex;
-  overflow: hidden;
+  flex-direction: column;
 }
 
-.page-with-sidebar {
-  display: flex;
-  flex: 1;
-  overflow: hidden;
-}
-
-.main-content {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg-primary);
+.page {
+  padding: 24px var(--gutter) 36px;
+  max-width: 1440px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 .page-centered {
@@ -66,14 +46,28 @@ body {
   align-items: center;
   justify-content: center;
   gap: 12px;
+  padding: 32px;
 }
 
 .page-centered h2 {
-  font-size: 24px;
-  font-weight: 600;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 36px;
+  color: var(--ink);
 }
 
 .page-placeholder {
-  color: var(--text-secondary);
+  color: var(--mute);
   font-size: 14px;
+}
+
+/* Persimmon period — reusable */
+.dot {
+  color: var(--persimmon);
+}
+
+@media (max-width: 768px) {
+  .page {
+    padding: 16px var(--gutter-mobile) 24px;
+  }
 }
