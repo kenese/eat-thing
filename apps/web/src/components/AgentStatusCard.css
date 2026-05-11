@@ -1,0 +1,45 @@
+.agent-card {
+  background: var(--ink);
+  color: var(--paper);
+  border-radius: var(--radius-card);
+  padding: 14px 16px;
+}
+
+.agent-card-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.agent-card-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.agent-card--idle    .agent-card-eyebrow { color: var(--fresh); }
+.agent-card--idle    .agent-card-dot     { background: var(--fresh); }
+.agent-card--running .agent-card-eyebrow { color: var(--persimmon); }
+.agent-card--running .agent-card-dot     { background: var(--persimmon); animation: agent-pulse 1.2s ease-in-out infinite; }
+.agent-card--failed  .agent-card-eyebrow { color: var(--warn); }
+.agent-card--failed  .agent-card-dot     { background: var(--warn); }
+
+.agent-card-message {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 14px;
+  color: rgba(243, 245, 242, 0.8);
+  margin-top: 6px;
+  line-height: 1.4;
+}
+
+@keyframes agent-pulse {
+  0%, 100% { opacity: 0.45; }
+  50%      { opacity: 1; }
+}
