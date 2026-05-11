@@ -2,6 +2,7 @@ node_modules
 dist
 .turbo
 .pnpm-store/
+package-lock.json
 
 # Environment — never commit real keys
 .env
