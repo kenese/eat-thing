@@ -67,6 +67,7 @@ export interface RecipeSummary {
   name: string;
   servings: number;
   sourceUrl: string | null;
+  sourceImage: string | null;
   ingredientCount: number;
   createdAt: string;
   updatedAt: string;

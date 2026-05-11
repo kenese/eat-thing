@@ -77,6 +77,7 @@ router.get('/', withHousehold, async (req, res) => {
         name: recipes.name,
         servings: recipes.servings,
         sourceUrl: recipes.sourceUrl,
+        sourceImage: recipes.sourceImage,
         ingredientCount: sql<number>`(select count(*)::int from ${recipeIngredients} where ${recipeIngredients.recipeId} = ${recipes.id})`,
         createdAt: recipes.createdAt,
         updatedAt: recipes.updatedAt,
