@@ -199,7 +199,7 @@ function ListView({ list }: { list: ShoppingList }) {
 
   const agentState: AgentState =
     job?.status === 'pending' || job?.status === 'in_progress' ? 'running'
-    : job?.status === 'error' ? 'failed'
+    : job?.status === 'failed' ? 'failed'
     : 'idle';
   const agentMessage =
     agentState === 'running' ? `Checking prices${storeLabel ? ' at ' + storeLabel.name : ''}.`

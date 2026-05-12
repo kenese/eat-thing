@@ -1,8 +1,16 @@
+import { getDevMockResponse } from '../dev/mockApi';
+import { isDevSessionEnabled } from '../hooks/useSession';
+
 interface ApiError extends Error {
   status: number;
 }
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  if (isDevSessionEnabled() && (!init?.method || init.method === 'GET')) {
+    const mockResponse = getDevMockResponse(path);
+    if (mockResponse !== null) return mockResponse as T;
+  }
+
   const res = await fetch(path, {
     credentials: 'include',
     headers: { 'Content-Type': 'application/json', ...(init?.headers as Record<string, string>) },

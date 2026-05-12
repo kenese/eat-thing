@@ -28,9 +28,28 @@ async function stubAuthedShell(page: Page) {
   await page.route('**/api/inventory*', (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }),
   );
-  await page.route('**/api/recipes*', (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }),
-  );
+  await page.route('**/api/recipes*', (route) => {
+    if (route.request().url().includes('/api/recipes/recipe-1')) {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'recipe-1',
+          householdId: 'h-1',
+          name: 'Pasta',
+          servings: 4,
+          sourceUrl: null,
+          sourceImage: null,
+          instructions: null,
+          ingredients: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }),
+      });
+    }
+
+    return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+  });
   await page.route('**/api/meal-plans*', (route) =>
     route.fulfill({
       status: 200,
@@ -88,6 +107,15 @@ test.describe('unauthenticated', () => {
     await expect(page.getByRole('button', { name: /sign in with google/i })).toBeVisible();
   });
 
+  test('local dev session can enter the app without OAuth', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: /continue locally/i }).click();
+    await expect(page.getByRole('heading', { level: 1, name: /cook from what's already/i })).toBeVisible();
+    await expect(page.getByText('baby spinach')).toBeVisible();
+    await expect(page.getByText('Mushroom pasta')).toBeVisible();
+    await expect(page.locator('.shop-preview-total')).toBeVisible();
+  });
+
   test('clicking sign in posts to better-auth social endpoint', async ({ page }) => {
     await page.goto('/');
     const signInPost = page.waitForRequest(
@@ -104,9 +132,9 @@ test.describe('authenticated routes load', () => {
     await stubAuthedShell(page);
   });
 
-  test('redirects / to /inventory', async ({ page }) => {
+  test('home route loads', async ({ page }) => {
     await page.goto('/');
-    await expect(page).toHaveURL(/\/inventory$/);
+    await expect(page.getByRole('heading', { level: 1, name: /cook from what's already/i })).toBeVisible();
   });
 
   test('inventory route loads', async ({ page }) => {
