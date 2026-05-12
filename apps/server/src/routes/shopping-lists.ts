@@ -223,6 +223,8 @@ router.get('/current', withHousehold, async (req, res) => {
 // PUT /api/shopping-lists/:listId/items/:itemId
 router.put('/:listId/items/:itemId', withHousehold, async (req, res) => {
   const itemId = req.params['itemId'] as string;
+  const listId = req.params['listId'] as string;
+  if (!z.string().uuid().safeParse(itemId).success || !z.string().uuid().safeParse(listId).success) { res.status(404).json({ error: 'Not found' }); return; }
   const parse = updateItemSchema.safeParse(req.body);
   if (!parse.success) {
     res.status(400).json({ error: 'Invalid input', details: parse.error.flatten() });
@@ -259,6 +261,7 @@ router.put('/:listId/items/:itemId', withHousehold, async (req, res) => {
 // POST /api/shopping-lists/:listId/items
 router.post('/:listId/items', withHousehold, async (req, res) => {
   const listId = req.params['listId'] as string;
+  if (!z.string().uuid().safeParse(listId).success) { res.status(404).json({ error: 'Not found' }); return; }
   const parse = addItemSchema.safeParse(req.body);
   if (!parse.success) {
     res.status(400).json({ error: 'Invalid input', details: parse.error.flatten() });
@@ -295,6 +298,8 @@ router.post('/:listId/items', withHousehold, async (req, res) => {
 // DELETE /api/shopping-lists/:listId/items/:itemId
 router.delete('/:listId/items/:itemId', withHousehold, async (req, res) => {
   const itemId = req.params['itemId'] as string;
+  const listId = req.params['listId'] as string;
+  if (!z.string().uuid().safeParse(itemId).success || !z.string().uuid().safeParse(listId).success) { res.status(404).json({ error: 'Not found' }); return; }
   try {
     const [existing] = await db
       .select({ householdId: shoppingListItems.householdId })
@@ -315,6 +320,7 @@ router.delete('/:listId/items/:itemId', withHousehold, async (req, res) => {
 
 router.post('/:id/refresh-prices', withHousehold, async (req, res) => {
   const listId = req.params['id'] as string;
+  if (!z.string().uuid().safeParse(listId).success) { res.status(404).json({ error: 'Not found' }); return; }
   try {
     const inserted = await db
       .insert(scraperJobs)
@@ -336,6 +342,7 @@ router.post('/:id/refresh-prices', withHousehold, async (req, res) => {
 
 router.get('/:id/prices', withHousehold, async (req, res) => {
   const listId = req.params['id'] as string;
+  if (!z.string().uuid().safeParse(listId).success) { res.json({ prices: [], job: null }); return; }
   try {
     const priceRows = await db
       .select({

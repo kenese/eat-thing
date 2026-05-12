@@ -1,5 +1,5 @@
 {
-  "buildCommand": "pnpm turbo build --filter=@eat/web",
+  "buildCommand": "pnpm turbo build",
   "outputDirectory": "apps/web/dist",
   "installCommand": "pnpm install --frozen-lockfile",
   "rewrites": [

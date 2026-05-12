@@ -96,6 +96,7 @@ router.get('/', withHousehold, async (req, res) => {
 // GET /api/recipes/:id
 router.get('/:id', withHousehold, async (req, res) => {
   const id = req.params['id'] as string;
+  if (!z.string().uuid().safeParse(id).success) { res.status(404).json({ error: 'Recipe not found' }); return; }
 
   try {
     const [recipe] = await db
@@ -175,6 +176,7 @@ router.post('/', withHousehold, async (req, res) => {
 // PUT /api/recipes/:id
 router.put('/:id', withHousehold, async (req, res) => {
   const id = req.params['id'] as string;
+  if (!z.string().uuid().safeParse(id).success) { res.status(404).json({ error: 'Recipe not found' }); return; }
 
   const parse = updateSchema.safeParse(req.body);
   if (!parse.success) {
@@ -237,6 +239,7 @@ router.put('/:id', withHousehold, async (req, res) => {
 // DELETE /api/recipes/:id
 router.delete('/:id', withHousehold, async (req, res) => {
   const id = req.params['id'] as string;
+  if (!z.string().uuid().safeParse(id).success) { res.status(404).json({ error: 'Recipe not found' }); return; }
 
   try {
     const [existing] = await db
