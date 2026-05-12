@@ -178,8 +178,61 @@ test.describe('authenticated routes load', () => {
     await expect(page.getByRole('button', { name: 'URL', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Photo', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Search', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'OpenBrain', exact: true })).toBeVisible();
     // close modal
     await page.keyboard.press('Escape');
+  });
+
+  test('recipes page imports an OpenBrain thought into the confirmation form', async ({ page }) => {
+    await page.route('**/api/ingest/openbrain', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          {
+            id: 'thought-1',
+            title: 'Lemon Pasta',
+            preview: 'Servings: 2 Ingredients: pasta, lemon',
+            alreadyImported: true,
+          },
+        ]),
+      }),
+    );
+    await page.route('**/api/ingest/openbrain/parse', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          name: 'Lemon Pasta',
+          servings: 2,
+          sourceUrl: 'https://example.com/lemon-pasta',
+          sourceImage: null,
+          instructions: 'Boil pasta.',
+          ingredients: [
+            {
+              rawText: 'pasta',
+              canonicalFoodId: 'food-1',
+              foodName: 'pasta',
+              qty: 200,
+              unit: 'g',
+              optional: false,
+              confidence: 'high',
+            },
+          ],
+        }),
+      }),
+    );
+
+    await page.goto('/recipes');
+    await page.getByRole('button', { name: /import/i }).click();
+    await page.getByRole('button', { name: 'OpenBrain', exact: true }).click();
+    await expect(page.getByText('Lemon Pasta')).toBeVisible();
+    await expect(page.getByText('Already in eat-thing')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Import', exact: true }).click();
+
+    await expect(page.getByRole('heading', { name: /review imported recipe/i })).toBeVisible();
+    await expect(page.locator('#sourceUrl')).toHaveValue('https://example.com/lemon-pasta');
   });
 
   test('top nav links navigate between routes', async ({ page }) => {

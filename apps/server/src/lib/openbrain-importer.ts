@@ -1,6 +1,6 @@
-import Anthropic from '@anthropic-ai/sdk';
 import { searchThoughts, fetchThought } from '@eat/openbrain';
 import { matchIngredients } from './food-matcher.js';
+import { generateGeminiJson } from './gemini.js';
 import type { ImportedRecipe, ImportedIngredient } from '@eat/shared';
 
 export interface OpenBrainRecipePreview {
@@ -119,10 +119,9 @@ function parseIngredientLine(text: string): RawIngredient | null {
   return name ? { name, qty, unit } : null;
 }
 
-// ─── Claude fallback parser ───────────────────────────────────────────────────
+// ─── Gemini fallback parser ───────────────────────────────────────────────────
 
-async function parseWithClaude(content: string): Promise<RawRecipe | null> {
-  const client = new Anthropic();
+async function parseWithGemini(content: string): Promise<RawRecipe | null> {
   const prompt = `Extract the recipe from this text. Return ONLY valid JSON:
 {"name":"string","servings":4,"sourceUrl":"string or null","instructions":"string or null","ingredients":[{"name":"string","qty":1,"unit":"g|ml|count"}]}
 
@@ -132,15 +131,7 @@ Text:
 ${content.slice(0, 6000)}`;
 
   try {
-    const msg = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 2048,
-      messages: [{ role: 'user', content: prompt }],
-    });
-    const text = msg.content[0]?.type === 'text' ? msg.content[0].text : '';
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) return null;
-    return JSON.parse(jsonMatch[0]) as RawRecipe;
+    return await generateGeminiJson<RawRecipe>(prompt, { maxOutputTokens: 2048 });
   } catch {
     return null;
   }
@@ -152,7 +143,7 @@ export async function parseOpenBrainThought(thoughtId: string): Promise<Imported
   const thought = await fetchThought(thoughtId);
   if (!thought) throw new Error('Thought not found');
 
-  const raw = parseEatThingFormat(thought.content) ?? await parseWithClaude(thought.content);
+  const raw = parseEatThingFormat(thought.content) ?? await parseWithGemini(thought.content);
   if (!raw) throw new Error('Could not parse recipe from this thought');
 
   const matched = await matchIngredients(raw.ingredients.map(i => i.name));
@@ -173,7 +164,7 @@ export async function parseOpenBrainThought(thoughtId: string): Promise<Imported
   return {
     name: raw.name,
     servings: raw.servings,
-    sourceUrl: null,
+    sourceUrl: raw.sourceUrl,
     sourceImage: null,
     instructions: raw.instructions,
     ingredients,
