@@ -13,11 +13,12 @@ import cookEventsRouter from './routes/cook-events.js';
 import syncRouter from './routes/sync.js';
 import ingestRouter from './routes/ingest.js';
 import scraperRouter from './routes/scraper.js';
+import { getAllowedWebOrigins } from './auth-config.js';
 
 const app: express.Express = express();
 
 app.use(cors({
-  origin: process.env.WEB_BASE_URL || 'http://localhost:5173',
+  origin: getAllowedWebOrigins(),
   credentials: true,
 }));
 

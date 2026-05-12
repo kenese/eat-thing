@@ -3,12 +3,13 @@ import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { db } from './db/index.js';
 import { user, session, account, verification, households, memberships } from './db/schema/index.js';
+import { createAuthBaseURLConfig, getAllowedWebOrigins } from './auth-config.js';
 
 export const auth = betterAuth({
-  baseURL: process.env.SERVER_BASE_URL || 'http://localhost:3001',
+  baseURL: createAuthBaseURLConfig(),
   secret: process.env.BETTER_AUTH_SECRET!,
 
-  trustedOrigins: [process.env.WEB_BASE_URL || 'http://localhost:5173'],
+  trustedOrigins: getAllowedWebOrigins(),
 
   database: drizzleAdapter(db, {
     provider: 'pg',

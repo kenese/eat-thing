@@ -18,6 +18,9 @@ persistQueryClient({
   queryClient,
   persister: createIdbPersister(),
   maxAge: 1000 * 60 * 60 * 24,
+  dehydrateOptions: {
+    shouldDehydrateQuery: (query) => query.queryKey[0] !== 'session' && query.state.status === 'success',
+  },
 });
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
