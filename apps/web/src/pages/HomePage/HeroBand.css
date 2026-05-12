@@ -1,0 +1,135 @@
+.hero-band {
+  padding: 36px var(--gutter) 24px;
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 36px;
+  align-items: end;
+}
+
+/* ── Left column ── */
+
+.hero-band-left { min-width: 0; }
+
+.hero-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--cream);
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(13, 23, 20, 0.1);
+  margin-bottom: 14px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.hero-pill-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--fresh);
+}
+
+.hero-headline {
+  font-family: var(--font-sans);
+  font-size: 76px;
+  line-height: 0.95;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  color: var(--ink);
+}
+
+.hero-headline-italic {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 400;
+  color: var(--green);
+}
+
+.hero-subcopy {
+  font-size: 15px;
+  color: var(--ink2);
+  margin-top: 14px;
+  max-width: 540px;
+}
+
+.hero-subcopy-empty {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 15px;
+}
+
+/* ── Right "use this week" card ── */
+
+.hero-use-card {
+  background: var(--ink);
+  color: var(--paper);
+  border-radius: var(--radius-card-lg);
+  padding: 20px 22px;
+}
+
+.hero-use-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.hero-use-title { font-weight: 700; font-size: 16px; }
+
+.hero-use-tag {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 16px;
+  color: var(--fresh);
+}
+
+.hero-use-empty {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 14px;
+  opacity: 0.7;
+  padding: 8px 0;
+}
+
+.hero-use-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid rgba(243, 245, 242, 0.14);
+}
+.hero-use-row.is-first { border-top: none; }
+
+.hero-use-days {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 28px;
+  line-height: 1;
+  width: 40px;
+  font-variant-numeric: tabular-nums;
+  color: var(--paper);
+}
+.hero-use-days.is-today { color: var(--fresh); }
+
+.hero-use-name-col { flex: 1; min-width: 0; }
+.hero-use-name { font-weight: 600; font-size: 14px; }
+.hero-use-qty  { font-size: 11px; opacity: 0.6; }
+
+.hero-use-tagline {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: rgba(243, 245, 242, 0.7);
+}
+.hero-use-tagline.is-today { color: var(--fresh); }
+
+@media (max-width: 768px) {
+  .hero-band {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    padding: 24px var(--gutter-mobile);
+  }
+  .hero-headline { font-size: 48px; }
+}

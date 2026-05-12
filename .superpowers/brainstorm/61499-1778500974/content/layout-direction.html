@@ -1,0 +1,122 @@
+<h2>Multi-store comparison — which layout works?</h2>
+<p class="subtitle">Three directions for showing prices across New World, Pak'nSave, and Woolworths on the shopping list. Click whichever feels closest to right (you can change your mind).</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="rollup" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 16px; background: #f3f5f2;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+        <div style="background: #fff; border: 1.5px solid #5aa758; border-radius: 8px; padding: 10px; text-align: center;">
+          <div style="font-size: 10px; color: #6e7872; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700;">CHEAPEST</div>
+          <div style="font-weight: 800; color: #1f5d33; font-size: 11px; margin-top: 2px;">PAK'NSAVE</div>
+          <div style="font-size: 18px; font-weight: 800; font-family: serif; font-style: italic; margin-top: 6px;">$53.40</div>
+          <div style="font-size: 10px; color: #5aa758; margin-top: 2px;">save $4.89</div>
+        </div>
+        <div style="background: #fff; border: 1px solid #0d171420; border-radius: 8px; padding: 10px; text-align: center;">
+          <div style="font-size: 10px; color: #6e7872; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700;">USUAL</div>
+          <div style="font-weight: 800; font-size: 11px; margin-top: 2px;">NEW WORLD</div>
+          <div style="font-size: 18px; font-weight: 800; font-family: serif; font-style: italic; margin-top: 6px;">$58.29</div>
+          <div style="font-size: 10px; color: #6e7872; margin-top: 2px;">current</div>
+        </div>
+        <div style="background: #fff; border: 1px solid #0d171420; border-radius: 8px; padding: 10px; text-align: center;">
+          <div style="font-size: 10px; color: #6e7872; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700;">&nbsp;</div>
+          <div style="font-weight: 800; font-size: 11px; margin-top: 2px;">WOOLWORTHS</div>
+          <div style="font-size: 18px; font-weight: 800; font-family: serif; font-style: italic; margin-top: 6px;">$61.10</div>
+          <div style="font-size: 10px; color: #6e7872; margin-top: 2px;">+$2.81</div>
+        </div>
+      </div>
+      <div style="background: #fff; border: 1px solid #0d171410; border-radius: 6px; padding: 8px;">
+        <div style="font-size: 10px; color: #6e7872; font-style: italic;">fennel · 2 bulbs</div>
+        <div style="font-size: 12px; font-weight: 700; color: #1f5d33;">$4.20 at Pak'nSave ↓</div>
+      </div>
+      <div style="background: #fff; border: 1px solid #0d171410; border-radius: 6px; padding: 8px; margin-top: 4px;">
+        <div style="font-size: 10px; color: #6e7872; font-style: italic;">whole chicken · 4 lb</div>
+        <div style="font-size: 12px; font-weight: 700; color: #1f5d33;">$13.80 at Pak'nSave ↓</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A · Roll-up cards + per-item indicator</h3>
+      <p>Three store cards at the top show total cost per store, cheapest highlighted. Each item row shows the cheapest price + which store. Decision is "shop at one store" — pick the winner.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="table" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 16px; background: #f3f5f2;">
+      <div style="display: grid; grid-template-columns: 1.4fr 60px 60px 60px; gap: 4px; font-size: 10px; margin-bottom: 6px;">
+        <div></div>
+        <div style="text-align: right; font-weight: 700; color: #1f5d33;">NW</div>
+        <div style="text-align: right; font-weight: 700; color: #1f5d33;">PnS</div>
+        <div style="text-align: right; font-weight: 700; color: #1f5d33;">WW</div>
+      </div>
+      <div style="background: #fff; border-radius: 6px; padding: 8px;">
+        <div style="display: grid; grid-template-columns: 1.4fr 60px 60px 60px; gap: 4px; padding: 6px 0; font-size: 11px; border-bottom: 1px solid #0d171410;">
+          <div>fennel</div>
+          <div style="text-align: right;">$4.80</div>
+          <div style="text-align: right; background: #5aa75820; padding: 2px 4px; border-radius: 3px; font-weight: 700; color: #1f5d33;">$4.20</div>
+          <div style="text-align: right;">$5.10</div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1.4fr 60px 60px 60px; gap: 4px; padding: 6px 0; font-size: 11px; border-bottom: 1px solid #0d171410;">
+          <div>whole chicken</div>
+          <div style="text-align: right;">$14.40</div>
+          <div style="text-align: right; background: #5aa75820; padding: 2px 4px; border-radius: 3px; font-weight: 700; color: #1f5d33;">$13.80</div>
+          <div style="text-align: right;">$14.20</div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1.4fr 60px 60px 60px; gap: 4px; padding: 6px 0; font-size: 11px; border-bottom: 1px solid #0d171410;">
+          <div>fresh mozzarella</div>
+          <div style="text-align: right; background: #5aa75820; padding: 2px 4px; border-radius: 3px; font-weight: 700; color: #1f5d33;">$5.40</div>
+          <div style="text-align: right;">$5.90</div>
+          <div style="text-align: right;">$5.50</div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1.4fr 60px 60px 60px; gap: 4px; padding: 6px 0; font-size: 11px; font-weight: 700; border-top: 1.5px solid #0d171430; padding-top: 8px;">
+          <div>total</div>
+          <div style="text-align: right;">$58.29</div>
+          <div style="text-align: right; color: #1f5d33;">$53.40</div>
+          <div style="text-align: right;">$61.10</div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1.4fr 60px 60px 60px; gap: 4px; padding: 4px 0 0; font-size: 9px;">
+          <div style="font-style: italic; color: #6e7872;">if you split shop:</div>
+          <div></div>
+          <div style="text-align: right; font-weight: 700; color: #d96e2e;">$51.10</div>
+          <div></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B · Per-item 3-column table</h3>
+      <p>Every item row shows all three prices side-by-side, cheapest highlighted. Totals per store at the bottom + a "split shop" row showing the absolute cheapest if you mix stores. Decision can be per-item.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="drawer" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 16px; background: #f3f5f2;">
+      <div style="background: #fff; border-radius: 8px; padding: 12px; position: relative;">
+        <div style="font-size: 10px; color: #6e7872; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700;">SHOP AT NEW WORLD</div>
+        <div style="margin-top: 8px;">
+          <div style="display: flex; justify-content: space-between; font-size: 11px; padding: 4px 0; border-bottom: 1px solid #0d171410;">
+            <span>fennel · 2 bulbs</span><span>$4.80</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 11px; padding: 4px 0; border-bottom: 1px solid #0d171410;">
+            <span>whole chicken · 4 lb</span><span>$14.40</span>
+          </div>
+        </div>
+        <div style="margin-top: 8px; padding: 8px; background: #f3f5f2; border-radius: 4px; font-size: 10px; color: #b6541d; text-align: center; font-style: italic;">
+          → Compare across stores
+        </div>
+      </div>
+      <div style="margin-top: 8px; padding: 10px; background: #0d1714; color: #f3f5f2; border-radius: 6px;">
+        <div style="font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: #d96e2e; font-weight: 700;">DRAWER: COMPARISON</div>
+        <div style="font-size: 10px; margin-top: 4px; opacity: 0.85;">NW $58.29 (current)</div>
+        <div style="font-size: 10px; opacity: 0.85;">PnS $53.40 — save $4.89</div>
+        <div style="font-size: 10px; opacity: 0.85;">WW $61.10 — +$2.81</div>
+        <div style="font-size: 10px; margin-top: 6px; color: #5aa758; font-weight: 700;">→ switch to Pak'nSave</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C · Single-store + comparison drawer</h3>
+      <p>List looks like today — single store, single price column. A "Compare prices" button opens a slide-out drawer with the three totals + a "switch primary store" CTA. Comparison is hidden until requested.</p>
+    </div>
+  </div>
+
+</div>
+
+<p class="subtitle" style="margin-top: 24px;">After picking, tell me anything you'd change (e.g. "B but without the split-shop row", or "C but always visible, not in a drawer").</p>

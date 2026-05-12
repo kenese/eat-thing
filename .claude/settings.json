@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash(rm -rf */*:*)",
+      "BareBash(rm -rf ..*)",
+      "BareBash(rm -rf /:*)",
+      "Bash(git push :*--force :*main:*)",
+      "Bash(git push :*-f :*main:*)"
+    ]
+  }
+}

@@ -1,13 +1,26 @@
 import React from 'react';
 import { authClient } from '../lib/auth-client';
+import { enableDevSession } from '../hooks/useSession';
 import './LoginPage.css';
 
 export function LoginPage() {
-  const handleSignIn = () => {
-    authClient.signIn.social({
-      provider: 'google',
-      callbackURL: window.location.origin,
-    });
+  const [error, setError] = React.useState<string | null>(null);
+
+  const handleSignIn = async () => {
+    setError(null);
+    try {
+      await authClient.signIn.social({
+        provider: 'google',
+        callbackURL: window.location.origin,
+      });
+    } catch {
+      setError('Google sign-in is not available in this local dev session.');
+    }
+  };
+
+  const handleDevSession = () => {
+    enableDevSession();
+    window.location.reload();
   };
 
   return (
@@ -24,6 +37,12 @@ export function LoginPage() {
           </svg>
           Sign in with Google
         </button>
+        {import.meta.env.DEV && (
+          <button type="button" onClick={handleDevSession} className="login-dev-btn">
+            Continue locally
+          </button>
+        )}
+        {error && <p className="login-error">{error}</p>}
       </div>
     </div>
   );

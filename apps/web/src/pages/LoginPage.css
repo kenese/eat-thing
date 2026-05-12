@@ -53,3 +53,24 @@
 .login-google-btn:hover {
   background: #f0f0f0;
 }
+
+.login-dev-btn {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 20px;
+}
+
+.login-dev-btn:hover {
+  background: var(--bg-tertiary);
+}
+
+.login-error {
+  color: var(--accent);
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: center;
+}

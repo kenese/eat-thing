@@ -109,8 +109,9 @@ Pure restyle to the Crisp + Persimmon system; behaviour preserved.
 - [x] Recipes: inventory-aware sections + editorial hero (lite) + image-top cards
 - [x] Meal plan: proportion strip + redesigned day cards + fill-day suggestions
 - [x] Shopping list: categories migration + two-pane layout + reason chips + agent status
+- [x] Home dashboard: hero, use-this-week inventory strip, five-day meals strip, shopping-list preview — _2026-05-12_
 
-Deferred (own specs): Home dashboard, Shops nav destination, scan-receipt, print, delivery-window picker, per-meal reason pills, send-to-store CTA, `time`/`tags` on recipes, mobile re-cut.
+Deferred (own specs): Shops nav destination, scan-receipt, print, delivery-window picker, per-meal reason pills, send-to-store CTA, `time`/`tags` on recipes, mobile re-cut.
 
 ## Cross-cutting / ongoing
 
@@ -146,3 +147,4 @@ Deferred (own specs): Home dashboard, Shops nav destination, scan-receipt, print
 - 2026-05-10 — Phase 2: Recipe ingestion complete — /api/ingest/url (schema.org ld+json → Claude haiku fallback), /api/ingest/photo (Claude haiku multimodal), /api/ingest/search (TheMealDB); food-matcher with exact/alias/contains/LLM tiers returning confidence; ImportModal with URL/Photo/Search tabs + edit-and-confirm step prefilling RecipeForm; low-confidence ingredients highlighted in amber. Photos saved to Supabase Storage (eat-thing bucket) on recipe save. @anthropic-ai/sdk added to server. — `sync_dirty` table with INSERT…ON CONFLICT debounce; inventory/meal-plan/recipe routes fire markDirty after writes; `/api/sync` endpoints (pending, claim, complete, snapshots) gated by HMAC-SHA256 using `req.originalUrl`; `packages/openbrain` MCP client singleton + typed sync functions with `eat-thing:` external-ID scheme; `openbrain-worker` poller + `launchd` plist template for Mac mini.
 - 2026-05-10 — Phase 3 slice 1: New World vertical landed (encrypted sessions + jobs lifecycle + parser + matcher + price column). Headed bootstrap and live smoke pending user.
 - 2026-05-11 — Phase 3 slice 2: Pak'nSave + Woolworths adapters landed (parsers, fixtures, bootstrap, smoke). Smoke-only run path; multi-store enqueueing and UI deferred to slice 3. Live first-run login + smoke pending user.
+- 2026-05-12 — Frontend restyle follow-up: Home dashboard landed as `/`, composing inventory expiry, five-day meal readiness, and shopping-list preview. E2E now asserts the home route instead of the old inventory redirect.

@@ -12,7 +12,7 @@ import { PageTitle } from '../../components/PageTitle';
 import { StatusChip } from '../../components/StatusChip';
 import { computeMissing } from '../../lib/recipeMatch';
 import type { MealPlanEntry, RecipeSummary, Recipe } from '@eat/shared';
-import { mondayOf, addDays, toIsoDate, weekDays, formatWeekRange } from './dateUtils';
+import { mondayOf, addDays, toIsoDate, weekDays, formatWeekRange } from '../../lib/dateUtils';
 import { useNavigate } from 'react-router-dom';
 import './PlanPage.css';
 
@@ -208,11 +208,9 @@ export function PlanPage() {
     const map: Record<string, DayEntry[]> = {};
     for (const e of week?.entries ?? []) {
       const recipeSummary = recipeMap.get(e.recipeId);
-      // We don't have ingredients here without a per-recipe fetch; approximate kind by status.
-      const kind: DayKind =
-        e.status === 'leftover' ? 'leftover'
-        : 'cook'; // accurate per-day cook/shop bucketing requires per-entry recipe ingredients;
-                  // we ship 'cook' as the default and rely on the badge to be refined when the recipe loads.
+      // We don't have ingredients here without a per-recipe fetch; approximate planned entries as cookable.
+      const kind: DayKind = 'cook'; // accurate per-day cook/shop bucketing requires per-entry recipe ingredients;
+                                    // we ship 'cook' as the default and rely on the badge to be refined when the recipe loads.
       const dayEntry: DayEntry = {
         entry: e,
         recipe: undefined as Recipe | undefined, // not loaded in summary; CookModal handles cook-time deduction.

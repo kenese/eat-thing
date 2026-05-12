@@ -21,3 +21,11 @@ export const AllKinds: Story = {
     </div>
   ),
 };
+
+export const OnHero: Story = {
+  render: () => (
+    <div style={{ display: 'inline-flex', padding: 24, background: 'var(--green, #1f5d33)', borderRadius: 10 }}>
+      <StatusChip kind="cook" onHero />
+    </div>
+  ),
+};
