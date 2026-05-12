@@ -1,5 +1,5 @@
-import Anthropic from '@anthropic-ai/sdk';
 import { matchIngredients } from './food-matcher.js';
+import { generateGeminiJson } from './gemini.js';
 import type { ImportedIngredient } from '@eat/shared';
 
 type ImageMediaType = 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp';
@@ -15,40 +15,20 @@ export async function extractFromPhoto(
   imageBase64: string,
   mimeType: ImageMediaType,
 ): Promise<ExtractedPhotoRecipe> {
-  const client = new Anthropic();
-
   const prompt = `Look at this recipe image. Extract the recipe and return ONLY valid JSON with this shape:
 {"name":"string","servings":4,"instructions":"string or null","ingredients":[{"name":"string","qty":1,"unit":"g|ml|count"}]}
 
 Convert measurements to grams or ml where possible (1 cup=240ml, 1tbsp=15ml, 1tsp=5ml, 1oz=28g, 1lb=454g). Use "count" only for things like eggs. If you cannot see ingredient quantities clearly, use 1 as a default quantity.`;
 
-  const msg = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 2048,
-    messages: [
-      {
-        role: 'user',
-        content: [
-          {
-            type: 'image',
-            source: { type: 'base64', media_type: mimeType, data: imageBase64 },
-          },
-          { type: 'text', text: prompt },
-        ],
-      },
-    ],
-  });
-
-  const content = msg.content[0].type === 'text' ? msg.content[0].text : '';
-  const jsonMatch = content.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error('Could not extract recipe from image');
-
-  const raw = JSON.parse(jsonMatch[0]) as {
+  const raw = await generateGeminiJson<{
     name: string;
     servings: number;
     instructions: string | null;
     ingredients: { name: string; qty: number; unit: 'g' | 'ml' | 'count' }[];
-  };
+  }>(prompt, {
+    image: { data: imageBase64, mimeType },
+    maxOutputTokens: 2048,
+  });
 
   const matched = await matchIngredients(raw.ingredients.map(i => i.name));
 

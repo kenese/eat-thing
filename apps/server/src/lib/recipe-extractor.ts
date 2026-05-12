@@ -1,5 +1,5 @@
-import Anthropic from '@anthropic-ai/sdk';
 import { matchIngredients } from './food-matcher.js';
+import { generateGeminiJson } from './gemini.js';
 import type { ImportedIngredient } from '@eat/shared';
 
 interface SchemaRecipeIngredient {
@@ -109,7 +109,7 @@ function parseIngredientString(raw: string): SchemaRecipeIngredient {
   return { name, qty: Math.round(qty * 100) / 100, unit };
 }
 
-// ─── Claude text extractor ───────────────────────────────────────────────────
+// ─── Gemini text extractor ───────────────────────────────────────────────────
 
 function stripHtml(html: string): string {
   return html
@@ -120,8 +120,7 @@ function stripHtml(html: string): string {
     .slice(0, 8000); // keep prompt manageable
 }
 
-async function extractWithClaude(text: string): Promise<RawExtracted | null> {
-  const client = new Anthropic();
+async function extractWithGemini(text: string): Promise<RawExtracted | null> {
   const prompt = `Extract the recipe from this webpage text. Return ONLY valid JSON with this shape:
 {"name":"string","servings":4,"instructions":"string or null","ingredients":[{"name":"string","qty":1,"unit":"g|ml|count"}]}
 
@@ -131,15 +130,7 @@ Webpage text:
 ${text}`;
 
   try {
-    const msg = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 2048,
-      messages: [{ role: 'user', content: prompt }],
-    });
-    const content = msg.content[0].type === 'text' ? msg.content[0].text : '';
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) return null;
-    return JSON.parse(jsonMatch[0]) as RawExtracted;
+    return await generateGeminiJson<RawExtracted>(prompt, { maxOutputTokens: 2048 });
   } catch {
     return null;
   }
@@ -164,7 +155,7 @@ export async function extractFromUrl(url: string): Promise<ExtractedRecipe> {
     return r.text();
   });
 
-  const raw = parseSchemaOrg(html) ?? await extractWithClaude(stripHtml(html));
+  const raw = parseSchemaOrg(html) ?? await extractWithGemini(stripHtml(html));
   if (!raw) throw new Error('Could not extract recipe from this URL');
 
   const matched = await matchIngredients(raw.ingredients.map(i => i.name));

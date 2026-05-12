@@ -61,6 +61,7 @@ Make adding recipes effortless.
 - [x] In-app recipe search: TheMealDB (free, no key, 300+ recipes) — _2026-05-10_
 - [x] Ingredient → canonical_food matching with confidence + manual override — _2026-05-10_
 - [x] Edit-and-confirm step before save (no silent imports) — _2026-05-10_
+- [x] Bulk import from OpenBrain: "OpenBrain" tab in ImportModal, semantic search for recipe thoughts, already-imported flag, edit-and-confirm flow — _2026-05-11_ (see D18)
 
 ## Phase 3 — Read-only supermarket integration
 
