@@ -9,11 +9,32 @@ vi.mock('./food-matcher.js', () => ({
   matchIngredients: vi.fn(),
 }));
 
-const { fetchThought } = await import('@eat/openbrain');
+const { fetchThought, searchThoughts } = await import('@eat/openbrain');
 const { matchIngredients } = await import('./food-matcher.js');
-const { parseOpenBrainThought } = await import('./openbrain-importer.js');
+const { listOpenBrainRecipes, parseOpenBrainThought } = await import('./openbrain-importer.js');
 
 describe('openbrain importer', () => {
+  it('searches OpenBrain recipes with a low semantic threshold', async () => {
+    vi.mocked(searchThoughts).mockResolvedValueOnce([
+      {
+        id: 'thought-1',
+        content: "Recipe from the user's Evernote archive — Rib marinade.\n\n- 1/2 cup ketchup",
+      },
+    ]);
+
+    const previews = await listOpenBrainRecipes(new Set());
+
+    expect(searchThoughts).toHaveBeenCalledWith('recipe', { limit: 100, threshold: 0.1 });
+    expect(previews).toEqual([
+      {
+        id: 'thought-1',
+        title: 'Rib marinade',
+        preview: '- 1/2 cup ketchup',
+        alreadyImported: false,
+      },
+    ]);
+  });
+
   it('preserves source URL from eat-thing markdown thoughts', async () => {
     vi.mocked(fetchThought).mockResolvedValueOnce({
       id: 'thought-1',

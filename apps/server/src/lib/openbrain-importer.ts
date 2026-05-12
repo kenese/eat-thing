@@ -22,17 +22,21 @@ function isEatThingRecipe(thought: { external_id?: string; content: string }): b
 function extractTitleFromContent(content: string): string | null {
   const line = content.split('\n')[0]?.trim() ?? '';
   if (line.startsWith(EAT_THING_PREFIX)) return line.slice(EAT_THING_PREFIX.length).trim();
+  const archiveMatch = line.match(/^Recipe from the user's Evernote archive\s+[—-]\s+(.+?)(?:\.|$)/i);
+  if (archiveMatch) return archiveMatch[1].trim();
+  const recipeMatch = line.match(/^Recipe:\s*(.+?)(?:\.|$)/i);
+  if (recipeMatch) return recipeMatch[1].trim();
   if (line.startsWith('# ')) return line.slice(2).trim();
   return null;
 }
 
 function looksLikeRecipe(content: string): boolean {
   const lower = content.toLowerCase();
-  return lower.includes('ingredient') || lower.includes('## instructions') || lower.includes('servings');
+  return lower.includes('recipe') || lower.includes('ingredient') || lower.includes('## instructions') || lower.includes('servings');
 }
 
 export async function listOpenBrainRecipes(existingNames: Set<string>): Promise<OpenBrainRecipePreview[]> {
-  const thoughts = await searchThoughts('recipe ingredients cooking', { limit: 100 });
+  const thoughts = await searchThoughts('recipe', { limit: 100, threshold: 0.1 });
 
   const previews: OpenBrainRecipePreview[] = [];
   for (const t of thoughts) {
