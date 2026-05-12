@@ -30,6 +30,10 @@ export function enableDevSession() {
   window.localStorage.setItem(DEV_SESSION_KEY, '1');
 }
 
+export function disableDevSession() {
+  window.localStorage.removeItem(DEV_SESSION_KEY);
+}
+
 export function useSession() {
   return useQuery<Session | null>({
     queryKey: ['session'],

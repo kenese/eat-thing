@@ -1,6 +1,8 @@
 import { NavLink } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { Wordmark } from './Wordmark';
-import { useSession } from '../hooks/useSession';
+import { disableDevSession, useSession } from '../hooks/useSession';
+import { authClient } from '../lib/auth-client';
 import './TopNav.css';
 
 const NAV_ITEMS = [
@@ -24,7 +26,18 @@ function initialFor(name?: string | null, email?: string | null): string {
 
 export function TopNav() {
   const { data: session } = useSession();
+  const queryClient = useQueryClient();
   const today = new Date();
+
+  const handleSignOut = async () => {
+    disableDevSession();
+    try {
+      await authClient.signOut();
+    } finally {
+      queryClient.setQueryData(['session'], null);
+      await queryClient.invalidateQueries({ queryKey: ['session'] });
+    }
+  };
 
   return (
     <header className="topnav">
@@ -47,9 +60,15 @@ export function TopNav() {
       </nav>
       <div className="topnav-meta">
         <span className="topnav-date">{formatDateLabel(today)}</span>
-        <span className="topnav-avatar" aria-hidden>
+        <button
+          type="button"
+          className="topnav-avatar topnav-avatar-btn"
+          onClick={handleSignOut}
+          aria-label="Sign out"
+          title="Sign out"
+        >
           {initialFor(session?.user?.name, session?.user?.email)}
-        </span>
+        </button>
       </div>
     </header>
   );

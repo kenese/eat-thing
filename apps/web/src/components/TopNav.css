@@ -67,6 +67,16 @@
   font-size: 13px;
 }
 
+.topnav-avatar-btn {
+  border: 0;
+  cursor: pointer;
+  padding: 0;
+}
+
+.topnav-avatar-btn:hover {
+  filter: brightness(1.08);
+}
+
 @media (max-width: 768px) {
   .topnav { padding: 12px var(--gutter-mobile); gap: 12px; }
   .topnav-links { gap: 14px; }
