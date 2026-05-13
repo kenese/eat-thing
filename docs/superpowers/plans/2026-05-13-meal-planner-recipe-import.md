@@ -427,7 +427,7 @@ Render tabs in this order:
 Use label:
 
 ```ts
-t === 'mealPlanner' ? 'Meal Planner' : t === 'openbrain' ? 'OpenBrain notes' : ...
+t === 'mealPlanner' ? 'Meal Planner' : t === 'openbrain' ? 'OpenBrain notes' : ''
 ```
 
 Add the Meal Planner panel:
@@ -480,7 +480,7 @@ Expected: PASS or no matching unit test. Continue to E2E in Task 5.
 **Files:**
 - Modify: `apps/web/tests/app.spec.ts`
 
-- [ ] **Step 1: Add mocked API routes and browser flow**
+- [x] **Step 1: Add mocked API routes and browser flow**
 
 Add a test near the existing OpenBrain import E2E:
 
@@ -547,7 +547,7 @@ Expected: PASS.
 - Modify: `DECISIONS.md`
 - Modify: `ARCHITECTURE.md`
 
-- [ ] **Step 1: Add a current task to `PLAN.md`**
+- [x] **Step 1: Add a current task to `PLAN.md`**
 
 Add under Phase 2:
 
@@ -557,7 +557,7 @@ Add under Phase 2:
 
 Do not move to Done until both `pnpm test` and `pnpm test:e2e` have passed.
 
-- [ ] **Step 2: Add a decision to `DECISIONS.md`**
+- [x] **Step 2: Add a decision to `DECISIONS.md`**
 
 Append:
 
@@ -569,7 +569,7 @@ Append:
 **Rationale:** Structured Meal Planner payloads reduce LLM parsing, preserve quantities/servings more reliably, and still satisfy the intent of importing from the OpenBrain ecosystem. Eat-thing remains the source of truth after import.
 ```
 
-- [ ] **Step 3: Update `ARCHITECTURE.md`**
+- [x] **Step 3: Update `ARCHITECTURE.md`**
 
 In "Add recipe", change:
 
@@ -594,19 +594,19 @@ Imports may read structured Meal Planner recipes as a one-off migration/import s
 **Files:**
 - No source edits unless verification reveals failures.
 
-- [ ] **Step 1: Run unit tests**
+- [x] **Step 1: Run unit tests**
 
 Run: `pnpm test`
 
 Expected: PASS.
 
-- [ ] **Step 2: Run E2E tests**
+- [x] **Step 2: Run E2E tests**
 
 Run: `pnpm test:e2e`
 
 Expected: PASS.
 
-- [ ] **Step 3: Update `PLAN.md` completion state**
+- [x] **Step 3: Update `PLAN.md` completion state**
 
 Only after both suites pass, move the Meal Planner import task to `Done`:
 

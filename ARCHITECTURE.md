@@ -32,6 +32,9 @@ For per-decision rationale see [DECISIONS.md](./DECISIONS.md). For the rolling t
 │  OpenBrain sync worker ────▶ OpenBrain (MCP)   │
 │   (debounced ~5 min,                           │
 │    daily cook-log roll-up)                     │
+│                                                │
+│  Meal Planner import ─────▶ Meal Planner MCP   │
+│   (one-off structured recipe import)           │
 └──────────┬─────────────────────────────────────┘
            │ outbound HTTPS poll for pending jobs
            │ (no inbound port at home)
@@ -50,7 +53,8 @@ eat-thing/
 ├── packages/
 │   ├── shared/       cross-cutting types & zod schemas
 │   ├── taxonomy/     canonical foods + unit conversion    ← NEW
-│   └── openbrain/    OpenBrain sync adapter                ← NEW
+│   ├── openbrain/    OpenBrain sync adapter                ← NEW
+│   └── meal-planning/ Meal Planner import adapter          ← NEW
 └── extension/        legacy starter content (Discogs) — to be deleted
 ```
 
@@ -79,7 +83,7 @@ Every domain table carries `household_id` and is filtered by request middleware.
 ## Key flows
 
 ### Add recipe
-1. User submits (manual / URL / photo / search)
+1. User submits (manual / URL / photo / search / Meal Planner import)
 2. Server normalizes ingredients → `canonical_foods` (asks user to disambiguate any unmatched item)
 3. Recipe saved
 4. `packages/openbrain` syncs the recipe to OpenBrain immediately
@@ -121,6 +125,8 @@ The adapter is the only place that knows about MCP. Swapping brains = new adapte
 - **Daily roll-up:** Cook events flush once a day as a single thought summarizing yesterday.
 
 Within a single request the writes are already one DB transaction → one dirty-flag update. The debounce coalesces bursts across multiple requests, so OpenBrain sees one snapshot per ~5-minute activity window — not N diffs.
+
+Imports may read structured Meal Planner recipes as a one-off migration/import source. Runtime app behavior still does not depend on reading from OpenBrain or Meal Planner; imported recipes are copied into eat-thing tables and edited/confirmed before save.
 
 ## Playwright worker (`apps/scraper`)
 

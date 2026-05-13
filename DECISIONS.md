@@ -111,3 +111,9 @@ Each decision: short title, date, context, decision, rationale. Keep it terse â€
 **Context:** Meal Planner is part of the OpenBrain ecosystem, but it is exposed as its own MCP server with structured recipe tools. Routing structured Meal Planner imports through the OpenBrain thoughts adapter would blur two different integration boundaries.
 **Decision:** Meal Planner recipe imports use a dedicated `@eat/meal-planning` package. The OpenBrain package remains responsible for thought search/fetch/sync only.
 **Rationale:** The adapter boundary matches the MCP boundary, keeps recipe import code from depending on thought-store transport, and preserves the original rule that OpenBrain is not the runtime source of truth for eat-thing.
+
+## D20 â€” OpenBrain ecosystem recipe imports prefer Meal Planner structured data
+**Date:** 2026-05-13
+**Context:** The existing OpenBrain bulk import reads recipe thoughts and parses prose/markdown, but Meal Planner is part of the OpenBrain ecosystem and stores recipes with structured fields.
+**Decision:** New OpenBrain ecosystem recipe imports read from Meal Planner first. OpenBrain recipe-thought import remains as a legacy fallback for old notes.
+**Rationale:** Structured Meal Planner payloads reduce LLM parsing, preserve quantities/servings more reliably, and still satisfy the intent of importing from the OpenBrain ecosystem. Eat-thing remains the source of truth after import.

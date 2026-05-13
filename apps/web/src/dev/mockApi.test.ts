@@ -14,7 +14,7 @@ describe('getDevMockResponse', () => {
 
   it('returns a meal plan and recipe details that can produce cook/shop homepage cards', () => {
     const plan = getDevMockResponse('/api/meal-plans?weekStart=2026-05-11') as {
-      entries: Array<{ recipeId: string; recipeName: string }>;
+      entries: Array<{ recipeId: string; recipeName: string; date: string }>;
     };
     const recipe = getDevMockResponse('/api/recipes/recipe-risotto') as {
       name: string;
@@ -22,6 +22,7 @@ describe('getDevMockResponse', () => {
     };
 
     expect(plan.entries.map((entry) => entry.recipeName)).toContain('Spinach risotto');
+    expect(plan.entries.find((entry) => entry.recipeName === 'Mushroom pasta')?.date).toBe('2026-05-13');
     expect(recipe.name).toBe('Spinach risotto');
     expect(recipe.ingredients.map((ingredient) => ingredient.foodName)).toContain('arborio rice');
   });

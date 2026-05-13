@@ -62,7 +62,6 @@ Make adding recipes effortless.
 - [x] Ingredient → canonical_food matching with confidence + manual override — _2026-05-10_
 - [x] Edit-and-confirm step before save (no silent imports) — _2026-05-10_
 - [x] Bulk import from OpenBrain: "OpenBrain" tab in ImportModal, semantic search for recipe thoughts, already-imported flag, edit-and-confirm flow — _2026-05-11_ (see D18)
-- [~] Meal Planner recipe import from the OpenBrain ecosystem: use structured Meal Planner MCP data via a dedicated `@eat/meal-planning` adapter, not the OpenBrain thoughts adapter
 
 ## Phase 3 — Read-only supermarket integration
 
@@ -149,3 +148,4 @@ Deferred (own specs): Shops nav destination, scan-receipt, print, delivery-windo
 - 2026-05-10 — Phase 3 slice 1: New World vertical landed (encrypted sessions + jobs lifecycle + parser + matcher + price column). Headed bootstrap and live smoke pending user.
 - 2026-05-11 — Phase 3 slice 2: Pak'nSave + Woolworths adapters landed (parsers, fixtures, bootstrap, smoke). Smoke-only run path; multi-store enqueueing and UI deferred to slice 3. Live first-run login + smoke pending user.
 - 2026-05-12 — Frontend restyle follow-up: Home dashboard landed as `/`, composing inventory expiry, five-day meal readiness, and shopping-list preview. E2E now asserts the home route instead of the old inventory redirect.
+- 2026-05-13 — Meal Planner recipe import from the OpenBrain ecosystem landed: structured list + parse endpoints, dedicated `@eat/meal-planning` adapter, import modal tab, edit-and-confirm flow, unit + E2E coverage.
