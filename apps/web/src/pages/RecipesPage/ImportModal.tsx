@@ -1,10 +1,18 @@
 import React, { useRef, useState } from 'react';
-import { useIngestUrl, useIngestPhoto, useIngestSearch, useIngestOpenBrainList, useIngestOpenBrainParse } from '../../hooks/useIngest';
+import {
+  useIngestUrl,
+  useIngestPhoto,
+  useIngestSearch,
+  useIngestOpenBrainList,
+  useIngestOpenBrainParse,
+  useIngestMealPlannerList,
+  useIngestMealPlannerParse,
+} from '../../hooks/useIngest';
 import { RecipeForm } from './RecipeForm';
 import type { ImportedRecipe } from '@eat/shared';
 import './ImportModal.css';
 
-type Tab = 'url' | 'photo' | 'search' | 'openbrain';
+type Tab = 'url' | 'photo' | 'search' | 'mealPlanner' | 'openbrain';
 
 interface ImportModalProps {
   onClose: () => void;
@@ -27,6 +35,8 @@ export function ImportModal({ onClose }: ImportModalProps) {
   const urlMutation = useIngestUrl();
   const photoMutation = useIngestPhoto();
   const searchMutation = useIngestSearch();
+  const mealPlannerList = useIngestMealPlannerList(tab === 'mealPlanner');
+  const mealPlannerParse = useIngestMealPlannerParse();
   const openBrainList = useIngestOpenBrainList(tab === 'openbrain');
   const openBrainParse = useIngestOpenBrainParse();
 
@@ -87,11 +97,17 @@ export function ImportModal({ onClose }: ImportModalProps) {
     );
   }
 
-  const isLoading = urlMutation.isPending || photoMutation.isPending || searchMutation.isPending || openBrainParse.isPending;
+  const isLoading =
+    urlMutation.isPending ||
+    photoMutation.isPending ||
+    searchMutation.isPending ||
+    mealPlannerParse.isPending ||
+    openBrainParse.isPending;
   const error =
     (urlMutation.error as Error | null)?.message ||
     (photoMutation.error as Error | null)?.message ||
     (searchMutation.error as Error | null)?.message ||
+    (mealPlannerParse.error as Error | null)?.message ||
     (openBrainParse.error as Error | null)?.message ||
     null;
 
@@ -104,13 +120,21 @@ export function ImportModal({ onClose }: ImportModalProps) {
         </div>
 
         <div className="import-tabs">
-          {(['url', 'photo', 'search', 'openbrain'] as Tab[]).map(t => (
+          {(['url', 'photo', 'search', 'mealPlanner', 'openbrain'] as Tab[]).map(t => (
             <button
               key={t}
               className={`import-tab${tab === t ? ' active' : ''}`}
               onClick={() => setTab(t)}
             >
-              {t === 'url' ? 'URL' : t === 'photo' ? 'Photo' : t === 'search' ? 'Search' : 'OpenBrain'}
+              {t === 'url'
+                ? 'URL'
+                : t === 'photo'
+                  ? 'Photo'
+                  : t === 'search'
+                    ? 'Search'
+                    : t === 'mealPlanner'
+                      ? 'Meal Planner'
+                      : 'OpenBrain'}
             </button>
           ))}
         </div>
@@ -165,7 +189,7 @@ export function ImportModal({ onClose }: ImportModalProps) {
 
         {tab === 'openbrain' && (
           <div className="import-form">
-            <p className="import-hint">Import recipes stored in your OpenBrain account. Already-imported recipes are marked.</p>
+            <p className="import-hint">Import legacy recipe notes stored in your OpenBrain account. Already-imported recipes are marked.</p>
             {openBrainList.isLoading && <p className="recipes-status">Loading from OpenBrain…</p>}
             {openBrainList.isError && (
               <p className="form-error">{(openBrainList.error as Error).message}</p>
@@ -192,6 +216,43 @@ export function ImportModal({ onClose }: ImportModalProps) {
                       }}
                     >
                       {openBrainParse.isPending ? 'Importing…' : 'Import'}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
+        {tab === 'mealPlanner' && (
+          <div className="import-form">
+            <p className="import-hint">Import structured recipes from Meal Planner in your OpenBrain ecosystem. Already-imported recipes are marked.</p>
+            {mealPlannerList.isLoading && <p className="recipes-status">Loading from Meal Planner…</p>}
+            {mealPlannerList.isError && (
+              <p className="form-error">{(mealPlannerList.error as Error).message}</p>
+            )}
+            {error && <p className="form-error">{error}</p>}
+            {mealPlannerList.data && mealPlannerList.data.length === 0 && (
+              <p className="recipes-status empty">No Meal Planner recipes found.</p>
+            )}
+            {mealPlannerList.data && mealPlannerList.data.length > 0 && (
+              <ul className="search-results">
+                {mealPlannerList.data.map(r => (
+                  <li key={r.id} className="search-result-item">
+                    <div className="search-result-info">
+                      <strong>{r.title}</strong>
+                      <span>{r.preview || 'Structured Meal Planner recipe'}</span>
+                      {r.alreadyImported && <span className="openbrain-badge">Already in eat-thing</span>}
+                    </div>
+                    <button
+                      className="btn-secondary"
+                      disabled={isLoading}
+                      onClick={async () => {
+                        const result = await mealPlannerParse.mutateAsync(r.id);
+                        setImported(result);
+                      }}
+                    >
+                      {mealPlannerParse.isPending ? 'Importing…' : 'Import'}
                     </button>
                   </li>
                 ))}

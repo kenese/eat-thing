@@ -28,6 +28,11 @@ vi.mock('../lib/openbrain-importer.js', () => ({
   parseOpenBrainThought: vi.fn(),
 }));
 
+vi.mock('../lib/meal-planner-importer.js', () => ({
+  listMealPlannerRecipes: vi.fn(),
+  parseMealPlannerRecipe: vi.fn(),
+}));
+
 vi.mock('../db/index.js', () => ({
   db: { select: vi.fn().mockReturnThis(), from: vi.fn().mockReturnThis(), where: vi.fn().mockResolvedValue([]) },
 }));
@@ -36,6 +41,7 @@ const { extractFromUrl } = await import('../lib/recipe-extractor.js');
 const { extractFromPhoto } = await import('../lib/photo-extractor.js');
 const { searchMealDb } = await import('../lib/themealdb.js');
 const { listOpenBrainRecipes, parseOpenBrainThought } = await import('../lib/openbrain-importer.js');
+const { listMealPlannerRecipes, parseMealPlannerRecipe } = await import('../lib/meal-planner-importer.js');
 const { default: ingestRouter } = await import('./ingest.js');
 
 const MOCK_RECIPE = {
@@ -173,6 +179,50 @@ describe('ingest router', () => {
       const res = await request(app).post('/api/ingest/openbrain/parse').send({ id: 'ob-missing' });
       expect(res.status).toBe(422);
       expect(res.body.error).toMatch(/Thought not found/);
+    });
+  });
+
+  describe('GET /meal-planner', () => {
+    const MOCK_PREVIEWS = [
+      { id: 'mp-1', title: 'Lemon Pasta', preview: '4 servings', alreadyImported: false },
+      { id: 'mp-2', title: 'Chicken Soup', preview: '2 servings', alreadyImported: true },
+    ];
+
+    it('returns list of Meal Planner recipe previews', async () => {
+      vi.mocked(listMealPlannerRecipes).mockResolvedValueOnce(MOCK_PREVIEWS);
+      const res = await request(app).get('/api/ingest/meal-planner');
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveLength(2);
+      expect(res.body[0].title).toBe('Lemon Pasta');
+      expect(res.body[1].alreadyImported).toBe(true);
+    });
+
+    it('returns 502 when Meal Planner is unreachable', async () => {
+      vi.mocked(listMealPlannerRecipes).mockRejectedValueOnce(new Error('Meal Planner MCP failed'));
+      const res = await request(app).get('/api/ingest/meal-planner');
+      expect(res.status).toBe(502);
+      expect(res.body.error).toMatch(/Meal Planner MCP failed/);
+    });
+  });
+
+  describe('POST /meal-planner/parse', () => {
+    it('returns 400 when id is missing', async () => {
+      const res = await request(app).post('/api/ingest/meal-planner/parse').send({});
+      expect(res.status).toBe(400);
+    });
+
+    it('returns parsed recipe on success', async () => {
+      vi.mocked(parseMealPlannerRecipe).mockResolvedValueOnce(MOCK_RECIPE);
+      const res = await request(app).post('/api/ingest/meal-planner/parse').send({ id: 'mp-1' });
+      expect(res.status).toBe(200);
+      expect(res.body.name).toBe('Test Recipe');
+    });
+
+    it('returns 422 when recipe cannot be parsed', async () => {
+      vi.mocked(parseMealPlannerRecipe).mockRejectedValueOnce(new Error('Meal Planner recipe not found'));
+      const res = await request(app).post('/api/ingest/meal-planner/parse').send({ id: 'mp-missing' });
+      expect(res.status).toBe(422);
+      expect(res.body.error).toMatch(/Meal Planner recipe not found/);
     });
   });
 });

@@ -105,3 +105,9 @@ Each decision: short title, date, context, decision, rationale. Keep it terse �
 **Context:** PLAN.md and ARCHITECTURE.md disagreed on where the AES key for `supermarket_credentials.encrypted_session_blob` lives. Need a single home that the bootstrap and worker scripts can read.
 **Decision:** The key (`SUPERMARKET_ENC_KEY`, 32 bytes base64) lives only on the Mac mini. The server stores ciphertext as opaque bytes and never decrypts. Bootstrap is split: a headed login script runs on the user's laptop and writes plaintext `storageState` to disk; the user transfers the file to the mini; an ingest script on the mini encrypts and POSTs.
 **Rationale:** A server compromise should not leak supermarket sessions, since they're not data the server's HTTP surface ever needs. Two-step bootstrap keeps the key off any other machine. Rotation cost is one re-bootstrap per store — acceptable for a two-user household.
+
+## D19 — Meal Planner imports use a dedicated adapter
+**Date:** 2026-05-13
+**Context:** Meal Planner is part of the OpenBrain ecosystem, but it is exposed as its own MCP server with structured recipe tools. Routing structured Meal Planner imports through the OpenBrain thoughts adapter would blur two different integration boundaries.
+**Decision:** Meal Planner recipe imports use a dedicated `@eat/meal-planning` package. The OpenBrain package remains responsible for thought search/fetch/sync only.
+**Rationale:** The adapter boundary matches the MCP boundary, keeps recipe import code from depending on thought-store transport, and preserves the original rule that OpenBrain is not the runtime source of truth for eat-thing.

@@ -178,9 +178,64 @@ test.describe('authenticated routes load', () => {
     await expect(page.getByRole('button', { name: 'URL', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Photo', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Search', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Meal Planner', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'OpenBrain', exact: true })).toBeVisible();
     // close modal
     await page.keyboard.press('Escape');
+  });
+
+  test('recipes page imports a Meal Planner recipe into the confirmation form', async ({ page }) => {
+    await page.route('**/api/ingest/meal-planner', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          {
+            id: 'meal-planner-1',
+            title: 'Kimchi Fried Rice',
+            source: 'Meal Planner',
+            servings: 3,
+            ingredientCount: 4,
+            alreadyImported: false,
+          },
+        ]),
+      }),
+    );
+    await page.route('**/api/ingest/meal-planner/parse', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          name: 'Kimchi Fried Rice',
+          servings: 3,
+          sourceUrl: null,
+          sourceImage: null,
+          instructions: 'Fry rice with kimchi.',
+          ingredients: [
+            {
+              rawText: 'cooked rice',
+              canonicalFoodId: 'food-rice',
+              foodName: 'rice',
+              qty: 300,
+              unit: 'g',
+              optional: false,
+              confidence: 'high',
+            },
+          ],
+        }),
+      }),
+    );
+
+    await page.goto('/recipes');
+    await page.getByRole('button', { name: /import/i }).click();
+    await page.getByRole('button', { name: 'Meal Planner', exact: true }).click();
+    await expect(page.getByText('Kimchi Fried Rice')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Import', exact: true }).click();
+
+    await expect(page.getByRole('heading', { name: /review imported recipe/i })).toBeVisible();
+    await expect(page.locator('#name')).toHaveValue('Kimchi Fried Rice');
+    await expect(page.locator('#servings')).toHaveValue('3');
   });
 
   test('recipes page imports an OpenBrain thought into the confirmation form', async ({ page }) => {

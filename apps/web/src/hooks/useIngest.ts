@@ -9,6 +9,13 @@ export interface OpenBrainRecipePreview {
   alreadyImported: boolean;
 }
 
+export interface MealPlannerRecipePreview {
+  id: string;
+  title: string;
+  preview: string;
+  alreadyImported: boolean;
+}
+
 export function useIngestUrl() {
   return useMutation({
     mutationFn: (url: string) => api.post<ImportedRecipe>('/api/ingest/url', { url }),
@@ -40,5 +47,20 @@ export function useIngestOpenBrainList(enabled: boolean) {
 export function useIngestOpenBrainParse() {
   return useMutation({
     mutationFn: (id: string) => api.post<ImportedRecipe>('/api/ingest/openbrain/parse', { id }),
+  });
+}
+
+export function useIngestMealPlannerList(enabled: boolean) {
+  return useQuery({
+    queryKey: ['ingest', 'meal-planner', 'list'],
+    queryFn: () => api.get<MealPlannerRecipePreview[]>('/api/ingest/meal-planner'),
+    enabled,
+    staleTime: 60_000,
+  });
+}
+
+export function useIngestMealPlannerParse() {
+  return useMutation({
+    mutationFn: (id: string) => api.post<ImportedRecipe>('/api/ingest/meal-planner/parse', { id }),
   });
 }
