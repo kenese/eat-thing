@@ -4,6 +4,8 @@ import { useRecipe, useAddRecipe, useUpdateRecipe } from '../../hooks/useRecipes
 import type { CanonicalFood, RecipeIngredientInput, ImportedRecipe } from '@eat/shared';
 import '../InventoryPage/ItemForm.css';
 import './RecipesPage.css';
+import './RecipeForm.css';
+import { RecipeImagePicker } from './RecipeImagePicker';
 
 interface IngredientDraft extends RecipeIngredientInput {
   foodName: string;
@@ -25,21 +27,23 @@ function IngredientRow({ draft, onChange, onRemove }: IngredientRowProps) {
       >
         {draft.foodName ?? '⚠ unmatched'}{draft.optional ? ' (optional)' : ''}
       </span>
-      <input
-        className="form-input"
-        type="text"
-        value={draft.qty || ''}
-        onChange={e => onChange({ ...draft, qty: e.target.value })}
-        aria-label="Quantity"
-      />
-      <input
-        type="text"
-        className="form-select"
-        value={draft.unit}
-        onChange={e => onChange({ ...draft, unit: e.target.value })}
-        aria-label="Unit"
-      />
-      <button type="button" className="ingredient-remove" onClick={onRemove} aria-label="Remove ingredient">✕</button>
+      <div className="ingredient-controls">
+        <input
+          className="form-input ingredient-qty"
+          type="text"
+          value={draft.qty || ''}
+          onChange={e => onChange({ ...draft, qty: e.target.value })}
+          aria-label="Quantity"
+        />
+        <input
+          type="text"
+          className="form-select ingredient-unit"
+          value={draft.unit}
+          onChange={e => onChange({ ...draft, unit: e.target.value })}
+          aria-label="Unit"
+        />
+        <button type="button" className="ingredient-remove" onClick={onRemove} aria-label="Remove ingredient">✕</button>
+      </div>
     </li>
   );
 }
@@ -123,6 +127,8 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose 
   );
   const [error, setError] = useState('');
   const [hydrated, setHydrated] = useState(mode === 'add' || !!initialData);
+  const [photoBase64, setPhotoBase64] = useState<string | null>(pendingPhoto?.base64 ?? null);
+  const [photoMimeType, setPhotoMimeType] = useState<string | null>(pendingPhoto?.mimeType ?? null);
 
   useEffect(() => {
     if (mode === 'edit' && existing && !hydrated) {
@@ -183,7 +189,7 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose 
       sourceImage: initialData?.sourceImage ?? null,
       instructions: instructions.trim() || null,
       ingredients: ingredients.map(({ foodName: _fn, lowConfidence: _lc, ...rest }) => rest),
-      ...(pendingPhoto && { photoBase64: pendingPhoto.base64, photoMimeType: pendingPhoto.mimeType }),
+      ...(photoBase64 && photoMimeType && { photoBase64, photoMimeType }),
     };
 
     try {
@@ -213,59 +219,78 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose 
           <p className="recipes-status">Loading…</p>
         ) : (
           <form className="recipe-form" onSubmit={handleSubmit} noValidate>
-            <div className="form-field">
-              <label className="form-label" htmlFor="name">Name *</label>
-              <input
-                id="name"
-                className="form-input"
-                type="text"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                placeholder="e.g. Spaghetti bolognese"
-                required
+            <div className="recipe-form-header">
+              <div className="recipe-form-meta">
+                <div className="form-field">
+                  <label className="form-label" htmlFor="name">Name *</label>
+                  <input
+                    id="name"
+                    className="form-input"
+                    type="text"
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    placeholder="e.g. Spaghetti bolognese"
+                    required
+                  />
+                </div>
+                <div className="form-row">
+                  <div className="form-field">
+                    <label className="form-label" htmlFor="servings">Servings *</label>
+                    <input
+                      id="servings"
+                      className="form-input"
+                      type="number"
+                      step="any"
+                      min="0"
+                      value={servings}
+                      onChange={e => setServings(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="form-field">
+                    <label className="form-label" htmlFor="sourceUrl">Source URL</label>
+                    <input
+                      id="sourceUrl"
+                      className="form-input"
+                      type="url"
+                      placeholder="Optional"
+                      value={sourceUrl}
+                      onChange={e => setSourceUrl(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+              <RecipeImagePicker
+                photoBase64={photoBase64}
+                photoMimeType={photoMimeType}
+                onChange={(base64, mimeType) => { setPhotoBase64(base64); setPhotoMimeType(mimeType); }}
               />
             </div>
 
-            <div className="form-row">
-              <div className="form-field">
-                <label className="form-label" htmlFor="servings">Servings *</label>
-                <input
-                  id="servings"
-                  className="form-input"
-                  type="number"
-                  step="any"
-                  min="0"
-                  value={servings}
-                  onChange={e => setServings(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="form-field">
-                <label className="form-label" htmlFor="sourceUrl">Source URL</label>
-                <input
-                  id="sourceUrl"
-                  className="form-input"
-                  type="url"
-                  placeholder="Optional"
-                  value={sourceUrl}
-                  onChange={e => setSourceUrl(e.target.value)}
-                />
-              </div>
-            </div>
+            <hr className="recipe-form-divider" />
 
             <div className="ingredients-section">
-              <span className="form-label">Ingredients *</span>
+              <div className="ingredients-section-header">
+                <span className="ingredients-section-title">Ingredients</span>
+                {ingredients.length > 0 && (
+                  <span className="ingredients-section-count">
+                    {ingredients.length} {ingredients.length === 1 ? 'item' : 'items'}
+                  </span>
+                )}
+              </div>
               {ingredients.length > 0 && (
-                <ul className="ingredients-list">
-                  {ingredients.map((ing, idx) => (
-                    <IngredientRow
-                      key={ing.canonicalFoodId}
-                      draft={ing}
-                      onChange={next => updateIngredient(idx, next)}
-                      onRemove={() => removeIngredient(idx)}
-                    />
-                  ))}
-                </ul>
+                <div className="ingredients-block">
+                  <ul className="ingredients-grid">
+                    {ingredients.map((ing, idx) => (
+                      <IngredientRow
+                        key={ing.canonicalFoodId}
+                        draft={ing}
+                        onChange={next => updateIngredient(idx, next)}
+                        onRemove={() => removeIngredient(idx)}
+                      />
+                    ))}
+                  </ul>
+                </div>
               )}
               <IngredientPicker onPick={addIngredient} />
             </div>
