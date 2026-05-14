@@ -85,7 +85,7 @@ describe('recipes router', () => {
     expect(res.status).toBe(400);
   });
 
-  it('rejects ingredient with non-positive qty', async () => {
+  it('rejects ingredient with blank qty', async () => {
     mocks.getSession.mockResolvedValue({ user: { id: 'user-1' } });
     mocks.membershipLimit.mockResolvedValue([{ householdId: 'hh-1' }]);
 
@@ -94,7 +94,22 @@ describe('recipes router', () => {
       .send({
         name: 'Test',
         servings: 4,
-        ingredients: [{ canonicalFoodId: '00000000-0000-0000-0000-000000000001', qty: 0, unit: 'g' }],
+        ingredients: [{ canonicalFoodId: '00000000-0000-0000-0000-000000000001', qty: '', unit: 'g' }],
+      });
+
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects numeric ingredient qty because recipe quantities are stored as display strings', async () => {
+    mocks.getSession.mockResolvedValue({ user: { id: 'user-1' } });
+    mocks.membershipLimit.mockResolvedValue([{ householdId: 'hh-1' }]);
+
+    const res = await request(app)
+      .post('/api/recipes')
+      .send({
+        name: 'Test',
+        servings: 4,
+        ingredients: [{ canonicalFoodId: '00000000-0000-0000-0000-000000000001', qty: 1, unit: 'cups' }],
       });
 
     expect(res.status).toBe(400);

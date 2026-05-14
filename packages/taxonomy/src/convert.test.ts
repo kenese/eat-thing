@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   toCanonical,
   fromCanonical,
+  convertNormalizedAmount,
   mlToG,
   gToMl,
 } from './convert';
@@ -114,5 +115,23 @@ describe('mlToG / gToMl', () => {
     const density = 0.85;
     const originalMl = 250;
     expect(gToMl(mlToG(originalMl, density), density)).toBeCloseTo(originalMl);
+  });
+});
+
+describe('convertNormalizedAmount', () => {
+  it('converts count to grams with a food-specific average weight', () => {
+    expect(convertNormalizedAmount(2, 'count', 'g', { countToGrams: 5 })).toBe(10);
+  });
+
+  it('converts grams to count with a food-specific average weight', () => {
+    expect(convertNormalizedAmount(150, 'g', 'count', { countToGrams: 75 })).toBe(2);
+  });
+
+  it('uses density and count weight together for count to ml', () => {
+    expect(convertNormalizedAmount(2, 'count', 'ml', { countToGrams: 50, densityGPerMl: 1 })).toBe(100);
+  });
+
+  it('returns null when a count conversion has no average weight', () => {
+    expect(convertNormalizedAmount(2, 'count', 'g')).toBeNull();
   });
 });

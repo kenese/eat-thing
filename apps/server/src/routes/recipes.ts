@@ -12,8 +12,8 @@ const router: ExpressRouter = Router();
 
 const ingredientSchema = z.object({
   canonicalFoodId: z.string().uuid(),
-  qty: z.number().positive(),
-  unit: z.enum(['g', 'ml', 'count']),
+  qty: z.string().trim().min(1).max(40),
+  unit: z.string().trim().max(40),
   optional: z.boolean().optional(),
 });
 

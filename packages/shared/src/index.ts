@@ -1,6 +1,5 @@
 // ─── Units & locations ──────────────────────────────────────────────────────
 
-export type CanonicalUnit = 'g' | 'ml' | 'count';
 export type InventoryLocation = 'fridge' | 'pantry' | 'freezer' | 'other';
 
 // ─── Food categories ─────────────────────────────────────────────────────────
@@ -12,9 +11,10 @@ export type Category = 'produce' | 'meat' | 'dairy' | 'pantry' | 'frozen' | 'dri
 export interface CanonicalFood {
   id: string;
   name: string;
-  defaultUnit: CanonicalUnit;
+  defaultUnit: string;
   aliases: string[];
   densityGPerMl: number | null;
+  countToGrams: number | null;
 }
 
 // ─── Inventory ────────────────────────────────────────────────────────────────
@@ -25,7 +25,7 @@ export interface InventoryRow {
   canonicalFoodId: string;
   foodName: string;
   qty: number;
-  unit: CanonicalUnit;
+  unit: string;
   brand: string | null;
   location: InventoryLocation;
   purchasedAt: string | null;
@@ -37,7 +37,7 @@ export interface InventoryRow {
 export interface CreateInventoryItemInput {
   canonicalFoodId: string;
   qty: number;
-  unit: CanonicalUnit;
+  unit: string;
   brand?: string | null;
   location?: InventoryLocation;
   purchasedAt?: string | null;
@@ -46,7 +46,7 @@ export interface CreateInventoryItemInput {
 
 export interface UpdateInventoryItemInput {
   qty?: number;
-  unit?: CanonicalUnit;
+  unit?: string;
   brand?: string | null;
   location?: InventoryLocation;
   purchasedAt?: string | null;
@@ -60,8 +60,8 @@ export interface RecipeIngredient {
   recipeId: string;
   canonicalFoodId: string;
   foodName: string;
-  qty: number;
-  unit: CanonicalUnit;
+  qty: string;
+  unit: string;
   optional: boolean;
   sortOrder: number;
 }
@@ -92,8 +92,8 @@ export interface Recipe {
 
 export interface RecipeIngredientInput {
   canonicalFoodId: string;
-  qty: number;
-  unit: CanonicalUnit;
+  qty: string;
+  unit: string;
   optional?: boolean;
 }
 
@@ -125,8 +125,8 @@ export interface ImportedIngredient {
   rawText: string;
   canonicalFoodId: string | null;
   foodName: string | null;
-  qty: number;
-  unit: CanonicalUnit;
+  qty: string;
+  unit: string;
   optional: boolean;
   confidence: 'high' | 'low';
 }
@@ -195,19 +195,19 @@ export interface Staple {
   canonicalFoodId: string;
   foodName: string;
   thresholdQty: number;
-  thresholdUnit: CanonicalUnit;
+  thresholdUnit: string;
   createdAt: string;
 }
 
 export interface CreateStapleInput {
   canonicalFoodId: string;
   thresholdQty: number;
-  thresholdUnit: CanonicalUnit;
+  thresholdUnit: string;
 }
 
 export interface UpdateStapleInput {
   thresholdQty?: number;
-  thresholdUnit?: CanonicalUnit;
+  thresholdUnit?: string;
 }
 
 // ─── Shopping lists ───────────────────────────────────────────────────────────
@@ -220,7 +220,7 @@ export interface ShoppingListItem {
   canonicalFoodId: string | null;
   name: string;
   qty: number;
-  unit: CanonicalUnit;
+  unit: string;
   source: ShoppingSource;
   checked: boolean;
   category: Category;
@@ -242,7 +242,7 @@ export interface GenerateShoppingListInput {
 export interface AddShoppingListItemInput {
   name: string;
   qty: number;
-  unit: CanonicalUnit;
+  unit: string;
   canonicalFoodId?: string | null;
 }
 
@@ -258,7 +258,7 @@ export interface CookDeduction {
   canonicalFoodId: string;
   foodName: string;
   qty: number;
-  unit: CanonicalUnit;
+  unit: string;
 }
 
 export interface CookPrompt {
@@ -267,7 +267,7 @@ export interface CookPrompt {
   foodName: string;
   inventoryItemId?: string;
   inventoryQty?: number;
-  inventoryUnit?: CanonicalUnit;
+  inventoryUnit?: string;
 }
 
 export interface CookEventPreview {

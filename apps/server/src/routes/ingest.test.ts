@@ -51,7 +51,7 @@ const MOCK_RECIPE = {
   sourceImage: null as null,
   instructions: 'Mix and bake.',
   ingredients: [
-    { rawText: 'flour', canonicalFoodId: 'cf-1', foodName: 'flour', qty: 200, unit: 'g' as const, optional: false, confidence: 'high' as const },
+    { rawText: 'flour', canonicalFoodId: 'cf-1', foodName: 'flour', qty: '200', unit: 'g', optional: false, confidence: 'high' as const },
   ],
 };
 

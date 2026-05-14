@@ -19,6 +19,7 @@ router.get('/', async (req, res) => {
         defaultUnit: canonicalFoods.defaultUnit,
         aliases: canonicalFoods.aliases,
         densityGPerMl: canonicalFoods.densityGPerMl,
+        countToGrams: canonicalFoods.countToGrams,
       })
       .from(canonicalFoods)
       .where(q?.trim() ? ilike(canonicalFoods.name, `%${q.trim()}%`) : undefined)

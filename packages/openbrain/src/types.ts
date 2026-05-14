@@ -5,7 +5,7 @@ export interface SyncResult {
 
 export interface RecipeIngredientPayload {
   foodName: string;
-  qty: number;
+  qty: string;
   unit: string;
   optional: boolean;
 }

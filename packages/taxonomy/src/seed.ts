@@ -1,9 +1,9 @@
-import type { CanonicalUnit } from './convert.js';
+import type { NormalizedUnit } from './convert.js';
 import type { Category } from './index.js';
 
 export interface SeedFood {
   name: string;
-  defaultUnit: CanonicalUnit;
+  defaultUnit: NormalizedUnit;
   category: Category;
   aliases: string[];
   /** g per ml — enables g↔ml conversion for this food. */

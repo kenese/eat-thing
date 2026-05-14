@@ -16,12 +16,17 @@ async function seed() {
         category: f.category,
         aliases: f.aliases,
         densityGPerMl: f.densityGPerMl ?? null,
+        countToGrams: f.countToGrams ?? null,
       })),
     )
     .onConflictDoUpdate({
       target: canonicalFoods.name,
       set: {
         category: sql`EXCLUDED.category`,
+        aliases: sql`EXCLUDED.aliases`,
+        defaultUnit: sql`EXCLUDED.default_unit`,
+        densityGPerMl: sql`EXCLUDED.density_g_per_ml`,
+        countToGrams: sql`EXCLUDED.count_to_grams`,
       },
     });
 

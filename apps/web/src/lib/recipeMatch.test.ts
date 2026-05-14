@@ -16,7 +16,7 @@ function recipe(name: string, ingredients: { canonicalFoodId: string; foodName: 
       recipeId: `recipe-${name}`,
       canonicalFoodId: i.canonicalFoodId,
       foodName: i.foodName,
-      qty: i.qty,
+      qty: String(i.qty),
       unit: i.unit,
       optional: false,
       sortOrder: idx,

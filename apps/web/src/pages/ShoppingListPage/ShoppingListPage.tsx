@@ -9,7 +9,7 @@ import { PageTitle } from '../../components/PageTitle';
 import { FilterStrip } from '../../components/FilterStrip';
 import { AgentStatusCard, type AgentState } from '../../components/AgentStatusCard';
 import type {
-  ShoppingList, ShoppingListItem, ShoppingListPrice, CanonicalUnit, Category, ShoppingSource,
+  ShoppingList, ShoppingListItem, ShoppingListPrice, Category, ShoppingSource,
 } from '@eat/shared';
 import { CATEGORY_LABEL, CATEGORY_ORDER } from '@eat/taxonomy';
 import { mondayOf, toIsoDate } from '../../lib/dateUtils';
@@ -117,7 +117,7 @@ function AddItemForm({ listId }: { listId: string }) {
   const addItem = useAddShoppingListItem(listId);
   const [name, setName] = useState('');
   const [qty, setQty] = useState('');
-  const [unit, setUnit] = useState<CanonicalUnit>('count');
+  const [unit, setUnit] = useState('count');
 
   async function submit() {
     const parsedQty = parseFloat(qty);
@@ -131,7 +131,7 @@ function AddItemForm({ listId }: { listId: string }) {
     <div className="sl-add-form">
       <input placeholder="Item name…" value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} />
       <input type="number" min="0" step="any" placeholder="Qty" value={qty} onChange={(e) => setQty(e.target.value)} />
-      <select value={unit} onChange={(e) => setUnit(e.target.value as CanonicalUnit)}>
+      <select value={unit} onChange={(e) => setUnit(e.target.value)}>
         <option value="g">g</option>
         <option value="ml">ml</option>
         <option value="count">count</option>

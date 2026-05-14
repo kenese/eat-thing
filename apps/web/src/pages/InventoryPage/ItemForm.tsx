@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useFoodSearch } from '../../hooks/useFoodSearch';
 import { useAddInventoryItem, useUpdateInventoryItem } from '../../hooks/useInventory';
-import type { InventoryRow, InventoryLocation, CanonicalUnit, CanonicalFood } from '@eat/shared';
+import type { InventoryRow, InventoryLocation, CanonicalFood } from '@eat/shared';
 import './ItemForm.css';
 
 interface FormState {
   canonicalFoodId: string;
   foodName: string;
   qty: string;
-  unit: CanonicalUnit;
+  unit: string;
   brand: string;
   location: InventoryLocation;
   purchasedAt: string;
@@ -182,7 +182,7 @@ export function ItemForm({ mode, item, onClose }: ItemFormProps) {
                 id="unit"
                 className="form-select"
                 value={form.unit}
-                onChange={e => set('unit', e.target.value as CanonicalUnit)}
+                onChange={e => set('unit', e.target.value)}
               >
                 <option value="g">g</option>
                 <option value="ml">ml</option>

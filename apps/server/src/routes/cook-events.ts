@@ -4,6 +4,8 @@ import { and, eq, sql } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { withHousehold } from '../middleware/with-household.js';
 import { db } from '../db/index.js';
+import { normalizeRecipeAmount } from '../lib/recipe-quantities.js';
+import { subtractAmount } from '../lib/food-amounts.js';
 import {
   mealPlanEntries, recipes, recipeIngredients,
   inventoryItems, canonicalFoods, cookEvents,
@@ -17,7 +19,7 @@ const deductionSchema = z.object({
   canonicalFoodId: z.string().uuid(),
   foodName: z.string(),
   qty: z.number().positive(),
-  unit: z.enum(['g', 'ml', 'count']),
+  unit: z.string().trim().min(1).max(40),
 });
 
 const promptResponseSchema = z.object({
@@ -88,6 +90,7 @@ router.get('/preview', withHousehold, async (req, res) => {
         qty: recipeIngredients.qty,
         unit: recipeIngredients.unit,
         densityGPerMl: canonicalFoods.densityGPerMl,
+        countToGrams: canonicalFoods.countToGrams,
       })
       .from(recipeIngredients)
       .innerJoin(canonicalFoods, eq(recipeIngredients.canonicalFoodId, canonicalFoods.id))
@@ -114,37 +117,30 @@ router.get('/preview', withHousehold, async (req, res) => {
     const prompts: CookPrompt[] = [];
 
     for (const ing of ingredients) {
-      const needed = ing.qty * scalingRatio;
+      const amount = normalizeRecipeAmount(ing.qty, ing.unit);
+      if (!amount) continue;
+      const needed = amount.qty * scalingRatio;
       const invItems = invByFood.get(ing.canonicalFoodId) ?? [];
 
       if (invItems.length === 0) continue;
 
-      const sameUnit = invItems.filter(i => i.unit === ing.unit);
-      if (sameUnit.length > 0) {
-        const item = sameUnit[0];
-        const actualDeduction = Math.min(needed, item.qty);
-        if (actualDeduction > 0.001) {
-          deductions.push({ inventoryItemId: item.id, canonicalFoodId: ing.canonicalFoodId, foodName: ing.foodName, qty: actualDeduction, unit: ing.unit });
-        }
-        continue;
+      const neededAmount = { qty: needed, unit: amount.unit };
+      let matched = false;
+      for (const item of invItems) {
+        const subtraction = subtractAmount(item, neededAmount, ing);
+        if (subtraction == null || subtraction.deductedQty <= 0.001) continue;
+        deductions.push({
+          inventoryItemId: item.id,
+          canonicalFoodId: ing.canonicalFoodId,
+          foodName: ing.foodName,
+          qty: subtraction.deductedQty,
+          unit: item.unit,
+        });
+        matched = true;
+        break;
       }
-
-      if (ing.densityGPerMl != null) {
-        const altUnit = ing.unit === 'g' ? 'ml' : ing.unit === 'ml' ? 'g' : null;
-        if (altUnit) {
-          const altItems = invItems.filter(i => i.unit === altUnit);
-          if (altItems.length > 0) {
-            const item = altItems[0];
-            const neededInAltUnit = ing.unit === 'g'
-              ? needed / ing.densityGPerMl
-              : needed * ing.densityGPerMl;
-            const actualDeduction = Math.min(neededInAltUnit, item.qty);
-            if (actualDeduction > 0.001) {
-              deductions.push({ inventoryItemId: item.id, canonicalFoodId: ing.canonicalFoodId, foodName: ing.foodName, qty: actualDeduction, unit: altUnit as 'g' | 'ml' | 'count' });
-            }
-            continue;
-          }
-        }
+      if (matched) {
+        continue;
       }
 
       const item = invItems[0];

@@ -56,8 +56,8 @@ export async function listOpenBrainRecipes(existingNames: Set<string>): Promise<
 
 interface RawIngredient {
   name: string;
-  qty: number;
-  unit: 'g' | 'ml' | 'count';
+  qty: string;
+  unit: string;
 }
 
 interface RawRecipe {
@@ -109,14 +109,13 @@ function parseIngredientLine(text: string): RawIngredient | null {
   // Format: "{qty} {unit} {name}" or "{qty} {unit} {name} (optional)"
   const cleaned = text.replace(/\s*\(optional\)$/i, '').trim();
   const parts = cleaned.split(/\s+/);
-  const qty = parseFloat(parts[0] ?? '');
-  if (isNaN(qty) || parts.length < 2) return null;
+  const qty = parts[0] ?? '';
+  if (!qty || parts.length < 2) return null;
 
   const unitStr = (parts[1] ?? '').toLowerCase();
-  let unit: 'g' | 'ml' | 'count' = 'count';
+  let unit = '';
   let nameStart = 2;
-  if (unitStr === 'g') { unit = 'g'; }
-  else if (unitStr === 'ml') { unit = 'ml'; }
+  if (unitStr === 'g' || unitStr === 'ml' || unitStr === 'count') { unit = unitStr; }
   else { nameStart = 1; } // no recognised unit — whole remainder is name
 
   const name = parts.slice(nameStart).join(' ');
@@ -127,7 +126,7 @@ function parseIngredientLine(text: string): RawIngredient | null {
 
 async function parseWithGemini(content: string): Promise<RawRecipe | null> {
   const prompt = `Extract the recipe from this text. Return ONLY valid JSON:
-{"name":"string","servings":4,"sourceUrl":"string or null","instructions":"string or null","ingredients":[{"name":"string","qty":1,"unit":"g|ml|count"}]}
+{"name":"string","servings":4,"sourceUrl":"string or null","instructions":"string or null","ingredients":[{"name":"string","qty":"1 1/2","unit":"cups"}]}
 
 Convert measurements to grams or ml where possible. Use "count" only for countable items like eggs.
 

@@ -67,7 +67,7 @@ function recipe(
       recipeId: id,
       canonicalFoodId: ingredient.canonicalFoodId,
       foodName: ingredient.foodName,
-      qty: ingredient.qty,
+      qty: String(ingredient.qty),
       unit: ingredient.unit,
       optional: false,
       sortOrder: index,

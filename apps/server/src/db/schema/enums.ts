@@ -1,6 +1,5 @@
 import { pgEnum } from 'drizzle-orm/pg-core';
 
-export const canonicalUnitEnum = pgEnum('canonical_unit', ['g', 'ml', 'count']);
 export const membershipRoleEnum = pgEnum('membership_role', ['owner', 'member']);
 export const inventoryLocationEnum = pgEnum('inventory_location', ['fridge', 'pantry', 'freezer', 'other']);
 export const mealStatusEnum = pgEnum('meal_status', ['planned', 'cooked', 'skipped']);

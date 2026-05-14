@@ -1,5 +1,5 @@
 import { searchRecipes, type MealPlannerRecipe } from '@eat/meal-planning';
-import type { CanonicalUnit, ImportedIngredient, ImportedRecipe } from '@eat/shared';
+import type { ImportedIngredient, ImportedRecipe } from '@eat/shared';
 import { matchIngredients } from './food-matcher.js';
 
 export interface MealPlannerRecipePreview {
@@ -13,18 +13,6 @@ type MealPlannerSearchResponse = MealPlannerRecipe[];
 
 async function searchMealPlannerRecipes(): Promise<MealPlannerSearchResponse> {
   return searchRecipes({});
-}
-
-function parseQuantity(value: string): number {
-  const parsed = Number.parseFloat(value);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
-}
-
-function normalizeUnit(unit: string): CanonicalUnit {
-  const normalized = unit.trim().toLowerCase();
-  if (normalized === 'g' || normalized === 'gram' || normalized === 'grams') return 'g';
-  if (normalized === 'ml' || normalized === 'millilitre' || normalized === 'millilitres') return 'ml';
-  return 'count';
 }
 
 export async function listMealPlannerRecipes(existingNames: Set<string>): Promise<MealPlannerRecipePreview[]> {
@@ -45,14 +33,14 @@ export async function parseMealPlannerRecipe(id: string): Promise<ImportedRecipe
   if (!source.ingredients.length) throw new Error('Meal Planner recipe has no ingredients');
 
   const matched = await matchIngredients(source.ingredients.map((ingredient) => ingredient.name));
-  const ingredients: ImportedIngredient[] = source.ingredients.map((ingredient, index) => {
+  const ingredients = source.ingredients.map((ingredient, index) => {
     const match = matched[index];
     return {
       rawText: ingredient.name,
       canonicalFoodId: match.canonicalFoodId,
       foodName: match.foodName,
-      qty: parseQuantity(ingredient.quantity),
-      unit: normalizeUnit(ingredient.unit),
+      qty: ingredient.quantity,
+      unit: ingredient.unit,
       optional: false,
       confidence: match.confidence,
     };

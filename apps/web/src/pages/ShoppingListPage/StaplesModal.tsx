@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useFoodSearch } from '../../hooks/useFoodSearch';
 import { useStaples, useCreateStaple, useDeleteStaple } from '../../hooks/useStaples';
-import type { CanonicalUnit } from '@eat/shared';
 
 interface Props {
   onClose: () => void;
@@ -13,14 +12,14 @@ export function StaplesModal({ onClose }: Props) {
   const deleteStaple = useDeleteStaple();
 
   const [foodQuery, setFoodQuery] = useState('');
-  const [selectedFood, setSelectedFood] = useState<{ id: string; name: string; defaultUnit: CanonicalUnit } | null>(null);
+  const [selectedFood, setSelectedFood] = useState<{ id: string; name: string; defaultUnit: string } | null>(null);
   const [thresholdQty, setThresholdQty] = useState('');
-  const [thresholdUnit, setThresholdUnit] = useState<CanonicalUnit>('g');
+  const [thresholdUnit, setThresholdUnit] = useState('g');
   const [formError, setFormError] = useState('');
 
   const { data: foodSuggestions = [] } = useFoodSearch(foodQuery);
 
-  function handleSelectFood(food: { id: string; name: string; defaultUnit: CanonicalUnit }) {
+  function handleSelectFood(food: { id: string; name: string; defaultUnit: string }) {
     setSelectedFood(food);
     setFoodQuery(food.name);
     setThresholdUnit(food.defaultUnit);
@@ -108,7 +107,7 @@ export function StaplesModal({ onClose }: Props) {
               <select
                 className="form-select"
                 value={thresholdUnit}
-                onChange={e => setThresholdUnit(e.target.value as CanonicalUnit)}
+                onChange={e => setThresholdUnit(e.target.value)}
               >
                 <option value="g">g</option>
                 <option value="ml">ml</option>

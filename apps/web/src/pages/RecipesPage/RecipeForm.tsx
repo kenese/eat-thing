@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useFoodSearch } from '../../hooks/useFoodSearch';
 import { useRecipe, useAddRecipe, useUpdateRecipe } from '../../hooks/useRecipes';
-import type { CanonicalFood, CanonicalUnit, RecipeIngredientInput, ImportedRecipe } from '@eat/shared';
+import type { CanonicalFood, RecipeIngredientInput, ImportedRecipe } from '@eat/shared';
 import '../InventoryPage/ItemForm.css';
 import './RecipesPage.css';
 
@@ -19,28 +19,26 @@ interface IngredientRowProps {
 function IngredientRow({ draft, onChange, onRemove }: IngredientRowProps) {
   return (
     <li className={`ingredient-row${draft.lowConfidence ? ' ingredient-row--unmatched' : ''}`}>
-      <span className="ingredient-name" title={draft.lowConfidence ? `Unmatched: "${draft.foodName ?? 'unknown'}" — please reassign` : undefined}>
+      <span
+        className="ingredient-name"
+        title={draft.lowConfidence ? `Unmatched: "${draft.foodName ?? 'unknown'}" — please reassign` : undefined}
+      >
         {draft.foodName ?? '⚠ unmatched'}{draft.optional ? ' (optional)' : ''}
       </span>
       <input
         className="form-input"
-        type="number"
-        step="any"
-        min="0"
+        type="text"
         value={draft.qty || ''}
-        onChange={e => onChange({ ...draft, qty: parseFloat(e.target.value) || 0 })}
+        onChange={e => onChange({ ...draft, qty: e.target.value })}
         aria-label="Quantity"
       />
-      <select
+      <input
+        type="text"
         className="form-select"
         value={draft.unit}
-        onChange={e => onChange({ ...draft, unit: e.target.value as CanonicalUnit })}
+        onChange={e => onChange({ ...draft, unit: e.target.value })}
         aria-label="Unit"
-      >
-        <option value="g">g</option>
-        <option value="ml">ml</option>
-        <option value="count">count</option>
-      </select>
+      />
       <button type="button" className="ingredient-remove" onClick={onRemove} aria-label="Remove ingredient">✕</button>
     </li>
   );
@@ -152,8 +150,8 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose 
     setIngredients(prev => [...prev, {
       canonicalFoodId: food.id,
       foodName: food.name,
-      qty: 0,
-      unit: food.defaultUnit as CanonicalUnit,
+      qty: '',
+      unit: food.defaultUnit,
       optional: false,
     }]);
   }
@@ -176,7 +174,7 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose 
     if (isNaN(servingsNum) || servingsNum <= 0) { setError('Servings must be a positive number.'); return; }
 
     if (ingredients.length === 0) { setError('Add at least one ingredient.'); return; }
-    if (ingredients.some(i => !i.qty || i.qty <= 0)) { setError('Every ingredient needs a positive quantity.'); return; }
+    if (ingredients.some(i => !i.qty.trim())) { setError('Every ingredient needs a quantity.'); return; }
 
     const payload = {
       name: name.trim(),

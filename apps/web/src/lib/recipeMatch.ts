@@ -21,7 +21,8 @@ export function computeMissing(recipe: Recipe, inventory: InventoryRow[]): strin
 
     if (canonicalMatches.length > 0) {
       const totalQty = canonicalMatches.reduce((s, m) => s + m.qty, 0);
-      if (totalQty < ing.qty) {
+      const neededQty = Number.parseFloat(ing.qty);
+      if (Number.isFinite(neededQty) && totalQty < neededQty) {
         missing.push(ing.foodName);
       }
       continue;

@@ -4,8 +4,8 @@ import type { ImportedIngredient } from '@eat/shared';
 
 interface SchemaRecipeIngredient {
   name: string;
-  qty: number;
-  unit: 'g' | 'ml' | 'count';
+  qty: string;
+  unit: string;
 }
 
 interface RawExtracted {
@@ -82,31 +82,26 @@ function extractSchemaNode(node: Record<string, unknown>): RawExtracted | null {
 
 // Very basic ingredient string parser — qty unit name
 function parseIngredientString(raw: string): SchemaRecipeIngredient {
-  const cleaned = raw.trim().replace(/¼/g, '0.25').replace(/½/g, '0.5').replace(/¾/g, '0.75');
+  const cleaned = raw.trim().replace(/¼/g, '1/4').replace(/½/g, '1/2').replace(/¾/g, '3/4');
   const parts = cleaned.split(/\s+/);
-  let qty = 1;
-  let unit: 'g' | 'ml' | 'count' = 'count';
+  let qty = '1';
+  let unit = '';
   let nameStart = 0;
 
-  const numMatch = parts[0]?.match(/^(\d+(?:[./]\d+)?)/);
+  const numMatch = cleaned.match(/^(\d+(?:\s+\d+\/\d+|[./]\d+)?)/);
   if (numMatch) {
-    qty = eval(numMatch[1].replace('/', '/')) || 1; // safe: only digits and /
-    nameStart = 1;
+    qty = numMatch[1];
+    nameStart = qty.includes(' ') ? 2 : 1;
   }
 
   const unitStr = (parts[nameStart] ?? '').toLowerCase();
-  if (['g', 'gram', 'grams', 'gr'].includes(unitStr)) { unit = 'g'; nameStart++; }
-  else if (['ml', 'milliliter', 'milliliters'].includes(unitStr)) { unit = 'ml'; nameStart++; }
-  else if (['kg', 'kilogram', 'kilograms'].includes(unitStr)) { unit = 'g'; qty *= 1000; nameStart++; }
-  else if (['l', 'liter', 'liters', 'litre', 'litres'].includes(unitStr)) { unit = 'ml'; qty *= 1000; nameStart++; }
-  else if (['cup', 'cups'].includes(unitStr)) { unit = 'ml'; qty *= 240; nameStart++; }
-  else if (['tbsp', 'tablespoon', 'tablespoons'].includes(unitStr)) { unit = 'ml'; qty *= 15; nameStart++; }
-  else if (['tsp', 'teaspoon', 'teaspoons'].includes(unitStr)) { unit = 'ml'; qty *= 5; nameStart++; }
-  else if (['oz', 'ounce', 'ounces'].includes(unitStr)) { unit = 'g'; qty *= 28; nameStart++; }
-  else if (['lb', 'pound', 'pounds'].includes(unitStr)) { unit = 'g'; qty *= 454; nameStart++; }
+  if (['g', 'gram', 'grams', 'gr', 'ml', 'milliliter', 'milliliters', 'kg', 'kilogram', 'kilograms', 'l', 'liter', 'liters', 'litre', 'litres', 'cup', 'cups', 'tbsp', 'tablespoon', 'tablespoons', 'tsp', 'teaspoon', 'teaspoons', 'oz', 'ounce', 'ounces', 'lb', 'pound', 'pounds'].includes(unitStr)) {
+    unit = parts[nameStart] ?? '';
+    nameStart++;
+  }
 
   const name = parts.slice(nameStart).join(' ') || raw;
-  return { name, qty: Math.round(qty * 100) / 100, unit };
+  return { name, qty, unit };
 }
 
 // ─── Gemini text extractor ───────────────────────────────────────────────────
@@ -131,8 +126,8 @@ ${text}`;
 
   try {
     return await generateGeminiJson<RawExtracted>(prompt, { maxOutputTokens: 2048 });
-  } catch {
-    return null;
+  } catch (e) {
+    throw e;
   }
 }
 
@@ -156,7 +151,7 @@ export async function extractFromUrl(url: string): Promise<ExtractedRecipe> {
   });
 
   const raw = parseSchemaOrg(html) ?? await extractWithGemini(stripHtml(html));
-  if (!raw) throw new Error('Could not extract recipe from this URL');
+  if (!raw) throw new Error('Could not extract recipe from this URL with Gemini');
 
   const matched = await matchIngredients(raw.ingredients.map(i => i.name));
 

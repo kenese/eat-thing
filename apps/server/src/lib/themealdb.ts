@@ -10,22 +10,11 @@ interface MealDbMeal {
   [key: string]: string | undefined;
 }
 
-function parseMeasure(raw: string): { qty: number; unit: 'g' | 'ml' | 'count' } {
-  const s = raw.trim().toLowerCase().replace(/¼/g, '0.25').replace(/½/g, '0.5').replace(/¾/g, '0.75');
-  const numMatch = s.match(/^(\d+(?:[./]\d+)?)\s*/);
-  let qty = numMatch ? eval(numMatch[1].replace('/', '/')) || 1 : 1;
-  const rest = s.replace(/^(\d+(?:[./]\d+)?)\s*/, '');
-
-  if (rest.startsWith('kg')) { qty *= 1000; return { qty, unit: 'g' }; }
-  if (rest.startsWith('g') || rest.startsWith('gram')) return { qty, unit: 'g' };
-  if (/^l(iter|itre)?s?\b/.test(rest)) { qty *= 1000; return { qty, unit: 'ml' }; }
-  if (rest.startsWith('ml') || rest.startsWith('millil')) return { qty, unit: 'ml' };
-  if (/^cup/.test(rest)) return { qty: qty * 240, unit: 'ml' };
-  if (/^tbsp|tablespoon/.test(rest)) return { qty: qty * 15, unit: 'ml' };
-  if (/^tsp|teaspoon/.test(rest)) return { qty: qty * 5, unit: 'ml' };
-  if (/^oz|ounce/.test(rest)) return { qty: qty * 28, unit: 'g' };
-  if (/^lb|pound/.test(rest)) return { qty: qty * 454, unit: 'g' };
-  return { qty, unit: 'count' };
+function parseMeasure(raw: string): { qty: string; unit: string } {
+  const s = raw.trim().toLowerCase().replace(/¼/g, '1/4').replace(/½/g, '1/2').replace(/¾/g, '3/4');
+  const match = s.match(/^(\d+(?:\s+\d+\/\d+|[./]\d+)?)\s*(.*)$/);
+  if (!match) return { qty: raw.trim() || '1', unit: '' };
+  return { qty: match[1], unit: match[2]?.trim() ?? '' };
 }
 
 async function mealToImportedRecipe(meal: MealDbMeal): Promise<ImportedRecipe> {
@@ -40,12 +29,12 @@ async function mealToImportedRecipe(meal: MealDbMeal): Promise<ImportedRecipe> {
 
   const ingredients: ImportedIngredient[] = rawIngredients.map((ing, idx) => {
     const m = matched[idx];
-    const parsed = ing.raw ? parseMeasure(ing.raw) : { qty: 1, unit: 'count' as const };
+    const parsed = ing.raw ? parseMeasure(ing.raw) : { qty: '1', unit: '' };
     return {
       rawText: ing.name,
       canonicalFoodId: m.canonicalFoodId,
       foodName: m.foodName,
-      qty: Math.round(parsed.qty * 100) / 100,
+      qty: parsed.qty,
       unit: parsed.unit,
       optional: false,
       confidence: m.confidence,

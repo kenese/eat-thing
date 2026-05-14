@@ -15,6 +15,20 @@
       "when": 1778486041165,
       "tag": "0001_giant_puppet_master",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1778713983404,
+      "tag": "0002_little_bastion",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1778717109172,
+      "tag": "0003_free_payback",
+      "breakpoints": true
     }
   ]
 }

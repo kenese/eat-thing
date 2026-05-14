@@ -112,7 +112,7 @@ test.describe('unauthenticated', () => {
     await page.getByRole('button', { name: /continue locally/i }).click();
     await expect(page.getByRole('heading', { level: 1, name: /cook from what's already/i })).toBeVisible();
     await expect(page.getByText('baby spinach')).toBeVisible();
-    await expect(page.getByText('Mushroom pasta')).toBeVisible();
+    await expect(page.getByText('shopping list · ready')).toBeVisible();
     await expect(page.locator('.shop-preview-total')).toBeVisible();
   });
 

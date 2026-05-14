@@ -23,7 +23,7 @@ const LOCATIONS: Location[] = ['fridge', 'pantry', 'freezer', 'other'];
 const createSchema = z.object({
   canonicalFoodId: z.string().uuid(),
   qty: z.number().positive(),
-  unit: z.enum(['g', 'ml', 'count']),
+  unit: z.string().trim().min(1).max(40),
   brand: z.string().trim().max(100).nullable().optional(),
   location: z.enum(['fridge', 'pantry', 'freezer', 'other']).default('pantry'),
   purchasedAt: z.string().nullable().optional(),
@@ -32,7 +32,7 @@ const createSchema = z.object({
 
 const updateSchema = z.object({
   qty: z.number().positive().optional(),
-  unit: z.enum(['g', 'ml', 'count']).optional(),
+  unit: z.string().trim().min(1).max(40).optional(),
   brand: z.string().trim().max(100).nullable().optional(),
   location: z.enum(['fridge', 'pantry', 'freezer', 'other']).optional(),
   purchasedAt: z.string().nullable().optional(),

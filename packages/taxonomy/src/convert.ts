@@ -4,7 +4,11 @@ export const MASS_UNITS = ['g', 'kg', 'oz', 'lb'] as const;
 export type VolumeUnit = (typeof VOLUME_UNITS)[number];
 export type MassUnit = (typeof MASS_UNITS)[number];
 export type DisplayUnit = VolumeUnit | MassUnit | 'count';
-export type CanonicalUnit = 'g' | 'ml' | 'count';
+export type NormalizedUnit = 'g' | 'ml' | 'count';
+export type ConversionOptions = {
+  densityGPerMl?: number | null;
+  countToGrams?: number | null;
+};
 
 // NZ/Australian metric cup = 250 ml
 export const ML_PER_UNIT: Record<VolumeUnit, number> = {
@@ -35,7 +39,7 @@ export function isMassUnit(u: string): u is MassUnit {
  * Volume display units → ml. Mass display units → g. Count → count.
  * Does NOT cross mass↔volume — use mlToG / gToMl for that.
  */
-export function toCanonical(qty: number, from: DisplayUnit): { qty: number; unit: CanonicalUnit } {
+export function toCanonical(qty: number, from: DisplayUnit): { qty: number; unit: NormalizedUnit } {
   if (from === 'count') return { qty, unit: 'count' };
   if (isVolumeUnit(from)) return { qty: qty * ML_PER_UNIT[from], unit: 'ml' };
   return { qty: qty * G_PER_UNIT[from], unit: 'g' };
@@ -57,7 +61,7 @@ export function gToMl(grams: number, densityGPerMl: number): number {
  */
 export function fromCanonical(
   qty: number,
-  unit: CanonicalUnit,
+  unit: NormalizedUnit,
   to: DisplayUnit,
   opts: { densityGPerMl?: number } = {},
 ): number | null {
@@ -74,5 +78,44 @@ export function fromCanonical(
   if (isMassUnit(to)) return qty / G_PER_UNIT[to];
   if (isVolumeUnit(to) && opts.densityGPerMl != null)
     return gToMl(qty, opts.densityGPerMl) / ML_PER_UNIT[to];
+  return null;
+}
+
+/**
+ * Convert between normalized storage/math units for a specific food.
+ * Uses density for g↔ml and countToGrams for count↔g. Count↔ml can be
+ * derived only when both values are available.
+ */
+export function convertNormalizedAmount(
+  qty: number,
+  from: NormalizedUnit,
+  to: NormalizedUnit,
+  opts: ConversionOptions = {},
+): number | null {
+  if (from === to) return qty;
+
+  if (from === 'ml' && to === 'g') {
+    return opts.densityGPerMl != null ? mlToG(qty, opts.densityGPerMl) : null;
+  }
+  if (from === 'g' && to === 'ml') {
+    return opts.densityGPerMl != null ? gToMl(qty, opts.densityGPerMl) : null;
+  }
+
+  if (from === 'count' && to === 'g') {
+    return opts.countToGrams != null ? qty * opts.countToGrams : null;
+  }
+  if (from === 'g' && to === 'count') {
+    return opts.countToGrams != null ? qty / opts.countToGrams : null;
+  }
+
+  if (from === 'count' && to === 'ml') {
+    if (opts.countToGrams == null || opts.densityGPerMl == null) return null;
+    return gToMl(qty * opts.countToGrams, opts.densityGPerMl);
+  }
+  if (from === 'ml' && to === 'count') {
+    if (opts.countToGrams == null || opts.densityGPerMl == null) return null;
+    return mlToG(qty, opts.densityGPerMl) / opts.countToGrams;
+  }
+
   return null;
 }

@@ -2,7 +2,7 @@ import { pgTable, uuid, text, timestamp, doublePrecision, boolean, unique } from
 import { households } from './households.js';
 import { canonicalFoods } from './foods.js';
 import { mealPlans } from './meal-plans.js';
-import { canonicalUnitEnum, shoppingSourceEnum } from './enums.js';
+import { shoppingSourceEnum } from './enums.js';
 
 export const shoppingLists = pgTable('shopping_lists', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -19,7 +19,7 @@ export const shoppingListItems = pgTable('shopping_list_items', {
   canonicalFoodId: uuid('canonical_food_id').references(() => canonicalFoods.id),
   name: text('name').notNull(), // denormalised display name; null canonicalFoodId = manual free-text item
   qty: doublePrecision('qty').notNull(),
-  unit: canonicalUnitEnum('unit').notNull(),
+  unit: text('unit').notNull(),
   source: shoppingSourceEnum('source').notNull(),
   checked: boolean('checked').notNull().default(false),
 });
@@ -29,6 +29,6 @@ export const staples = pgTable('staples', {
   householdId: uuid('household_id').notNull().references(() => households.id, { onDelete: 'cascade' }),
   canonicalFoodId: uuid('canonical_food_id').notNull().references(() => canonicalFoods.id, { onDelete: 'cascade' }),
   thresholdQty: doublePrecision('threshold_qty').notNull(),
-  thresholdUnit: canonicalUnitEnum('threshold_unit').notNull(),
+  thresholdUnit: text('threshold_unit').notNull(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 }, t => [unique().on(t.householdId, t.canonicalFoodId)]);

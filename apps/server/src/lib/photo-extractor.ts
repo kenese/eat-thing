@@ -16,7 +16,7 @@ export async function extractFromPhoto(
   mimeType: ImageMediaType,
 ): Promise<ExtractedPhotoRecipe> {
   const prompt = `Look at this recipe image. Extract the recipe and return ONLY valid JSON with this shape:
-{"name":"string","servings":4,"instructions":"string or null","ingredients":[{"name":"string","qty":1,"unit":"g|ml|count"}]}
+{"name":"string","servings":4,"instructions":"string or null","ingredients":[{"name":"string","qty":"1 1/2","unit":"cups"}]}
 
 Convert measurements to grams or ml where possible (1 cup=240ml, 1tbsp=15ml, 1tsp=5ml, 1oz=28g, 1lb=454g). Use "count" only for things like eggs. If you cannot see ingredient quantities clearly, use 1 as a default quantity.`;
 
@@ -24,7 +24,7 @@ Convert measurements to grams or ml where possible (1 cup=240ml, 1tbsp=15ml, 1ts
     name: string;
     servings: number;
     instructions: string | null;
-    ingredients: { name: string; qty: number; unit: 'g' | 'ml' | 'count' }[];
+    ingredients: { name: string; qty: string; unit: string }[];
   }>(prompt, {
     image: { data: imageBase64, mimeType },
     maxOutputTokens: 2048,

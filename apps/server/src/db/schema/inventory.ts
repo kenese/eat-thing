@@ -1,14 +1,14 @@
 import { pgTable, uuid, text, timestamp, doublePrecision, jsonb, boolean } from 'drizzle-orm/pg-core';
 import { households } from './households.js';
 import { canonicalFoods } from './foods.js';
-import { canonicalUnitEnum, inventoryLocationEnum } from './enums.js';
+import { inventoryLocationEnum } from './enums.js';
 
 export const inventoryItems = pgTable('inventory_items', {
   id: uuid('id').primaryKey().defaultRandom(),
   householdId: uuid('household_id').notNull().references(() => households.id, { onDelete: 'cascade' }),
   canonicalFoodId: uuid('canonical_food_id').notNull().references(() => canonicalFoods.id),
   qty: doublePrecision('qty').notNull(),
-  unit: canonicalUnitEnum('unit').notNull(),
+  unit: text('unit').notNull(),
   brand: text('brand'),
   location: inventoryLocationEnum('location').notNull().default('pantry'),
   purchasedAt: timestamp('purchased_at'),

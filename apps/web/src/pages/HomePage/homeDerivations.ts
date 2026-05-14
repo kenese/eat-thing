@@ -4,7 +4,6 @@ import type {
   Recipe,
   ShoppingList,
   ShoppingListPrice,
-  CanonicalUnit,
   Category,
 } from '@eat/shared';
 import { computeMissing } from '../../lib/recipeMatch';
@@ -54,7 +53,7 @@ function daysBetween(from: Date, to: Date): number {
   return Math.round(ms / 86_400_000);
 }
 
-function formatQty(qty: number, unit: CanonicalUnit): string {
+function formatQty(qty: number, unit: string): string {
   const rounded = Number.isInteger(qty) ? qty : Math.round(qty * 10) / 10;
   return `${rounded} ${unit}`;
 }

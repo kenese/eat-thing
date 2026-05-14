@@ -9,5 +9,6 @@ export const canonicalFoods = pgTable('canonical_foods', {
   category: text('category').notNull().default('other'),
   aliases: text('aliases').array().notNull().default([]),
   densityGPerMl: doublePrecision('density_g_per_ml'), // enables g↔ml conversion; null if not applicable
+  countToGrams: doublePrecision('count_to_grams'), // average grams per count unit; null if not meaningful
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
