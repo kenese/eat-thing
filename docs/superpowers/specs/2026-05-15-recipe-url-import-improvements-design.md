@@ -63,6 +63,10 @@ fetch(url)
 
 This function is **only called on the Gemini fallback path** — schema.org parsing still runs on the raw HTML because `<script type="application/ld+json">` tags are stripped by Readability.
 
+### Internal type change — `SchemaRecipeIngredient`
+
+The internal `SchemaRecipeIngredient` interface gains `section?: string` so both schema.org and Gemini paths can attach section names to individual ingredients before the shared annotation step. `RawExtracted.ingredients` stays as `SchemaRecipeIngredient[]`; instructions sections are assembled into the markdown-header format before being stored in `RawExtracted.instructions`.
+
 ### 2. No paraphrasing — Gemini prompt changes
 
 Remove the existing metric-conversion instruction:
@@ -119,7 +123,9 @@ Resolution order:
 3. First `<img src="...">` where src ends in `.jpg`, `.jpeg`, `.png`, or `.webp` and is not a data URI
 4. Null (silent — no error thrown)
 
-If an image URL is found, download it and upload to Supabase Storage using the same path convention as photo imports. The resulting Storage path is returned as `sourceImage` on `ExtractedRecipe`.
+`resolveHeroImage(html, baseUrl)` returns the resolved absolute image URL (not yet uploaded). `ExtractedRecipe` gains `heroImageUrl: string | null`.
+
+**Upload happens on save**, not during extraction — consistent with the photo import pattern. When `POST /api/recipes` receives a `heroImageUrl`, the recipes route fetches the image bytes and uploads to Supabase Storage, storing the resulting path in `source_image`. The `ImportedRecipe` shared type gains `heroImageUrl: string | null` so the frontend can display a preview in the edit-and-confirm step.
 
 All image resolution errors are caught and logged; a failure does not abort recipe extraction.
 
