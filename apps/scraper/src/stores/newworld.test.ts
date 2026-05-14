@@ -13,10 +13,10 @@ describe('parseSearchResults', () => {
     const results = parseSearchResults(fixture('search.html'));
     expect(results).toHaveLength(3);
     expect(results[0]).toEqual({
-      sku: 'NW-001',
-      name: 'Free Range Eggs Size 7 (12 pk)',
-      brand: 'Mainland',
-      price: 7.49,
+      sku: '5312709',
+      name: 'Rise N Shine Fresh Colony Mixed Grade Eggs 12pk',
+      brand: null,
+      price: 11.99,
       inStock: true,
     });
     expect(results[2]?.inStock).toBe(false);

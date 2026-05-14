@@ -17,16 +17,18 @@
         "worker:openbrain": "tsx src/workers/openbrain-worker.ts"
     },
     "dependencies": {
-        "@eat/openbrain": "workspace:*",
         "@eat/meal-planning": "workspace:*",
+        "@eat/openbrain": "workspace:*",
         "@eat/shared": "workspace:*",
         "@eat/taxonomy": "workspace:*",
+        "@mozilla/readability": "^0.6.0",
         "@types/uuid": "^10.0.0",
         "better-auth": "^1.6.9",
         "cors": "^2.8.5",
         "dotenv": "^17.4.2",
         "drizzle-orm": "^0.45.2",
         "express": "^4.21.0",
+        "jsdom": "^28.1.0",
         "postgres": "^3.4.9",
         "uuid": "^11.0.0",
         "zod": "^3.24.0"
@@ -34,6 +36,7 @@
     "devDependencies": {
         "@types/cors": "^2.8.17",
         "@types/express": "^5.0.0",
+        "@types/jsdom": "^28.0.3",
         "@types/supertest": "^7.2.0",
         "drizzle-kit": "^0.31.10",
         "supertest": "^7.2.2",

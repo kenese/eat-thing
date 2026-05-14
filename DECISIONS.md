@@ -112,6 +112,12 @@ Each decision: short title, date, context, decision, rationale. Keep it terse �
 **Decision:** Meal Planner recipe imports use a dedicated `@eat/meal-planning` package. The OpenBrain package remains responsible for thought search/fetch/sync only.
 **Rationale:** The adapter boundary matches the MCP boundary, keeps recipe import code from depending on thought-store transport, and preserves the original rule that OpenBrain is not the runtime source of truth for eat-thing.
 
+## D21 — Narrow MVP supermarket scope to New World only
+**Date:** 2026-05-15
+**Context:** Pak'nSave and Woolworths adapters exist in `apps/scraper` (parsers, fixtures, bootstrap, smoke scripts). Running all three in parallel adds bootstrap ops burden and design complexity (multi-store UI, fan-out, price comparison) before any store is proven stable in production.
+**Decision:** MVP ships New World only — prices, availability, and build-to-cart. Pak'nSave and Woolworths are deferred to post-MVP (see IDEAS.md). The adapter code stays in `apps/scraper` but the bootstrap and smoke for those stores won't be wired in until after Phase 4.
+**Rationale:** One store working well beats three stores half-working. Price comparison and split-shop optimisation only make sense once the single-store flow is solid.
+
 ## D20 — OpenBrain ecosystem recipe imports prefer Meal Planner structured data
 **Date:** 2026-05-13
 **Context:** The existing OpenBrain bulk import reads recipe thoughts and parses prose/markdown, but Meal Planner is part of the OpenBrain ecosystem and stores recipes with structured fields.

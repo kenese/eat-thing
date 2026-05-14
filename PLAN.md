@@ -67,7 +67,7 @@ Make adding recipes effortless.
 
 Scraper on Mac mini. Logs in, reads. No writes to the supermarket account. Built one store at a time so the architecture is shaped by real adapters, not guesses.
 
-### Slice 1 — New World vertical (in progress)
+### Slice 1 — New World vertical (complete)
 
 - [x] Encrypted credential storage; AES-256-GCM, key on the Mac mini only — _2026-05-10_
 - [x] Bootstrap: headed `bootstrap:newworld` (laptop) + `bootstrap:ingest` (mini) — _2026-05-10_
@@ -75,27 +75,20 @@ Scraper on Mac mini. Logs in, reads. No writes to the supermarket account. Built
 - [x] New World adapter: search + past-orders parsers + `handle()` dispatch — _2026-05-10_
 - [x] Hybrid catalog matching with preferred-brand bias — _2026-05-10_
 - [x] Inline price + availability column on the existing `ShoppingListPage` — _2026-05-10_
-- [ ] First-run login (user at browser) + smoke test against live New World
+- [x] First-run login + smoke test against live New World — _2026-05-15_
 
-### Slice 2 — Pak'nSave + Woolworths adapters (in progress)
+### Slice 2 — Hardening (next)
 
-- [x] Pak'nSave adapter (parser, fixtures, bootstrap, smoke) — _2026-05-11_
-- [x] Woolworths adapter (parser, fixtures, bootstrap, smoke) — _2026-05-11_
-- [ ] First-run login + smoke for Pak'nSave (user at browser)
-- [ ] First-run login + smoke for Woolworths (user at browser)
-
-### Slice 3 — Multi-store UI + production hardening (next)
-
-- [ ] Multi-store recommendation UI: cheapest store, convenient store, optional split shop
-- [ ] Multi-store `refresh-prices` enqueue (fan out per active session)
 - [ ] Robustness: detect logged-out state and prompt user; retry/backoff for transient failures
 - [ ] `launchd` plists so both the scraper and the OpenBrain sync worker auto-start on the Mac mini
 
-## Phase 4 — Build-to-cart
+Pak'nSave and Woolworths adapters exist in `apps/scraper` but are deferred post-MVP (see [IDEAS.md](./IDEAS.md) and D21).
+
+## Phase 4 — Build-to-cart (New World only)
 
 Adds items to cart on the user's behalf. User always clicks "place order" — see [D3](./DECISIONS.md#d3--supermarket-integration-ceiling-build-to-cart).
 
-- [ ] Per-store "add to cart" Playwright flows
+- [ ] New World "add to cart" Playwright flow
 - [ ] Reconcile: confirm cart contents match shopping list, surface mismatches
 - [ ] Cart-link handoff: deep link or QR back to phone for checkout
 - [ ] Audit log of every scraper action (what was added, when, in which session)
@@ -147,6 +140,7 @@ Deferred (own specs): Shops nav destination, scan-receipt, print, delivery-windo
 - 2026-05-09 — Phase 1: OpenBrain sync complete
 - 2026-05-10 — Phase 2: Recipe ingestion complete — /api/ingest/url (schema.org ld+json → Claude haiku fallback), /api/ingest/photo (Claude haiku multimodal), /api/ingest/search (TheMealDB); food-matcher with exact/alias/contains/LLM tiers returning confidence; ImportModal with URL/Photo/Search tabs + edit-and-confirm step prefilling RecipeForm; low-confidence ingredients highlighted in amber. Photos saved to Supabase Storage (eat-thing bucket) on recipe save. @anthropic-ai/sdk added to server. — `sync_dirty` table with INSERT…ON CONFLICT debounce; inventory/meal-plan/recipe routes fire markDirty after writes; `/api/sync` endpoints (pending, claim, complete, snapshots) gated by HMAC-SHA256 using `req.originalUrl`; `packages/openbrain` MCP client singleton + typed sync functions with `eat-thing:` external-ID scheme; `openbrain-worker` poller + `launchd` plist template for Mac mini.
 - 2026-05-10 — Phase 3 slice 1: New World vertical landed (encrypted sessions + jobs lifecycle + parser + matcher + price column). Headed bootstrap and live smoke pending user.
-- 2026-05-11 — Phase 3 slice 2: Pak'nSave + Woolworths adapters landed (parsers, fixtures, bootstrap, smoke). Smoke-only run path; multi-store enqueueing and UI deferred to slice 3. Live first-run login + smoke pending user.
+- 2026-05-11 — Phase 3 slice 2: Pak'nSave + Woolworths adapters landed (parsers, fixtures, bootstrap, smoke). Deferred from MVP per D21 — see IDEAS.md.
+- 2026-05-15 — Phase 3 slice 1: New World smoke test passing against live site. Selector refresh for new React/Next.js DOM structure (data-testid attributes, split price elements).
 - 2026-05-12 — Frontend restyle follow-up: Home dashboard landed as `/`, composing inventory expiry, five-day meal readiness, and shopping-list preview. E2E now asserts the home route instead of the old inventory redirect.
 - 2026-05-13 — Meal Planner recipe import from the OpenBrain ecosystem landed: structured list + parse endpoints, dedicated `@eat/meal-planning` adapter, import modal tab, edit-and-confirm flow, unit + E2E coverage.

@@ -16,7 +16,8 @@ type GeminiResponse = {
   }>;
 };
 
-const DEFAULT_MODEL = 'gemini-2.0-flash';
+const DEFAULT_MODEL = 'gemini-flash-latest';
+// const DEFAULT_MODEL = 'gemini-2.0-flash';
 
 function extractJsonText(text: string): string {
   const trimmed = text.trim();
@@ -45,7 +46,10 @@ export async function generateGeminiJson<T>(prompt: string, options: GeminiOptio
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
     {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-goog-api-key': 'AIzaSyCj6kM1Gyc5cgDCKob2RljrjhwGaDXjg6A'
+      },
       body: JSON.stringify({
         contents: [{ role: 'user', parts }],
         generationConfig: {

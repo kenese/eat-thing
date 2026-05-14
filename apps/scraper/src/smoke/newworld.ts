@@ -11,11 +11,21 @@ async function main() {
   const storageState = await loadStorageState(HOUSEHOLD, 'new_world');
   if (!storageState) throw new Error('No stored session for new_world. Run bootstrap first.');
 
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({
+    headless: false,
+    channel: 'chrome',
+    args: ['--disable-blink-features=AutomationControlled'],
+  });
   const context = await browser.newContext({ storageState });
+  await context.addInitScript(() => {
+    Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+  });
   const page = await context.newPage();
 
   await page.goto(`https://www.newworld.co.nz/shop/search?q=${encodeURIComponent(QUERY)}`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('p[data-testid="product-title"]', { timeout: 30000 }).catch(() => {
+    console.warn('Warning: product-title never appeared — page may still be loading');
+  });
   const html = await page.content();
 
   if (isLoggedOutPage(html)) {

@@ -23,16 +23,18 @@ export interface ParsedPastOrderProduct {
 export function parseSearchResults(html: string): ParsedSearchResult[] {
   const $ = cheerio.load(html);
   const out: ParsedSearchResult[] = [];
-  $('ul[data-testid="product-grid"] > li[data-product-id]').each((_i, el) => {
+  $('div[data-testid^="product-"]').each((_i, el) => {
     const $el = $(el);
-    const sku = $el.attr('data-product-id') ?? '';
-    const name = $el.find('.product-name').first().text().trim();
-    const brand = $el.find('.product-brand').first().text().trim() || null;
-    const priceText = $el.find('.product-price').first().text().trim().replace(/[^0-9.]/g, '');
-    const price = parseFloat(priceText);
-    const inStock = $el.attr('data-in-stock') === 'true';
+    const testId = $el.attr('data-testid') ?? '';
+    const skuMatch = testId.match(/^product-(\w+)-/);
+    const sku = skuMatch?.[1] ?? '';
+    const name = $el.find('p[data-testid="product-title"]').first().text().trim();
+    const dollars = $el.find('p[data-testid="price-dollars"]').first().text().trim();
+    const cents = $el.find('p[data-testid="price-cents"]').first().text().trim();
+    const price = parseFloat(`${dollars}.${cents.padStart(2, '0')}`);
+    const inStock = $el.find('button[data-testid="add-to-cart"]').length > 0;
     if (sku && name && !Number.isNaN(price)) {
-      out.push({ sku, name, brand, price, inStock });
+      out.push({ sku, name, brand: null, price, inStock });
     }
   });
   return out;
@@ -95,6 +97,7 @@ export const newWorldAdapter: StoreAdapter = {
         const items = [];
         for (const item of payload.items) {
           await page.goto(SEARCH_URL(item.name), { waitUntil: 'domcontentloaded' });
+          await page.waitForSelector('p[data-testid="product-title"]', { timeout: 15000 }).catch(() => {});
           const html = await page.content();
           if (isLoggedOutPage(html)) {
             return { ok: false, error: 'session_expired' };

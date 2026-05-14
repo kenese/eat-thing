@@ -15,7 +15,8 @@
         "bootstrap:ingest": "tsx src/bootstrap/ingest.ts",
         "smoke:newworld": "tsx src/smoke/newworld.ts",
         "smoke:paknsave": "tsx src/smoke/paknsave.ts",
-        "smoke:woolworths": "tsx src/smoke/woolworths.ts"
+        "smoke:woolworths": "tsx src/smoke/woolworths.ts",
+        "dump:newworld": "tsx src/smoke/dump-newworld-html.ts"
     },
     "dependencies": {
         "cheerio": "^1.2.0",

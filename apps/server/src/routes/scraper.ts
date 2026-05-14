@@ -13,7 +13,7 @@ import { fromNodeHeaders } from 'better-auth/node';
 const router: ExpressRouter = Router();
 
 function withWorkerAuth(req: Request, res: Response, next: NextFunction) {
-  const key = process.env.WORKER_HMAC_KEY;
+  const key = process.env.SCRAPER_HMAC_SECRET;
   if (!key) { res.status(500).json({ error: 'WORKER_HMAC_KEY not configured' }); return; }
 
   const timestamp = req.headers['x-worker-timestamp'] as string;
