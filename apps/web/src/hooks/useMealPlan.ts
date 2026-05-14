@@ -20,7 +20,13 @@ export function useAddMealPlanEntry() {
   return useMutation({
     mutationFn: (data: CreateMealPlanEntryInput) =>
       api.post<{ mealPlanId: string; entry: MealPlanEntry }>('/api/meal-plans/entries', data),
-    onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['meal-plan', vars.weekStart] }),
+    onSuccess: async (_, vars) => {
+      await api.post('/api/shopping-lists/generate', { weekStart: vars.weekStart });
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ['meal-plan', vars.weekStart] }),
+        qc.invalidateQueries({ queryKey: ['shopping-list'] }),
+      ]);
+    },
   });
 }
 

@@ -131,6 +131,7 @@ Deferred (own specs): Shops nav destination, scan-receipt, print, delivery-windo
 
 ## Done
 
+- 2026-05-14 — Fixed meal-plan → shopping-list freshness: adding a recipe to the current week now regenerates and invalidates the derived shopping list so missing ingredients appear without a manual Generate step.
 - 2026-05-07 — Phase 0: deleted `extension/` (Discogs Cart+), unrelated to eat-thing.
 - 2026-05-07 — Phase 0: wrote `CLAUDE.md` so any new Claude session starts warm.
 - 2026-05-07 — Phase 0: rebranded workspaces from `@starter/*` to `@eat/*`; rewrote `README.md` for eat-thing.
