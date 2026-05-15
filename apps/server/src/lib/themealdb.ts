@@ -36,6 +36,8 @@ async function mealToImportedRecipe(meal: MealDbMeal): Promise<ImportedRecipe> {
       foodName: m.foodName,
       qty: parsed.qty,
       unit: parsed.unit,
+      section: null,
+      metric: null,
       optional: false,
       confidence: m.confidence,
     };
@@ -46,6 +48,7 @@ async function mealToImportedRecipe(meal: MealDbMeal): Promise<ImportedRecipe> {
     servings: 4,
     sourceUrl: meal.strSource || `https://www.themealdb.com/meal/${meal.idMeal}`,
     sourceImage: null,
+    heroImageUrl: null,
     instructions: meal.strInstructions || null,
     ingredients,
   };

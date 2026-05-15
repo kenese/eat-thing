@@ -40,6 +40,8 @@ Convert measurements to grams or ml where possible (1 cup=240ml, 1tbsp=15ml, 1ts
       foodName: m.foodName,
       qty: ing.qty,
       unit: ing.unit,
+      section: null,
+      metric: null,
       optional: false,
       confidence: m.confidence,
     };

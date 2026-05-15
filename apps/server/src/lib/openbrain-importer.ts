@@ -159,6 +159,8 @@ export async function parseOpenBrainThought(thoughtId: string): Promise<Imported
       foodName: m.foodName,
       qty: ing.qty,
       unit: ing.unit,
+      section: null,
+      metric: null,
       optional: false,
       confidence: m.confidence,
     };
@@ -169,6 +171,7 @@ export async function parseOpenBrainThought(thoughtId: string): Promise<Imported
     servings: raw.servings,
     sourceUrl: raw.sourceUrl,
     sourceImage: null,
+    heroImageUrl: null,
     instructions: raw.instructions,
     ingredients,
   };

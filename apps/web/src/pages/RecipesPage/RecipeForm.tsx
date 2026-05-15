@@ -129,6 +129,7 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose 
   const [hydrated, setHydrated] = useState(mode === 'add' || !!initialData);
   const [photoBase64, setPhotoBase64] = useState<string | null>(pendingPhoto?.base64 ?? null);
   const [photoMimeType, setPhotoMimeType] = useState<string | null>(pendingPhoto?.mimeType ?? null);
+  const [readOnly, setReadOnly] = useState(mode === 'edit');
 
   useEffect(() => {
     if (mode === 'edit' && existing && !hydrated) {
@@ -204,19 +205,71 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose 
     }
   }
 
+  const viewImageSrc = photoBase64
+    ? `data:${photoMimeType};base64,${photoBase64}`
+    : (existing?.sourceImage ?? null);
+
+  function formatIngredient(ing: IngredientDraft) {
+    return [ing.qty, ing.unit, ing.foodName].filter(Boolean).join(' ');
+  }
+
   return (
     <div
       className="modal-overlay"
       onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="modal-panel" role="dialog" aria-modal="true">
+      <div className="modal-panel modal-panel--recipe" role="dialog" aria-modal="true">
         <div className="modal-header">
-          <h2>{initialData ? 'Review imported recipe' : mode === 'add' ? 'Add recipe' : 'Edit recipe'}</h2>
+          <h2>{initialData ? 'Review imported recipe' : mode === 'add' ? 'Add recipe' : name || 'Recipe'}</h2>
           <button className="modal-close" onClick={onClose} aria-label="Close">✕</button>
         </div>
 
         {mode === 'edit' && isLoadingExisting ? (
           <p className="recipes-status">Loading…</p>
+        ) : readOnly ? (
+          <div className="recipe-view">
+            {viewImageSrc && (
+              <div className="recipe-view-image">
+                <img src={viewImageSrc} alt={name} />
+              </div>
+            )}
+            <div className="recipe-view-body">
+              <div className="recipe-view-meta">
+                <span className="recipe-view-servings">{servings} servings</span>
+                {sourceUrl && (
+                  <a className="recipe-view-source" href={sourceUrl} target="_blank" rel="noopener noreferrer">
+                    Source ↗
+                  </a>
+                )}
+              </div>
+
+              {ingredients.length > 0 && (
+                <div className="recipe-view-section">
+                  <span className="ingredients-section-title">Ingredients</span>
+                  <ul className="recipe-view-ingredients">
+                    {ingredients.map(ing => (
+                      <li key={ing.canonicalFoodId} className="recipe-view-ingredient">
+                        {formatIngredient(ing)}
+                        {ing.optional && <span className="recipe-view-optional"> (optional)</span>}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {instructions && (
+                <div className="recipe-view-section">
+                  <span className="ingredients-section-title">Instructions</span>
+                  <p className="recipe-view-instructions">{instructions}</p>
+                </div>
+              )}
+
+              <div className="form-actions">
+                <button type="button" className="btn-secondary" onClick={onClose}>Close</button>
+                <button type="button" className="btn-primary" onClick={() => setReadOnly(false)}>Edit</button>
+              </div>
+            </div>
+          </div>
         ) : (
           <form className="recipe-form" onSubmit={handleSubmit} noValidate>
             <div className="recipe-form-header">
@@ -309,7 +362,9 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose 
             {error && <p className="form-error" role="alert">{error}</p>}
 
             <div className="form-actions">
-              <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
+              <button type="button" className="btn-secondary" onClick={() => mode === 'edit' ? setReadOnly(true) : onClose()}>
+                Cancel
+              </button>
               <button type="submit" className="btn-primary" disabled={isPending}>
                 {isPending ? 'Saving…' : initialData ? 'Save imported recipe' : mode === 'add' ? 'Add recipe' : 'Save changes'}
               </button>

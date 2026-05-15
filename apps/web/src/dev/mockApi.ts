@@ -69,6 +69,8 @@ function recipe(
       foodName: ingredient.foodName,
       qty: String(ingredient.qty),
       unit: ingredient.unit,
+      section: null,
+      metricValue: null,
       optional: false,
       sortOrder: index,
     })),

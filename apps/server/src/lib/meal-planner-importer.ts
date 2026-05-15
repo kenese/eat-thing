@@ -41,6 +41,8 @@ export async function parseMealPlannerRecipe(id: string): Promise<ImportedRecipe
       foodName: match.foodName,
       qty: ingredient.quantity,
       unit: ingredient.unit,
+      section: null,
+      metric: null,
       optional: false,
       confidence: match.confidence,
     };
@@ -51,6 +53,7 @@ export async function parseMealPlannerRecipe(id: string): Promise<ImportedRecipe
     servings: source.servings ?? 4,
     sourceUrl: null,
     sourceImage: null,
+    heroImageUrl: null,
     instructions: source.instructions?.join('\n') ?? null,
     ingredients,
   };

@@ -18,6 +18,8 @@ function recipe(name: string, ingredients: { canonicalFoodId: string; foodName: 
       foodName: i.foodName,
       qty: String(i.qty),
       unit: i.unit,
+      section: null,
+      metricValue: null,
       optional: false,
       sortOrder: idx,
     })),

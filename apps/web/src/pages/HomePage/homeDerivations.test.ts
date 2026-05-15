@@ -70,6 +70,8 @@ function recipe(id: string, ingredients: { name: string; canonicalFoodId: string
       foodName: ing.name,
       qty: String(ing.qty),
       unit: 'count',
+      section: null,
+      metricValue: null,
       optional: false,
       sortOrder: i,
     })),
