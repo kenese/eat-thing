@@ -82,6 +82,8 @@ describe('ingest router', () => {
       const res = await request(app).post('/api/ingest/url').send({ url: 'https://example.com/recipe' });
       expect(res.status).toBe(200);
       expect(res.body.name).toBe('Test Recipe');
+      expect(res.body.heroImageUrl).toBe('https://example.com/hero.jpg');
+      expect(res.body.ingredients[0].metric).toBe('200 g');
       expect(res.body.ingredients).toHaveLength(1);
     });
 
