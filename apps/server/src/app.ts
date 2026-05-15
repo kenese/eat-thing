@@ -25,7 +25,8 @@ app.use(cors({
 // Better-Auth handles its own body parsing for auth routes
 app.all('/api/auth/*', toNodeHandler(auth));
 
-app.use(express.json());
+app.use('/api/ingest', express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '10mb' }));
 
 // ─── Health ──────────────────────────────────────────────────────────────────
 

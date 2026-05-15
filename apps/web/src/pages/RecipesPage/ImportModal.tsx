@@ -10,21 +10,13 @@ import {
 } from '../../hooks/useIngest';
 import { RecipeForm } from './RecipeForm';
 import type { ImportedRecipe } from '@eat/shared';
+import { prepareRecipePhotoUpload } from '../../lib/recipePhotoUpload';
 import './ImportModal.css';
 
 type Tab = 'url' | 'photo' | 'search' | 'mealPlanner' | 'openbrain';
 
 interface ImportModalProps {
   onClose: () => void;
-}
-
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve((reader.result as string).split(',')[1]);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
 }
 
 export function ImportModal({ onClose }: ImportModalProps) {
@@ -66,8 +58,8 @@ export function ImportModal({ onClose }: ImportModalProps) {
   async function handlePhotoExtract(e: React.FormEvent) {
     e.preventDefault();
     if (!photoFile) return;
-    const base64 = await fileToBase64(photoFile);
-    const mimeType = photoFile.type as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp';
+    debugger;
+    const { base64, mimeType } = await prepareRecipePhotoUpload(photoFile);
     const result = await photoMutation.mutateAsync({ imageBase64: base64, mimeType });
     setPendingPhoto({ base64, mimeType });
     setImported(result);

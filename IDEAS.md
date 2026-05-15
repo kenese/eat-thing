@@ -35,6 +35,12 @@ Upload a supermarket receipt photo → LLM extracts line items → auto-update i
 
 ---
 
+## Multipart recipe photo ingestion
+
+`/api/ingest/photo` currently accepts resized base64 image JSON for compatibility with the existing importer. Move it to `multipart/form-data` so large phone photos avoid base64 overhead, file-size validation happens at the file boundary, and the server can stream or buffer bytes before handing them to the multimodal extractor.
+
+---
+
 ## Learned staples
 
 After several months of purchase history, derive which items are bought on a regular cadence and suggest them as staples with inferred thresholds. (See D7.)
