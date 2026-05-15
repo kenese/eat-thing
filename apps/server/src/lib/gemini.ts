@@ -48,7 +48,6 @@ export async function generateGeminiJson<T>(prompt: string, options: GeminiOptio
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-goog-api-key': 'AIzaSyCj6kM1Gyc5cgDCKob2RljrjhwGaDXjg6A'
       },
       body: JSON.stringify({
         contents: [{ role: 'user', parts }],

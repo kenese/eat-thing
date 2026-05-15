@@ -60,7 +60,7 @@ vi.mock('../db/schema/index.js', () => ({
 vi.mock('../auth.js', () => ({ auth: { api: { getSession: mocks.getSession } } }));
 vi.mock('better-auth/node', () => ({ fromNodeHeaders: (h: unknown) => h }));
 
-process.env.WORKER_HMAC_KEY = 'test-secret-key';
+process.env.SCRAPER_HMAC_SECRET = 'test-secret-key';
 const { default: scraperRouter } = await import('./scraper.js');
 
 function sign(method: string, path: string, body = '') {
