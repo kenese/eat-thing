@@ -21,6 +21,8 @@ export const recipeIngredients = pgTable('recipe_ingredients', {
   canonicalFoodId: uuid('canonical_food_id').notNull().references(() => canonicalFoods.id),
   qty: text('qty').notNull(),
   unit: text('unit').notNull(),
+  section: text('section'),
+  metricValue: text('metric_value'),
   optional: boolean('optional').notNull().default(false),
   sortOrder: integer('sort_order').notNull().default(0),
 });
