@@ -1,0 +1,1 @@
+ALTER TABLE "shopping_list_items" ADD COLUMN "source_recipe_names" text[];

@@ -22,6 +22,7 @@ export const shoppingListItems = pgTable('shopping_list_items', {
   unit: text('unit').notNull(),
   source: shoppingSourceEnum('source').notNull(),
   checked: boolean('checked').notNull().default(false),
+  sourceRecipeNames: text('source_recipe_names').array(),
 });
 
 export const staples = pgTable('staples', {

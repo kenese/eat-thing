@@ -30,9 +30,10 @@ const STORE_LABEL: Record<string, { name: string; initials: string }> = {
   woolworths: { name: 'Woolworths', initials: 'WW' },
 };
 
-function ReasonChip({ source }: { source: ShoppingSource }) {
+function ReasonChip({ source, sourceRecipeNames }: { source: ShoppingSource; sourceRecipeNames: string[] | null }) {
   const label =
-    source === 'recipe' ? 'from recipes'
+    source === 'recipe'
+      ? (sourceRecipeNames && sourceRecipeNames.length > 0 ? sourceRecipeNames.join(', ') : 'from recipes')
     : source === 'staple' ? 'low staple'
     : 'you added';
   return <span className={`sl-row-reason sl-row-reason--${source}`}>{label}</span>;
@@ -104,7 +105,7 @@ function CategorySection({
             <span className="sl-row-label">{it.name}</span>
             <span className="sl-row-qty">{Math.ceil(it.qty * 10) / 10} {it.unit}</span>
           </div>
-          <ReasonChip source={it.source} />
+          <ReasonChip source={it.source} sourceRecipeNames={it.sourceRecipeNames ?? null} />
           <PriceCell price={prices.get(it.id)} refreshing={refreshing} />
           <button className="sl-row-menu" onClick={() => onDelete(it.id)} aria-label={`Remove ${it.name}`}>✕</button>
         </div>

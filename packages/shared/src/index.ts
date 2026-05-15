@@ -229,6 +229,7 @@ export interface ShoppingListItem {
   source: ShoppingSource;
   checked: boolean;
   category: Category;
+  sourceRecipeNames: string[] | null;
 }
 
 export interface ShoppingList {

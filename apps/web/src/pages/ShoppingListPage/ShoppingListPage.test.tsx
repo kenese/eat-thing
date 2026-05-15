@@ -34,8 +34,8 @@ const baseList = {
   id: 'list-1', householdId: 'h', generatedFromMealPlanId: null,
   createdAt: '2026-05-10T00:00:00Z', finalizedAt: null,
   items: [
-    { id: 'i1', shoppingListId: 'list-1', canonicalFoodId: 'cf1', name: 'Eggs',  qty: 1, unit: 'count', source: 'recipe', checked: false, category: 'dairy' },
-    { id: 'i2', shoppingListId: 'list-1', canonicalFoodId: 'cf2', name: 'Bread', qty: 1, unit: 'count', source: 'staple', checked: false, category: 'pantry' },
+    { id: 'i1', shoppingListId: 'list-1', canonicalFoodId: 'cf1', name: 'Eggs',  qty: 1, unit: 'count', source: 'recipe', checked: false, category: 'dairy',  sourceRecipeNames: ['Shakshuka'] },
+    { id: 'i2', shoppingListId: 'list-1', canonicalFoodId: 'cf2', name: 'Bread', qty: 1, unit: 'count', source: 'staple', checked: false, category: 'pantry', sourceRecipeNames: null },
   ],
 };
 
@@ -47,6 +47,25 @@ describe('ShoppingListPage prices', () => {
     hooks.useUpdateShoppingListItem.mockReturnValue({ mutate: vi.fn() });
     hooks.useAddShoppingListItem.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
     hooks.useDeleteShoppingListItem.mockReturnValue({ mutate: vi.fn() });
+  });
+
+  it('shows recipe name on recipe-sourced items', () => {
+    hooks.usePricesForList.mockReturnValue({ data: { prices: [], job: null } });
+    hooks.useRefreshPrices.mockReturnValue({ mutate: vi.fn(), isPending: false });
+    renderPage();
+    expect(screen.getByText('Shakshuka')).toBeInTheDocument();
+  });
+
+  it('shows "from recipes" fallback when sourceRecipeNames is null', () => {
+    hooks.usePricesForList.mockReturnValue({ data: { prices: [], job: null } });
+    hooks.useRefreshPrices.mockReturnValue({ mutate: vi.fn(), isPending: false });
+    const listWithNullRecipes = {
+      ...baseList,
+      items: [{ ...baseList.items[0], sourceRecipeNames: null }],
+    };
+    hooks.useCurrentShoppingList.mockReturnValue({ data: listWithNullRecipes, isLoading: false });
+    renderPage();
+    expect(screen.getByText('from recipes')).toBeInTheDocument();
   });
 
   it('renders the new page title', () => {

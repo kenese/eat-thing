@@ -44,6 +44,7 @@ const listItemCols = {
   source: shoppingListItems.source,
   checked: shoppingListItems.checked,
   category: canonicalFoods.category,
+  sourceRecipeNames: shoppingListItems.sourceRecipeNames,
 };
 
 function withCategory<T extends { category: string | null }>(row: T): Omit<T, 'category'> & { category: Category } {
@@ -92,6 +93,7 @@ router.post('/generate', withHousehold, async (req, res) => {
       recipeServings: number; entryServings: number;
       densityGPerMl: number | null;
       countToGrams: number | null;
+      recipeName: string;
     };
 
     const rawIngredients: RawIng[] = plan
@@ -105,6 +107,7 @@ router.post('/generate', withHousehold, async (req, res) => {
             entryServings: mealPlanEntries.servings,
             densityGPerMl: canonicalFoods.densityGPerMl,
             countToGrams: canonicalFoods.countToGrams,
+            recipeName: recipes.name,
           })
           .from(mealPlanEntries)
           .innerJoin(recipes, eq(mealPlanEntries.recipeId, recipes.id))
@@ -116,7 +119,7 @@ router.post('/generate', withHousehold, async (req, res) => {
           ))
       : [];
 
-    type FoodInfo = { foodName: string; unit: string; qty: number; densityGPerMl: number | null; countToGrams: number | null };
+    type FoodInfo = { foodName: string; unit: string; qty: number; densityGPerMl: number | null; countToGrams: number | null; recipeNames: Set<string> };
     const needed = new Map<string, FoodInfo>();
     for (const row of rawIngredients) {
       const amount = normalizeRecipeAmount(row.qty, row.unit);
@@ -124,14 +127,17 @@ router.post('/generate', withHousehold, async (req, res) => {
       const ratio = row.recipeServings > 0 ? row.entryServings / row.recipeServings : 1;
       const key = `${row.canonicalFoodId}::${amount.unit}`;
       const cur = needed.get(key);
-      if (cur) { cur.qty += amount.qty * ratio; }
-      else {
+      if (cur) {
+        cur.qty += amount.qty * ratio;
+        cur.recipeNames.add(row.recipeName);
+      } else {
         needed.set(key, {
           foodName: row.foodName,
           unit: amount.unit,
           qty: amount.qty * ratio,
           densityGPerMl: row.densityGPerMl,
           countToGrams: row.countToGrams,
+          recipeNames: new Set([row.recipeName]),
         });
       }
     }
@@ -153,7 +159,7 @@ router.post('/generate', withHousehold, async (req, res) => {
       invByFood.set(r.canonicalFoodId, rows);
     }
 
-    type ItemInsert = { canonicalFoodId: string; name: string; qty: number; unit: string; source: 'recipe' | 'staple' | 'manual'; checked: boolean };
+    type ItemInsert = { canonicalFoodId: string; name: string; qty: number; unit: string; source: 'recipe' | 'staple' | 'manual'; checked: boolean; sourceRecipeNames: string[] | null };
     const toInsert: ItemInsert[] = [];
 
     for (const [key, info] of needed) {
@@ -165,7 +171,7 @@ router.post('/generate', withHousehold, async (req, res) => {
       const gap = info.qty - available;
 
       if (gap > 0.001) {
-        toInsert.push({ canonicalFoodId: foodId, name: info.foodName, qty: gap, unit: info.unit, source: 'recipe', checked: false });
+        toInsert.push({ canonicalFoodId: foodId, name: info.foodName, qty: gap, unit: info.unit, source: 'recipe', checked: false, sourceRecipeNames: [...info.recipeNames] });
       }
     }
 
@@ -189,7 +195,7 @@ router.post('/generate', withHousehold, async (req, res) => {
       }
       const gap = st.thresholdQty - available;
       if (gap > 0.001) {
-        toInsert.push({ canonicalFoodId: st.canonicalFoodId, name: st.foodName, qty: gap, unit: st.thresholdUnit, source: 'staple', checked: false });
+        toInsert.push({ canonicalFoodId: st.canonicalFoodId, name: st.foodName, qty: gap, unit: st.thresholdUnit, source: 'staple', checked: false, sourceRecipeNames: null });
       }
     }
 

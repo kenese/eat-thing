@@ -21,6 +21,10 @@ Household food management app. Inventory ↔ recipes ↔ meal plans ↔ shopping
 - Auth: Better-Auth with Google OAuth.
 - Storage units canonical (g / ml / count); display layer converts.
 
+## Database migrations
+- Use `pnpm --filter @eat/server db:migrate` to apply migrations — not `db:push`. `db:push` is broken on this project (drizzle-kit v0.31.10 crashes when introspecting the DB schema).
+- When creating a migration manually, also add the entry to `drizzle/meta/_journal.json`.
+
 ## Conventions
 - TanStack Query for server state. Zustand for purely local UI state.
 - CSS Modules / plain CSS, co-located with components.

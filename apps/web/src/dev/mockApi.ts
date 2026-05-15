@@ -125,11 +125,11 @@ const shoppingList: ShoppingList = {
   createdAt: '2026-05-12T09:14:00',
   finalizedAt: null,
   items: [
-    { id: 'shop-fish', shoppingListId: LIST_ID, canonicalFoodId: 'food-fish', name: 'white fish', qty: 500, unit: 'g', source: 'recipe', checked: false, category: 'meat' },
-    { id: 'shop-tortillas', shoppingListId: LIST_ID, canonicalFoodId: 'food-tortillas', name: 'tortillas', qty: 8, unit: 'count', source: 'recipe', checked: false, category: 'pantry' },
-    { id: 'shop-limes', shoppingListId: LIST_ID, canonicalFoodId: 'food-limes', name: 'limes', qty: 3, unit: 'count', source: 'recipe', checked: false, category: 'produce' },
-    { id: 'shop-coriander', shoppingListId: LIST_ID, canonicalFoodId: 'food-coriander', name: 'coriander', qty: 1, unit: 'count', source: 'recipe', checked: false, category: 'produce' },
-    { id: 'shop-milk', shoppingListId: LIST_ID, canonicalFoodId: 'food-milk', name: 'milk', qty: 2, unit: 'count', source: 'staple', checked: false, category: 'dairy' },
+    { id: 'shop-fish', shoppingListId: LIST_ID, canonicalFoodId: 'food-fish', name: 'white fish', qty: 500, unit: 'g', source: 'recipe', checked: false, category: 'meat', sourceRecipeNames: ['Fish Tacos'] },
+    { id: 'shop-tortillas', shoppingListId: LIST_ID, canonicalFoodId: 'food-tortillas', name: 'tortillas', qty: 8, unit: 'count', source: 'recipe', checked: false, category: 'pantry', sourceRecipeNames: ['Fish Tacos'] },
+    { id: 'shop-limes', shoppingListId: LIST_ID, canonicalFoodId: 'food-limes', name: 'limes', qty: 3, unit: 'count', source: 'recipe', checked: false, category: 'produce', sourceRecipeNames: ['Fish Tacos'] },
+    { id: 'shop-coriander', shoppingListId: LIST_ID, canonicalFoodId: 'food-coriander', name: 'coriander', qty: 1, unit: 'count', source: 'recipe', checked: false, category: 'produce', sourceRecipeNames: ['Fish Tacos'] },
+    { id: 'shop-milk', shoppingListId: LIST_ID, canonicalFoodId: 'food-milk', name: 'milk', qty: 2, unit: 'count', source: 'staple', checked: false, category: 'dairy', sourceRecipeNames: null },
   ],
 };
 

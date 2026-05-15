@@ -151,6 +151,7 @@ function listItem(partial: { name: string; category: Category; qty?: number; che
     source: 'recipe' as const,
     checked: partial.checked ?? false,
     category: partial.category,
+    sourceRecipeNames: null,
   };
 }
 
