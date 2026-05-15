@@ -14,6 +14,8 @@ const ingredientSchema = z.object({
   canonicalFoodId: z.string().uuid(),
   qty: z.string().trim().min(1).max(40),
   unit: z.string().trim().max(40),
+  section: z.string().nullable().optional(),
+  metricValue: z.string().nullable().optional(),
   optional: z.boolean().optional(),
 });
 
@@ -22,6 +24,7 @@ const createSchema = z.object({
   servings: z.number().positive().max(100),
   sourceUrl: z.string().trim().url().nullable().optional(),
   sourceImage: z.string().nullable().optional(),
+  heroImageUrl: z.string().url().nullable().optional(),
   instructions: z.string().nullable().optional(),
   ingredients: z.array(ingredientSchema).min(1),
   photoBase64: z.string().optional(),
@@ -33,6 +36,7 @@ const updateSchema = z.object({
   servings: z.number().positive().max(100).optional(),
   sourceUrl: z.string().trim().url().nullable().optional(),
   sourceImage: z.string().nullable().optional(),
+  heroImageUrl: z.string().url().nullable().optional(),
   instructions: z.string().nullable().optional(),
   ingredients: z.array(ingredientSchema).min(1).optional(),
   photoBase64: z.string().optional(),
@@ -46,6 +50,8 @@ const ingredientCols = {
   foodName: canonicalFoods.name,
   qty: recipeIngredients.qty,
   unit: recipeIngredients.unit,
+  section: recipeIngredients.section,
+  metricValue: recipeIngredients.metricValue,
   optional: recipeIngredients.optional,
   sortOrder: recipeIngredients.sortOrder,
 };
@@ -124,7 +130,7 @@ router.post('/', withHousehold, async (req, res) => {
     return;
   }
 
-  const { name, servings, sourceUrl, sourceImage, instructions, ingredients, photoBase64, photoMimeType } = parse.data;
+  const { name, servings, sourceUrl, sourceImage, heroImageUrl, instructions, ingredients, photoBase64, photoMimeType } = parse.data;
   const recipeId = uuidv4();
 
   let resolvedImage: string | null = sourceImage ?? null;
@@ -133,6 +139,19 @@ router.post('/', withHousehold, async (req, res) => {
       resolvedImage = await uploadPhoto(photoBase64, photoMimeType);
     } catch (err) {
       console.error('[recipes] photo upload failed', err);
+    }
+  } else if (heroImageUrl) {
+    try {
+      const imgRes = await fetch(heroImageUrl, { signal: AbortSignal.timeout(8_000) });
+      if (imgRes.ok) {
+        const contentType = imgRes.headers.get('content-type') ?? 'image/jpeg';
+        const mimeType = contentType.split(';')[0].trim();
+        const buffer = await imgRes.arrayBuffer();
+        const base64 = Buffer.from(buffer).toString('base64');
+        resolvedImage = await uploadPhoto(base64, mimeType);
+      }
+    } catch (err) {
+      console.error('[recipes] hero image download/upload failed', err);
     }
   }
 
@@ -156,6 +175,8 @@ router.post('/', withHousehold, async (req, res) => {
           canonicalFoodId: ing.canonicalFoodId,
           qty: ing.qty,
           unit: ing.unit,
+          section: ing.section ?? null,
+          metricValue: ing.metricValue ?? null,
           optional: ing.optional ?? false,
           sortOrder: idx,
         })),
@@ -218,6 +239,8 @@ router.put('/:id', withHousehold, async (req, res) => {
             canonicalFoodId: ing.canonicalFoodId,
             qty: ing.qty,
             unit: ing.unit,
+            section: ing.section ?? null,
+            metricValue: ing.metricValue ?? null,
             optional: ing.optional ?? false,
             sortOrder: idx,
           })),
