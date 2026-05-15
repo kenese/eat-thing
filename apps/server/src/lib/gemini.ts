@@ -53,7 +53,7 @@ export async function generateGeminiJson<T>(prompt: string, options: GeminiOptio
         contents: [{ role: 'user', parts }],
         generationConfig: {
           response_mime_type: 'application/json',
-          max_output_tokens: options.maxOutputTokens ?? 2048,
+          max_output_tokens: options.maxOutputTokens ?? 8192,
         },
       }),
     },
