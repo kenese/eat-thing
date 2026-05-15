@@ -217,6 +217,17 @@ router.put('/:id', withHousehold, async (req, res) => {
 
     const d = parse.data;
 
+    let resolvedImage: string | null | undefined;
+    if (d.photoBase64 && d.photoMimeType) {
+      try {
+        resolvedImage = await uploadPhoto(d.photoBase64, d.photoMimeType);
+      } catch (err) {
+        console.error('[recipes] photo upload failed', err);
+      }
+    } else if ('sourceImage' in d) {
+      resolvedImage = d.sourceImage ?? null;
+    }
+
     await db.transaction(async tx => {
       await tx
         .update(recipes)
@@ -225,6 +236,7 @@ router.put('/:id', withHousehold, async (req, res) => {
           ...(d.servings !== undefined && { servings: d.servings }),
           ...('sourceUrl' in d && { sourceUrl: d.sourceUrl ?? null }),
           ...('instructions' in d && { instructions: d.instructions ?? null }),
+          ...(resolvedImage !== undefined && { sourceImage: resolvedImage }),
           updatedAt: new Date(),
         })
         .where(eq(recipes.id, id));

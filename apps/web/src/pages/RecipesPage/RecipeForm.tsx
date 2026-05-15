@@ -187,9 +187,10 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose 
       name: name.trim(),
       servings: servingsNum,
       sourceUrl: sourceUrl.trim() || null,
-      sourceImage: initialData?.sourceImage ?? null,
       instructions: instructions.trim() || null,
       ingredients: ingredients.map(({ foodName: _fn, lowConfidence: _lc, ...rest }) => rest),
+      // Only carry sourceImage from an import; in edit mode omit it so the server keeps the existing value
+      ...(initialData !== undefined && { sourceImage: initialData.sourceImage ?? null }),
       ...(photoBase64 && photoMimeType && { photoBase64, photoMimeType }),
     };
 

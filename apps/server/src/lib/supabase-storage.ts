@@ -29,7 +29,7 @@ export async function uploadPhoto(
     throw new Error(`Storage upload failed: ${res.status} ${text}`);
   }
 
-  return path;
+  return publicUrl(path);
 }
 
 export function publicUrl(storagePath: string): string {

@@ -7,7 +7,7 @@ export const recipes = pgTable('recipes', {
   householdId: uuid('household_id').notNull().references(() => households.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   sourceUrl: text('source_url'),
-  sourceImage: text('source_image'), // Supabase Storage path
+  sourceImage: text('source_image'), // full public URL (Supabase Storage or external)
   instructions: text('instructions'),
   servings: doublePrecision('servings').notNull().default(4),
   createdAt: timestamp('created_at').notNull().defaultNow(),
