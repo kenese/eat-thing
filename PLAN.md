@@ -81,6 +81,7 @@ Scraper on Mac mini. Logs in, reads. No writes to the supermarket account. Built
 
 - [ ] Robustness: detect logged-out state and prompt user; retry/backoff for transient failures
 - [ ] `launchd` plists so both the scraper and the OpenBrain sync worker auto-start on the Mac mini
+- [ ] Fix pre-existing test failures in `scraper.test.ts` (10 tests) and `gemini.test.ts` (1 test) — confirmed present before Phase 3.5 work, unrelated to recipe import changes
 
 Pak'nSave and Woolworths adapters exist in `apps/scraper` but are deferred post-MVP (see [IDEAS.md](./IDEAS.md) and D21).
 
