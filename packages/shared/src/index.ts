@@ -1,7 +1,3 @@
-// ─── Units & locations ──────────────────────────────────────────────────────
-
-export type InventoryLocation = 'fridge' | 'pantry' | 'freezer' | 'other';
-
 // ─── Food categories ─────────────────────────────────────────────────────────
 
 export type Category = 'produce' | 'meat' | 'dairy' | 'pantry' | 'frozen' | 'drinks' | 'other';
@@ -27,7 +23,7 @@ export interface InventoryRow {
   qty: number;
   unit: string;
   brand: string | null;
-  location: InventoryLocation;
+  category: Category;
   purchasedAt: string | null;
   expiresAt: string | null;
   createdAt: string;
@@ -35,11 +31,12 @@ export interface InventoryRow {
 }
 
 export interface CreateInventoryItemInput {
-  canonicalFoodId: string;
+  canonicalFoodId?: string;
+  foodName?: string;
+  category?: Category;
   qty: number;
   unit: string;
   brand?: string | null;
-  location?: InventoryLocation;
   purchasedAt?: string | null;
   expiresAt?: string | null;
 }
@@ -48,7 +45,6 @@ export interface UpdateInventoryItemInput {
   qty?: number;
   unit?: string;
   brand?: string | null;
-  location?: InventoryLocation;
   purchasedAt?: string | null;
   expiresAt?: string | null;
 }
@@ -250,11 +246,20 @@ export interface AddShoppingListItemInput {
   qty: number;
   unit: string;
   canonicalFoodId?: string | null;
+  category?: Category;
 }
 
 export interface UpdateShoppingListItemInput {
   checked?: boolean;
   qty?: number;
+}
+
+export interface PurchaseShoppingListItemsInput {
+  itemIds: string[];
+}
+
+export interface BatchDeleteShoppingListItemsInput {
+  itemIds: string[];
 }
 
 // ─── Cook events ──────────────────────────────────────────────────────────────
