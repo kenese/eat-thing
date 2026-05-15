@@ -16,9 +16,13 @@ export async function extractFromPhoto(
   mimeType: ImageMediaType,
 ): Promise<ExtractedPhotoRecipe> {
   const prompt = `Look at this recipe image. Extract the recipe and return ONLY valid JSON with this shape:
-{"name":"string","servings":4,"instructions":"string or null","ingredients":[{"name":"string","qty":"1 1/2","unit":"cups"}]}
+{"name":"string","servings":4,"sections":[{"name":"string or null","ingredients":[{"name":"string","qty":"string","unit":"string"}],"instructions":"string or null"}]}
 
-Convert measurements to grams or ml where possible (1 cup=240ml, 1tbsp=15ml, 1tsp=5ml, 1oz=28g, 1lb=454g). Use "count" only for things like eggs. If you cannot see ingredient quantities clearly, use 1 as a default quantity.`;
+Rules:
+- Preserve all original quantities and units exactly as written. Do not convert measurements.
+- Do not paraphrase ingredients or instructions — keep the original wording.
+- A recipe with no named sections should return a single section with name: null.
+- Multiple components (e.g. "For the sauce", "For the pasta") should be separate sections.`;
 
   const raw = await generateGeminiJson<{
     name: string;
@@ -27,7 +31,7 @@ Convert measurements to grams or ml where possible (1 cup=240ml, 1tbsp=15ml, 1ts
     ingredients: { name: string; qty: string; unit: string }[];
   }>(prompt, {
     image: { data: imageBase64, mimeType },
-    maxOutputTokens: 2048,
+    maxOutputTokens: 8192,
   });
 
   const matched = await matchIngredients(raw.ingredients.map(i => i.name));

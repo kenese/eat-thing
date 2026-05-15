@@ -13,6 +13,12 @@ export interface CanonicalFood {
   countToGrams: number | null;
 }
 
+export interface CreateFoodInput {
+  name: string;
+  defaultUnit?: 'g' | 'ml' | 'count';
+  category?: Category;
+}
+
 // ─── Inventory ────────────────────────────────────────────────────────────────
 
 export interface InventoryRow {

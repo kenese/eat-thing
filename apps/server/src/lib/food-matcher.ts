@@ -66,7 +66,7 @@ export async function matchIngredients(names: string[]): Promise<MatchedIngredie
     }
     const contains = findContains(raw, foods);
     if (contains) {
-      results.push({ rawText: raw, canonicalFoodId: contains.id, foodName: contains.name, confidence: 'high' });
+      results.push({ rawText: raw, canonicalFoodId: contains.id, foodName: contains.name, confidence: 'low' });
       continue;
     }
     results.push({ rawText: raw, canonicalFoodId: null, foodName: null, confidence: 'low' });

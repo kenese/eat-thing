@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useFoodSearch } from '../../hooks/useFoodSearch';
+import { useFoodSearch, useCreateFood } from '../../hooks/useFoodSearch';
 import { useRecipe, useAddRecipe, useUpdateRecipe } from '../../hooks/useRecipes';
 import type { CanonicalFood, RecipeIngredientInput, ImportedRecipe } from '@eat/shared';
 import '../InventoryPage/ItemForm.css';
@@ -7,8 +7,13 @@ import './RecipesPage.css';
 import './RecipeForm.css';
 import { RecipeImagePicker } from './RecipeImagePicker';
 
-interface IngredientDraft extends RecipeIngredientInput {
-  foodName: string;
+interface IngredientDraft {
+  canonicalFoodId: string | null;
+  foodName: string | null;
+  rawText: string;
+  qty: string;
+  unit: string;
+  optional: boolean;
   lowConfidence?: boolean;
 }
 
@@ -18,14 +23,112 @@ interface IngredientRowProps {
   onRemove: () => void;
 }
 
-function IngredientRow({ draft, onChange, onRemove }: IngredientRowProps) {
+function UnresolvedIngredientRow({ draft, onChange, onRemove }: IngredientRowProps) {
+  const [searchInput, setSearchInput] = useState('');
+  const [open, setOpen] = useState(false);
+  const { data: results = [] } = useFoodSearch(searchInput);
+  const createFood = useCreateFood();
+  const comboRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (comboRef.current && !comboRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
   return (
-    <li className={`ingredient-row${draft.lowConfidence ? ' ingredient-row--unmatched' : ''}`}>
-      <span
-        className="ingredient-name"
-        title={draft.lowConfidence ? `Unmatched: "${draft.foodName ?? 'unknown'}" — please reassign` : undefined}
-      >
-        {draft.foodName ?? '⚠ unmatched'}{draft.optional ? ' (optional)' : ''}
+    <li className="ingredient-row ingredient-row--unresolved">
+      <div className="ingredient-resolution">
+        <span className="ingredient-raw-text">{draft.rawText}</span>
+        <div className="ingredient-resolution-actions" ref={comboRef}>
+          {draft.canonicalFoodId && draft.foodName && (
+            <button
+              type="button"
+              className="btn-resolve-accept"
+              title={`Accept suggested match: ${draft.foodName}`}
+              onClick={() => onChange({ ...draft, lowConfidence: false })}
+            >
+              Use &ldquo;{draft.foodName}&rdquo;
+            </button>
+          )}
+          <div className="resolution-combobox">
+            <input
+              className="form-input resolution-search"
+              type="text"
+              placeholder={draft.foodName ? `or search to change…` : `Search canonical foods…`}
+              value={searchInput}
+              autoComplete="off"
+              onChange={e => { setSearchInput(e.target.value); setOpen(true); }}
+              onFocus={() => { if (searchInput.trim()) setOpen(true); }}
+            />
+            {open && results.length > 0 && (
+              <ul className="food-dropdown" role="listbox">
+                {results.map(food => (
+                  <li
+                    key={food.id}
+                    role="option"
+                    className="food-option"
+                    onMouseDown={() => {
+                      onChange({ ...draft, canonicalFoodId: food.id, foodName: food.name, lowConfidence: false });
+                      setSearchInput('');
+                      setOpen(false);
+                    }}
+                  >
+                    <span>{food.name}</span>
+                    <span className="food-option-unit">{food.defaultUnit}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <button
+            type="button"
+            className="btn-resolve-new"
+            disabled={createFood.isPending}
+            onClick={async () => {
+              const food = await createFood.mutateAsync({
+                name: draft.rawText,
+                defaultUnit: (['g', 'ml', 'count'] as const).includes(draft.unit as 'g' | 'ml' | 'count') ? draft.unit as 'g' | 'ml' | 'count' : 'g',
+                category: 'other',
+              });
+              onChange({ ...draft, canonicalFoodId: food.id, foodName: food.name, lowConfidence: false });
+            }}
+          >
+            {createFood.isPending ? '…' : 'New food'}
+          </button>
+        </div>
+      </div>
+      <div className="ingredient-controls">
+        <input
+          className="form-input ingredient-qty"
+          type="text"
+          value={draft.qty || ''}
+          onChange={e => onChange({ ...draft, qty: e.target.value })}
+          aria-label="Quantity"
+        />
+        <input
+          type="text"
+          className="form-select ingredient-unit"
+          value={draft.unit}
+          onChange={e => onChange({ ...draft, unit: e.target.value })}
+          aria-label="Unit"
+        />
+        <button type="button" className="ingredient-remove" onClick={onRemove} aria-label="Remove ingredient">✕</button>
+      </div>
+    </li>
+  );
+}
+
+function IngredientRow({ draft, onChange, onRemove }: IngredientRowProps) {
+  if (draft.lowConfidence || !draft.canonicalFoodId) {
+    return <UnresolvedIngredientRow draft={draft} onChange={onChange} onRemove={onRemove} />;
+  }
+  return (
+    <li className="ingredient-row">
+      <span className="ingredient-name">
+        {draft.foodName ?? draft.rawText}{draft.optional ? ' (optional)' : ''}
       </span>
       <div className="ingredient-controls">
         <input
@@ -113,16 +216,15 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose 
   const [instructions, setInstructions] = useState(initialData?.instructions ?? '');
   const [ingredients, setIngredients] = useState<IngredientDraft[]>(
     initialData
-      ? initialData.ingredients
-          .filter(i => i.canonicalFoodId)
-          .map(i => ({
-            canonicalFoodId: i.canonicalFoodId!,
-            foodName: i.foodName!,
-            qty: i.qty,
-            unit: i.unit,
-            optional: i.optional,
-            lowConfidence: i.confidence === 'low',
-          }))
+      ? initialData.ingredients.map(i => ({
+          canonicalFoodId: i.canonicalFoodId,
+          foodName: i.foodName,
+          rawText: i.rawText,
+          qty: i.qty,
+          unit: i.unit,
+          optional: i.optional,
+          lowConfidence: i.confidence === 'low' || !i.canonicalFoodId,
+        }))
       : [],
   );
   const [error, setError] = useState('');
@@ -140,6 +242,7 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose 
       setIngredients(existing.ingredients.map(i => ({
         canonicalFoodId: i.canonicalFoodId,
         foodName: i.foodName,
+        rawText: i.foodName,
         qty: i.qty,
         unit: i.unit,
         optional: i.optional,
@@ -157,6 +260,7 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose 
     setIngredients(prev => [...prev, {
       canonicalFoodId: food.id,
       foodName: food.name,
+      rawText: food.name,
       qty: '',
       unit: food.defaultUnit,
       optional: false,
@@ -181,6 +285,7 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose 
     if (isNaN(servingsNum) || servingsNum <= 0) { setError('Servings must be a positive number.'); return; }
 
     if (ingredients.length === 0) { setError('Add at least one ingredient.'); return; }
+    if (ingredients.some(i => !i.canonicalFoodId)) { setError('Please resolve all unmatched ingredients (shown in amber) before saving.'); return; }
     if (ingredients.some(i => !i.qty.trim())) { setError('Every ingredient needs a quantity.'); return; }
 
     const payload = {
@@ -188,8 +293,7 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose 
       servings: servingsNum,
       sourceUrl: sourceUrl.trim() || null,
       instructions: instructions.trim() || null,
-      ingredients: ingredients.map(({ foodName: _fn, lowConfidence: _lc, ...rest }) => rest),
-      // Only carry sourceImage from an import; in edit mode omit it so the server keeps the existing value
+      ingredients: ingredients.map(({ foodName: _fn, lowConfidence: _lc, rawText: _rt, ...rest }) => rest as RecipeIngredientInput),
       ...(initialData !== undefined && { sourceImage: initialData.sourceImage ?? null }),
       ...(photoBase64 && photoMimeType && { photoBase64, photoMimeType }),
     };
@@ -211,7 +315,7 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose 
     : (existing?.sourceImage ?? null);
 
   function formatIngredient(ing: IngredientDraft) {
-    return [ing.qty, ing.unit, ing.foodName].filter(Boolean).join(' ');
+    return [ing.qty, ing.unit, ing.foodName ?? ing.rawText].filter(Boolean).join(' ');
   }
 
   return (
