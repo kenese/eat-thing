@@ -41,6 +41,24 @@ After several months of purchase history, derive which items are bought on a reg
 
 ---
 
+## Recipe variations
+
+Recipes should support saved variations so a planned meal can be adapted without losing the original recipe. This is useful when an ingredient is already in the fridge, when a household member has a preferred version, or when the same recipe works with a single ingredient swap.
+
+Variation shapes:
+
+- **Whole-recipe variation**: a named variant with a different ingredient combination, e.g. "Sam's version" or "fridge-clearout version".
+- **Ingredient-option variation**: one or more swappable ingredients while the rest of the recipe stays the same, e.g. chicken/pork/tofu with unchanged method and quantities.
+
+Places this should appear:
+
+- When adding a recipe, allow the initial recipe to include variations.
+- On existing recipes, allow adding, editing, and naming variations.
+- In the meal plan, allow choosing or creating a variation for that planned entry based on current inventory.
+- Shopping-list generation and cook events should use the selected variation's ingredients.
+
+---
+
 ## Delivery-window picker
 
 When building to cart, let the user pick a delivery window before handing off to the store checkout. Requires understanding each store's delivery slot API.
@@ -50,3 +68,9 @@ When building to cart, let the user pick a delivery window before handing off to
 ## Native mobile shell
 
 Capacitor or React Native wrapper around the PWA for push notifications (e.g. "your delivery is on the way", "a staple is running low"). Deferred until PWA limitations are actually felt.
+
+---
+
+## Metric values as shopping-list / cook-event source of truth
+
+Currently `metric_value` on `recipe_ingredients` is display-only. Long-term, these pre-computed values could replace the runtime `toCanonical()` call in the shopping-list generator and cook-event route. This would make aggregation deterministic (no surprise conversion failures at list-generate time) and remove the dependency on `@eat/taxonomy` from the hot path. Would require updating `apps/server/src/lib/shopping-list-generator.ts` and the cook-event route.

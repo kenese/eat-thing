@@ -84,6 +84,14 @@ Scraper on Mac mini. Logs in, reads. No writes to the supermarket account. Built
 
 Pak'nSave and Woolworths adapters exist in `apps/scraper` but are deferred post-MVP (see [IDEAS.md](./IDEAS.md) and D21).
 
+## Phase 3.5 — Recipe URL import improvements
+
+- [x] Readability HTML cleaning before LLM fallback
+- [x] No-paraphrase: preserve original ingredient text and units
+- [x] Metric annotation: `metric_value` stored alongside original qty/unit (display only)
+- [x] Hero image: OG tag → first photo img → uploaded to Supabase Storage on save
+- [x] Sections: `HowToSection` schema.org support; Gemini sections in prompt; `section` column on recipe_ingredients; markdown headers in instructions
+
 ## Phase 4 — Build-to-cart (New World only)
 
 Adds items to cart on the user's behalf. User always clicks "place order" — see [D3](./DECISIONS.md#d3--supermarket-integration-ceiling-build-to-cart).
@@ -142,5 +150,6 @@ Deferred (own specs): Shops nav destination, scan-receipt, print, delivery-windo
 - 2026-05-10 — Phase 3 slice 1: New World vertical landed (encrypted sessions + jobs lifecycle + parser + matcher + price column). Headed bootstrap and live smoke pending user.
 - 2026-05-11 — Phase 3 slice 2: Pak'nSave + Woolworths adapters landed (parsers, fixtures, bootstrap, smoke). Deferred from MVP per D21 — see IDEAS.md.
 - 2026-05-15 — Phase 3 slice 1: New World smoke test passing against live site. Selector refresh for new React/Next.js DOM structure (data-testid attributes, split price elements).
+- 2026-05-15 — Phase 3.5: Recipe URL import improvements landed — Readability cleaning, no-paraphrase prompt, metric annotation (display-only), hero image extraction + upload, sections support (schema.org HowToSection + Gemini sections schema + section column on recipe_ingredients).
 - 2026-05-12 — Frontend restyle follow-up: Home dashboard landed as `/`, composing inventory expiry, five-day meal readiness, and shopping-list preview. E2E now asserts the home route instead of the old inventory redirect.
 - 2026-05-13 — Meal Planner recipe import from the OpenBrain ecosystem landed: structured list + parse endpoints, dedicated `@eat/meal-planning` adapter, import modal tab, edit-and-confirm flow, unit + E2E coverage.
