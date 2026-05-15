@@ -192,12 +192,17 @@ ${cleanText}`;
 
 // ─── Metric annotation ───────────────────────────────────────────────────────
 
+function formatMetricQty(qty: number): string {
+  const rounded = Math.round(qty * 10) / 10;
+  return rounded % 1 === 0 ? String(Math.round(rounded)) : rounded.toFixed(1);
+}
+
 function annotateMetric(
   ingredients: SchemaRecipeIngredient[],
 ): Array<SchemaRecipeIngredient & { metric: string | null }> {
   return ingredients.map(ing => {
     const canonical = normalizeRecipeAmount(ing.qty, ing.unit);
-    const metric = canonical ? `${canonical.qty} ${canonical.unit}` : null;
+    const metric = canonical ? `${formatMetricQty(canonical.qty)} ${canonical.unit}` : null;
     return { ...ing, metric };
   });
 }
