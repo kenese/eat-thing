@@ -90,4 +90,47 @@ describe('shopping-lists router', () => {
     const res = await request(app).get('/api/shopping-lists/list-1/prices');
     expect(res.status).toBe(401);
   });
+
+  it('POST /:listId/items/purchase returns 401 unauthenticated', async () => {
+    mocks.getSession.mockResolvedValue(null);
+    const res = await request(app)
+      .post('/api/shopping-lists/list-1/items/purchase')
+      .send({ itemIds: ['item-1'] });
+    expect(res.status).toBe(401);
+  });
+
+  it('POST /:listId/items/purchase rejects empty itemIds', async () => {
+    mocks.getSession.mockResolvedValue({ user: { id: 'u1' } });
+    mocks.membershipLimit.mockResolvedValue([{ householdId: 'hh-1' }]);
+    const res = await request(app)
+      .post('/api/shopping-lists/list-1/items/purchase')
+      .send({ itemIds: [] });
+    expect(res.status).toBe(400);
+  });
+
+  it('POST /:listId/items/batch-delete returns 401 unauthenticated', async () => {
+    mocks.getSession.mockResolvedValue(null);
+    const res = await request(app)
+      .post('/api/shopping-lists/list-1/items/batch-delete')
+      .send({ itemIds: ['item-1'] });
+    expect(res.status).toBe(401);
+  });
+
+  it('POST /:listId/items/batch-delete rejects empty itemIds', async () => {
+    mocks.getSession.mockResolvedValue({ user: { id: 'u1' } });
+    mocks.membershipLimit.mockResolvedValue([{ householdId: 'hh-1' }]);
+    const res = await request(app)
+      .post('/api/shopping-lists/list-1/items/batch-delete')
+      .send({ itemIds: [] });
+    expect(res.status).toBe(400);
+  });
+
+  it('POST manual item requires category when no canonicalFoodId', async () => {
+    mocks.getSession.mockResolvedValue({ user: { id: 'u1' } });
+    mocks.membershipLimit.mockResolvedValue([{ householdId: 'hh-1' }]);
+    const res = await request(app)
+      .post('/api/shopping-lists/list-id/items')
+      .send({ name: 'Dish soap', qty: 1, unit: 'count' });
+    expect(res.status).toBe(400);
+  });
 });

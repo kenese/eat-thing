@@ -1,9 +1,10 @@
 import { Router, type Router as ExpressRouter } from 'express';
 import { z } from 'zod';
-import { and, eq, asc, desc, sql } from 'drizzle-orm';
+import { and, eq, asc, desc, sql, inArray } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { withHousehold } from '../middleware/with-household.js';
 import { db } from '../db/index.js';
+import { findOrCreateFood, type FoodCategory } from '../lib/find-or-create-food.js';
 import { normalizeRecipeAmount } from '../lib/recipe-quantities.js';
 import { amountInUnit } from '../lib/food-amounts.js';
 import {
@@ -23,6 +24,13 @@ const addItemSchema = z.object({
   qty: z.number().positive(),
   unit: z.string().trim().min(1).max(40),
   canonicalFoodId: z.string().uuid().nullable().optional(),
+  category: z.enum(['produce', 'meat', 'dairy', 'pantry', 'frozen', 'drinks', 'other']).optional(),
+}).refine(d => d.canonicalFoodId || d.category, {
+  message: 'category is required when canonicalFoodId is not provided',
+});
+
+const batchItemSchema = z.object({
+  itemIds: z.array(z.string().uuid()).min(1),
 });
 
 const updateItemSchema = z.object({
@@ -292,10 +300,15 @@ router.post('/:listId/items', withHousehold, async (req, res) => {
     if (!list) { res.status(404).json({ error: 'Shopping list not found' }); return; }
     if (list.householdId !== req.householdId) { res.status(403).json({ error: 'Forbidden' }); return; }
 
+    let foodId = parse.data.canonicalFoodId ?? null;
+    if (!foodId) {
+      foodId = await findOrCreateFood(parse.data.name, parse.data.category as FoodCategory, parse.data.unit);
+    }
+
     const id = uuidv4();
     await db.insert(shoppingListItems).values({
       id, shoppingListId: listId, householdId: req.householdId,
-      canonicalFoodId: parse.data.canonicalFoodId ?? null,
+      canonicalFoodId: foodId,
       name: parse.data.name, qty: parse.data.qty, unit: parse.data.unit,
       source: 'manual', checked: false,
     });
@@ -326,6 +339,91 @@ router.delete('/:listId/items/:itemId', withHousehold, async (req, res) => {
     if (existing.householdId !== req.householdId) { res.status(403).json({ error: 'Forbidden' }); return; }
     await db.delete(shoppingListItems).where(eq(shoppingListItems.id, itemId));
     res.json({ id: itemId });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/shopping-lists/:listId/items/purchase
+router.post('/:listId/items/purchase', withHousehold, async (req, res) => {
+  const listId = req.params['listId'] as string;
+  const parse = batchItemSchema.safeParse(req.body);
+  if (!parse.success) {
+    res.status(400).json({ error: 'Invalid input', details: parse.error.flatten() });
+    return;
+  }
+  if (!z.string().uuid().safeParse(listId).success) { res.status(404).json({ error: 'Not found' }); return; }
+
+  try {
+    const { itemIds } = parse.data;
+    const items = await db
+      .select({
+        id: shoppingListItems.id,
+        householdId: shoppingListItems.householdId,
+        canonicalFoodId: shoppingListItems.canonicalFoodId,
+        qty: shoppingListItems.qty,
+        unit: shoppingListItems.unit,
+      })
+      .from(shoppingListItems)
+      .where(inArray(shoppingListItems.id, itemIds));
+
+    if (items.some(i => i.householdId !== req.householdId)) {
+      res.status(403).json({ error: 'Forbidden' }); return;
+    }
+
+    await db.transaction(async tx => {
+      const toInsert = items.filter(i => i.canonicalFoodId !== null);
+      if (toInsert.length > 0) {
+        await tx.insert(inventoryItems).values(
+          toInsert.map(i => ({
+            id: uuidv4(),
+            householdId: req.householdId,
+            canonicalFoodId: i.canonicalFoodId!,
+            qty: i.qty,
+            unit: i.unit,
+            purchasedAt: new Date(),
+          })),
+        );
+      }
+      await tx.delete(shoppingListItems).where(inArray(shoppingListItems.id, itemIds));
+    });
+
+    const [list] = await db.select(listCols).from(shoppingLists).where(eq(shoppingLists.id, listId));
+    const updatedItems = list ? await itemsForList(listId) : [];
+    res.json(list ? { ...list, items: updatedItems } : { items: [] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/shopping-lists/:listId/items/batch-delete
+router.post('/:listId/items/batch-delete', withHousehold, async (req, res) => {
+  const listId = req.params['listId'] as string;
+  const parse = batchItemSchema.safeParse(req.body);
+  if (!parse.success) {
+    res.status(400).json({ error: 'Invalid input', details: parse.error.flatten() });
+    return;
+  }
+  if (!z.string().uuid().safeParse(listId).success) { res.status(404).json({ error: 'Not found' }); return; }
+
+  try {
+    const { itemIds } = parse.data;
+    const items = await db
+      .select({ householdId: shoppingListItems.householdId })
+      .from(shoppingListItems)
+      .where(inArray(shoppingListItems.id, itemIds));
+
+    if (items.some(i => i.householdId !== req.householdId)) {
+      res.status(403).json({ error: 'Forbidden' }); return;
+    }
+
+    await db.delete(shoppingListItems).where(inArray(shoppingListItems.id, itemIds));
+
+    const [list] = await db.select(listCols).from(shoppingLists).where(eq(shoppingLists.id, listId));
+    const updatedItems = list ? await itemsForList(listId) : [];
+    res.json(list ? { ...list, items: updatedItems } : { items: [] });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });
