@@ -19,7 +19,7 @@ function inventoryRow(
   canonicalFoodId: string,
   qty: number,
   unit: InventoryRow['unit'],
-  location: InventoryRow['location'],
+  category: InventoryRow['category'],
   expiresAt: string | null,
 ): InventoryRow {
   return {
@@ -30,7 +30,7 @@ function inventoryRow(
     qty,
     unit,
     brand: null,
-    location,
+    category,
     purchasedAt: null,
     expiresAt,
     createdAt: ts('2026-05-10'),
@@ -39,14 +39,14 @@ function inventoryRow(
 }
 
 const inventory: InventoryRow[] = [
-  inventoryRow('inv-spinach', 'baby spinach', 'food-spinach', 180, 'g', 'fridge', '2026-05-13'),
-  inventoryRow('inv-mushroom', 'mushrooms', 'food-mushrooms', 250, 'g', 'fridge', '2026-05-14'),
-  inventoryRow('inv-yoghurt', 'greek yoghurt', 'food-yoghurt', 500, 'g', 'fridge', '2026-05-15'),
-  inventoryRow('inv-broccoli', 'broccoli', 'food-broccoli', 1, 'count', 'fridge', '2026-05-16'),
+  inventoryRow('inv-spinach', 'baby spinach', 'food-spinach', 180, 'g', 'produce', '2026-05-13'),
+  inventoryRow('inv-mushroom', 'mushrooms', 'food-mushrooms', 250, 'g', 'produce', '2026-05-14'),
+  inventoryRow('inv-yoghurt', 'greek yoghurt', 'food-yoghurt', 500, 'g', 'dairy', '2026-05-15'),
+  inventoryRow('inv-broccoli', 'broccoli', 'food-broccoli', 1, 'count', 'produce', '2026-05-16'),
   inventoryRow('inv-rice', 'arborio rice', 'food-rice', 600, 'g', 'pantry', null),
   inventoryRow('inv-stock', 'vegetable stock', 'food-stock', 1_000, 'ml', 'pantry', null),
   inventoryRow('inv-pasta', 'pasta', 'food-pasta', 500, 'g', 'pantry', null),
-  inventoryRow('inv-parmesan', 'parmesan', 'food-parmesan', 80, 'g', 'fridge', '2026-05-18'),
+  inventoryRow('inv-parmesan', 'parmesan', 'food-parmesan', 80, 'g', 'dairy', '2026-05-18'),
 ];
 
 function recipe(

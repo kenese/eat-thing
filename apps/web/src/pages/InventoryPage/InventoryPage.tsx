@@ -3,17 +3,12 @@ import { useInventory, useDeleteInventoryItem } from '../../hooks/useInventory';
 import { ItemForm } from './ItemForm';
 import { PageTitle } from '../../components/PageTitle';
 import { FilterStrip } from '../../components/FilterStrip';
-import type { InventoryRow, InventoryLocation } from '@eat/shared';
+import type { InventoryRow } from '@eat/shared';
+import { CATEGORY_ORDER, CATEGORY_LABEL } from '@eat/taxonomy';
+import type { Category } from '@eat/taxonomy';
 import './InventoryPage.css';
 
-type LocationFilter = 'all' | InventoryLocation;
-
-const LOCATIONS: { key: InventoryLocation; label: string }[] = [
-  { key: 'fridge',  label: 'Fridge' },
-  { key: 'pantry',  label: 'Pantry' },
-  { key: 'freezer', label: 'Freezer' },
-  { key: 'other',   label: 'Other' },
-];
+type CategoryFilter = 'all' | Category;
 
 function daysUntil(iso: string | null): number | null {
   if (!iso) return null;
@@ -108,7 +103,7 @@ function ItemRow({ item, onEdit, onDelete }: { item: InventoryRow; onEdit: () =>
   );
 }
 
-function LocationGroup({ label, items, onEdit, onDelete }: {
+function CategoryGroup({ label, items, onEdit, onDelete }: {
   label: string;
   items: InventoryRow[];
   onEdit: (it: InventoryRow) => void;
@@ -134,7 +129,7 @@ function LocationGroup({ label, items, onEdit, onDelete }: {
 }
 
 export function InventoryPage() {
-  const [locationFilter, setLocationFilter] = useState<LocationFilter>('all');
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [modal, setModal] = useState<{ mode: 'add' } | { mode: 'edit'; item: InventoryRow } | null>(null);
@@ -147,17 +142,16 @@ export function InventoryPage() {
   }, [search]);
 
   const { data: items = [], isLoading, isError } = useInventory({
-    location: locationFilter === 'all' ? undefined : locationFilter,
+    category: categoryFilter === 'all' ? undefined : categoryFilter,
     q: debouncedSearch || undefined,
   });
 
-  // Sort within each location by expiry ascending (nulls last).
-  const sortedByLocation = useMemo(() => {
-    const buckets: Record<InventoryLocation, InventoryRow[]> = {
-      fridge: [], pantry: [], freezer: [], other: [],
+  const sortedByCategory = useMemo(() => {
+    const buckets: Record<Category, InventoryRow[]> = {
+      produce: [], meat: [], dairy: [], pantry: [], frozen: [], drinks: [], other: [],
     };
-    for (const it of items) buckets[it.location].push(it);
-    for (const k of Object.keys(buckets) as InventoryLocation[]) {
+    for (const it of items) buckets[it.category].push(it);
+    for (const k of CATEGORY_ORDER) {
       buckets[k].sort((a, b) => {
         const da = daysUntil(a.expiresAt);
         const db = daysUntil(b.expiresAt);
@@ -180,15 +174,15 @@ export function InventoryPage() {
 
   const tabs = [
     { key: 'all', label: 'All', count: items.length },
-    ...LOCATIONS.map((l) => ({
-      key: l.key,
-      label: l.label,
-      count: sortedByLocation[l.key].length,
+    ...CATEGORY_ORDER.map((cat) => ({
+      key: cat,
+      label: CATEGORY_LABEL[cat],
+      count: sortedByCategory[cat].length,
     })),
   ];
 
-  const locationsToRender: InventoryLocation[] =
-    locationFilter === 'all' ? ['fridge', 'pantry', 'freezer', 'other'] : [locationFilter];
+  const categoriesToRender: Category[] =
+    categoryFilter === 'all' ? CATEGORY_ORDER : [categoryFilter];
 
   return (
     <div className="inventory-page">
@@ -219,8 +213,8 @@ export function InventoryPage() {
 
       <FilterStrip
         tabs={tabs}
-        activeTab={locationFilter}
-        onTabChange={(k) => setLocationFilter(k as LocationFilter)}
+        activeTab={categoryFilter}
+        onTabChange={(k) => setCategoryFilter(k as CategoryFilter)}
         searchValue={search}
         onSearchChange={setSearch}
         searchPlaceholder="Search items, brands…"
@@ -245,11 +239,11 @@ export function InventoryPage() {
             <div>expires</div>
             <div></div>
           </div>
-          {locationsToRender.map((loc) => (
-            <LocationGroup
-              key={loc}
-              label={loc}
-              items={sortedByLocation[loc]}
+          {categoriesToRender.map((cat) => (
+            <CategoryGroup
+              key={cat}
+              label={CATEGORY_LABEL[cat]}
+              items={sortedByCategory[cat]}
               onEdit={(item) => setModal({ mode: 'edit', item })}
               onDelete={(item) => deleteMutation.mutate(item.id)}
             />

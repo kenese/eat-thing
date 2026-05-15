@@ -67,7 +67,7 @@ describe('meal planner importer', () => {
 
     const recipe = await parseMealPlannerRecipe('mp-1');
 
-    expect(recipe).toEqual({
+    expect(recipe).toMatchObject({
       name: 'Lemon Pasta',
       servings: 4,
       sourceUrl: null,

@@ -107,7 +107,7 @@ Adds items to cart on the user's behalf. User always clicks "place order" — se
 Pure restyle to the Crisp + Persimmon system; behaviour preserved.
 
 - [x] Tokens + Google Fonts + global chrome (TopNav, page shell, PageTitle, FilterStrip, StatusChip, AgentStatusCard, Wordmark)
-- [x] Inventory: tabular ledger + use-this-week strip + sectioned by location
+- [x] Inventory: tabular ledger + use-this-week strip + sectioned by category (was location)
 - [x] Recipes: inventory-aware sections + editorial hero (lite) + image-top cards
 - [x] Meal plan: proportion strip + redesigned day cards + fill-day suggestions
 - [x] Shopping list: categories migration + two-pane layout + reason chips + agent status
@@ -155,3 +155,4 @@ Deferred (own specs): Shops nav destination, scan-receipt, print, delivery-windo
 - 2026-05-15 — Phase 3.5: Recipe URL import improvements landed — Readability cleaning, no-paraphrase prompt, metric annotation (display-only), hero image extraction + upload, sections support (schema.org HowToSection + Gemini sections schema + section column on recipe_ingredients).
 - 2026-05-12 — Frontend restyle follow-up: Home dashboard landed as `/`, composing inventory expiry, five-day meal readiness, and shopping-list preview. E2E now asserts the home route instead of the old inventory redirect.
 - 2026-05-13 — Meal Planner recipe import from the OpenBrain ecosystem landed: structured list + parse endpoints, dedicated `@eat/meal-planning` adapter, import modal tab, edit-and-confirm flow, unit + E2E coverage.
+- 2026-05-15 — Shopping list multi-select + purchased action: dropped `inventory_location` enum + column (replaced by category from canonical_foods); find-or-create food helper so manual inventory + list-item additions auto-create canonical foods; `POST /items/purchase` saves selected items to inventory and removes from list (in transaction); `POST /items/batch-delete` removes multiple items at once; `InventoryPage` now tabs by category instead of location; `ItemForm` shows category dropdown when adding a new food by free text; `ShoppingListPage` replaces per-item checkbox with multi-select + sticky action bar ("Mark purchased" / "Remove" with recipe-item confirmation dialog); `AddItemForm` uses food combobox with category fallback for new foods.

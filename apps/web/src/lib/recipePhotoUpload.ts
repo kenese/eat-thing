@@ -40,7 +40,6 @@ export function calculateRecipePhotoSize(
 }
 
 export async function prepareRecipePhotoUpload(file: File): Promise<RecipePhotoUpload> {
-  debugger;
   const mimeType = getRecipePhotoUploadMimeType(file.type);
   let uploadFile = shouldResizeRecipePhoto(file)
     ? await resizeRecipePhoto(file, mimeType, RECIPE_PHOTO_MAX_EDGE, RECIPE_PHOTO_JPEG_QUALITY)

@@ -1,17 +1,20 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import {
   useCurrentShoppingList, useGenerateShoppingList,
   useUpdateShoppingListItem, useAddShoppingListItem, useDeleteShoppingListItem,
+  usePurchaseShoppingListItems, useBatchDeleteShoppingListItems,
 } from '../../hooks/useShoppingList';
+import { useFoodSearch } from '../../hooks/useFoodSearch';
 import { usePricesForList, useRefreshPrices } from '../../hooks/usePricesForList';
 import { StaplesModal } from './StaplesModal';
 import { PageTitle } from '../../components/PageTitle';
 import { FilterStrip } from '../../components/FilterStrip';
 import { AgentStatusCard, type AgentState } from '../../components/AgentStatusCard';
 import type {
-  ShoppingList, ShoppingListItem, ShoppingListPrice, Category, ShoppingSource,
+  ShoppingList, ShoppingListItem, ShoppingListPrice, Category, ShoppingSource, CanonicalFood,
 } from '@eat/shared';
 import { CATEGORY_LABEL, CATEGORY_ORDER } from '@eat/taxonomy';
+import type { Category as TaxCategory } from '@eat/taxonomy';
 import { mondayOf, toIsoDate } from '../../lib/dateUtils';
 import './ShoppingListPage.css';
 
@@ -39,25 +42,6 @@ function ReasonChip({ source, sourceRecipeNames }: { source: ShoppingSource; sou
   return <span className={`sl-row-reason sl-row-reason--${source}`}>{label}</span>;
 }
 
-function CheckBox({ checked, onToggle, label }: { checked: boolean; onToggle: () => void; label: string }) {
-  return (
-    <button
-      type="button"
-      role="checkbox"
-      aria-checked={checked}
-      aria-label={`Mark ${label}`}
-      className={`sl-check${checked ? ' sl-check--checked' : ''}`}
-      onClick={onToggle}
-    >
-      {checked && (
-        <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden>
-          <path d="M2.5 6.5L5 9L9.5 3.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      )}
-    </button>
-  );
-}
-
 function PriceCell({ price, refreshing }: { price: ShoppingListPrice | undefined; refreshing: boolean }) {
   if (!price && refreshing) return <span className="sl-row-price sl-row-price--loading">…</span>;
   if (!price) return <span className="sl-row-price sl-row-price--missing">—</span>;
@@ -66,78 +50,230 @@ function PriceCell({ price, refreshing }: { price: ShoppingListPrice | undefined
   return <span className="sl-row-price">${price.price?.toFixed(2)}</span>;
 }
 
+function ConfirmDialog({ message, onConfirm, onCancel }: { message: string; onConfirm: () => void; onCancel: () => void }) {
+  return (
+    <div className="sl-confirm-overlay" role="dialog" aria-modal="true">
+      <div className="sl-confirm-panel">
+        <p className="sl-confirm-message">{message}</p>
+        <div className="sl-confirm-actions">
+          <button className="btn-outline" onClick={onCancel}>Cancel</button>
+          <button className="btn-danger" onClick={onConfirm}>Remove anyway</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function CategorySection({
   category,
   items,
   prices,
   refreshing,
-  onToggle,
+  selectedIds,
+  onToggleSelect,
   onDelete,
 }: {
   category: Category;
   items: ShoppingListItem[];
   prices: Map<string, ShoppingListPrice>;
   refreshing: boolean;
-  onToggle: (id: string, checked: boolean) => void;
+  selectedIds: Set<string>;
+  onToggleSelect: (id: string) => void;
   onDelete: (id: string) => void;
 }) {
   const subtotal = items.reduce((s, it) => {
     const p = prices.get(it.id);
     return p && p.matched && p.inStock && p.price ? s + p.price : s;
   }, 0);
-  const checked = items.filter((i) => i.checked).length;
 
   return (
     <section className="sl-section">
       <div className="sl-section-header">
         <span className="sl-section-title">{CATEGORY_LABEL[category]}<span className="dot">.</span></span>
-        <span className="sl-section-count">{items.length} {items.length === 1 ? 'item' : 'items'}{checked > 0 ? ` · ${checked} in cart` : ''}</span>
+        <span className="sl-section-count">{items.length} {items.length === 1 ? 'item' : 'items'}</span>
         <span className="sl-section-subtotal">${subtotal.toFixed(2)}</span>
       </div>
-      {items.map((it) => (
-        <div key={it.id} className={`sl-row${it.checked ? ' sl-row--checked' : ''}`}>
-          <CheckBox
-            checked={it.checked}
-            onToggle={() => onToggle(it.id, !it.checked)}
-            label={it.name}
-          />
-          <div className="sl-row-name">
-            <span className="sl-row-label">{it.name}</span>
-            <span className="sl-row-qty">{Math.ceil(it.qty * 10) / 10} {it.unit}</span>
+      {items.map((it) => {
+        const selected = selectedIds.has(it.id);
+        return (
+          <div key={it.id} className={`sl-row${selected ? ' sl-row--selected' : ''}`}>
+            <button
+              type="button"
+              role="checkbox"
+              aria-checked={selected}
+              aria-label={`Select ${it.name}`}
+              className={`sl-check${selected ? ' sl-check--checked' : ''}`}
+              onClick={() => onToggleSelect(it.id)}
+            >
+              {selected && (
+                <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden>
+                  <path d="M2.5 6.5L5 9L9.5 3.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
+            </button>
+            <div className="sl-row-name">
+              <span className="sl-row-label">{it.name}</span>
+              <span className="sl-row-qty">{Math.ceil(it.qty * 10) / 10} {it.unit}</span>
+            </div>
+            <ReasonChip source={it.source} sourceRecipeNames={it.sourceRecipeNames ?? null} />
+            <PriceCell price={prices.get(it.id)} refreshing={refreshing} />
+            <button className="sl-row-menu" onClick={() => onDelete(it.id)} aria-label={`Remove ${it.name}`}>✕</button>
           </div>
-          <ReasonChip source={it.source} sourceRecipeNames={it.sourceRecipeNames ?? null} />
-          <PriceCell price={prices.get(it.id)} refreshing={refreshing} />
-          <button className="sl-row-menu" onClick={() => onDelete(it.id)} aria-label={`Remove ${it.name}`}>✕</button>
-        </div>
-      ))}
+        );
+      })}
     </section>
+  );
+}
+
+function FoodCombobox({
+  value,
+  displayName,
+  onChange,
+  onTextChange,
+}: {
+  value: string;
+  displayName: string;
+  onChange: (food: CanonicalFood) => void;
+  onTextChange: (text: string) => void;
+}) {
+  const [input, setInput] = useState(displayName);
+  const [open, setOpen] = useState(false);
+  const { data: results = [] } = useFoodSearch(input);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { setInput(displayName); }, [displayName]);
+
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  return (
+    <div className="food-combobox" ref={ref} style={{ flex: 1, minWidth: 0 }}>
+      <input
+        className="form-input"
+        type="text"
+        placeholder="Food name or search…"
+        value={input}
+        autoComplete="off"
+        onChange={e => {
+          setInput(e.target.value);
+          setOpen(true);
+          onTextChange(e.target.value);
+        }}
+        onFocus={() => { if (input.trim()) setOpen(true); }}
+        onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }}
+      />
+      {open && results.length > 0 && (
+        <ul className="food-dropdown" role="listbox">
+          {results.map(food => (
+            <li
+              key={food.id}
+              role="option"
+              aria-selected={food.id === value}
+              className={`food-option${food.id === value ? ' selected' : ''}`}
+              onMouseDown={() => { onChange(food); setInput(food.name); setOpen(false); }}
+            >
+              <span>{food.name}</span>
+              <span className="food-option-unit">{food.defaultUnit}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
 function AddItemForm({ listId }: { listId: string }) {
   const addItem = useAddShoppingListItem(listId);
+  const [canonicalFoodId, setCanonicalFoodId] = useState('');
   const [name, setName] = useState('');
   const [qty, setQty] = useState('');
   const [unit, setUnit] = useState('count');
+  const [category, setCategory] = useState<TaxCategory>('other');
+
+  const isNewFood = !canonicalFoodId && name.trim().length > 0;
 
   async function submit() {
     const parsedQty = parseFloat(qty);
     if (!name.trim() || isNaN(parsedQty) || parsedQty <= 0) return;
-    await addItem.mutateAsync({ name: name.trim(), qty: parsedQty, unit });
+    if (isNewFood && !category) return;
+
+    const payload = canonicalFoodId
+      ? { canonicalFoodId, name: name.trim(), qty: parsedQty, unit }
+      : { name: name.trim(), qty: parsedQty, unit, category };
+
+    await addItem.mutateAsync(payload);
+    setCanonicalFoodId('');
     setName('');
     setQty('');
+    setUnit('count');
+    setCategory('other');
   }
 
   return (
     <div className="sl-add-form">
-      <input placeholder="Item name…" value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} />
-      <input type="number" min="0" step="any" placeholder="Qty" value={qty} onChange={(e) => setQty(e.target.value)} />
-      <select value={unit} onChange={(e) => setUnit(e.target.value)}>
+      <FoodCombobox
+        value={canonicalFoodId}
+        displayName={name}
+        onChange={food => {
+          setCanonicalFoodId(food.id);
+          setName(food.name);
+          setUnit(food.defaultUnit);
+        }}
+        onTextChange={text => {
+          setName(text);
+          setCanonicalFoodId('');
+        }}
+      />
+      {isNewFood && (
+        <select className="form-select" value={category} onChange={e => setCategory(e.target.value as TaxCategory)} aria-label="Category">
+          {CATEGORY_ORDER.map(cat => (
+            <option key={cat} value={cat}>{CATEGORY_LABEL[cat]}</option>
+          ))}
+        </select>
+      )}
+      <input type="number" min="0" step="any" placeholder="Qty" value={qty} onChange={(e) => setQty(e.target.value)} className="form-input" style={{ width: 70 }} />
+      <select value={unit} onChange={(e) => setUnit(e.target.value)} className="form-select" style={{ width: 70 }}>
         <option value="g">g</option>
         <option value="ml">ml</option>
         <option value="count">count</option>
       </select>
-      <button type="button" onClick={submit} disabled={addItem.isPending}>+ Add</button>
+      <button type="button" onClick={submit} disabled={addItem.isPending || !name.trim()} className="sl-add-btn">+ Add</button>
+    </div>
+  );
+}
+
+function ActionBar({
+  count,
+  hasRecipeItems,
+  onPurchase,
+  onRemove,
+  purchasing,
+  removing,
+}: {
+  count: number;
+  hasRecipeItems: boolean;
+  onPurchase: () => void;
+  onRemove: () => void;
+  purchasing: boolean;
+  removing: boolean;
+}) {
+  if (count === 0) return null;
+  return (
+    <div className="sl-action-bar" role="toolbar" aria-label="Selection actions">
+      <span className="sl-action-bar-count">{count} {count === 1 ? 'item' : 'items'} selected</span>
+      <div className="sl-action-bar-buttons">
+        <button className="sl-action-btn sl-action-btn--purchase" onClick={onPurchase} disabled={purchasing || removing} aria-label="Mark selected as purchased">
+          {purchasing ? 'Saving…' : 'Mark purchased'}
+        </button>
+        <button className="sl-action-btn sl-action-btn--remove" onClick={onRemove} disabled={purchasing || removing} aria-label="Remove selected items">
+          {removing ? 'Removing…' : `Remove${hasRecipeItems ? ' ⚠' : ''}`}
+        </button>
+      </div>
     </div>
   );
 }
@@ -145,6 +281,8 @@ function AddItemForm({ listId }: { listId: string }) {
 function ListView({ list }: { list: ShoppingList }) {
   const updateItem = useUpdateShoppingListItem(list.id);
   const deleteItem = useDeleteShoppingListItem(list.id);
+  const purchaseItems = usePurchaseShoppingListItems(list.id);
+  const batchDelete = useBatchDeleteShoppingListItems(list.id);
   const { data: pricesData } = usePricesForList(list.id);
   const refresh = useRefreshPrices(list.id);
 
@@ -158,18 +296,17 @@ function ListView({ list }: { list: ShoppingList }) {
   const refreshing = job?.status === 'pending' || job?.status === 'in_progress' || refresh.isPending;
 
   const [tab, setTab] = useState<SourceTab>('all');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [confirmRemove, setConfirmRemove] = useState(false);
 
-  const tabs = [
-    ...SOURCE_TABS.map((t) => ({
-      key: t.key,
-      label: t.label,
-      count: t.key === 'all' ? list.items.length : list.items.filter((i) => i.source === t.key).length,
-    })),
-  ];
+  const tabs = SOURCE_TABS.map((t) => ({
+    key: t.key,
+    label: t.label,
+    count: t.key === 'all' ? list.items.length : list.items.filter((i) => i.source === t.key).length,
+  }));
 
   const visible = tab === 'all' ? list.items : list.items.filter((i) => i.source === tab);
 
-  // Group by category.
   const byCategory = useMemo(() => {
     const m = new Map<Category, ShoppingListItem[]>();
     for (const it of visible) {
@@ -180,10 +317,8 @@ function ListView({ list }: { list: ShoppingList }) {
     return m;
   }, [visible]);
 
-  // Totals.
-  const allItems = CATEGORY_ORDER
-    .map((c) => byCategory.get(c) ?? [])
-    .flat();
+  const allItems = CATEGORY_ORDER.map((c) => byCategory.get(c) ?? []).flat();
+
   const subtotal = allItems.reduce((s, it) => {
     const p = prices.get(it.id);
     return p && p.matched && p.inStock && p.price ? s + p.price : s;
@@ -194,7 +329,6 @@ function ListView({ list }: { list: ShoppingList }) {
   }).length;
   const unmatched = allItems.length - pricedCount;
 
-  // Store identity — read from prices; null if none.
   const storeKey = pricesData?.prices?.[0]?.store ?? null;
   const storeLabel = storeKey ? STORE_LABEL[storeKey] : null;
 
@@ -206,6 +340,54 @@ function ListView({ list }: { list: ShoppingList }) {
     agentState === 'running' ? `Checking prices${storeLabel ? ' at ' + storeLabel.name : ''}.`
     : agentState === 'failed' ? 'Last price check failed. Run refresh to try again.'
     : `I'll log in, drop everything into your cart, choose the window, and stop before checkout for your okay.`;
+
+  function toggleSelect(id: string) {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  const selectedArr = [...selectedIds];
+  const hasRecipeItems = selectedArr.some(id => {
+    const item = list.items.find(i => i.id === id);
+    return item?.source === 'recipe';
+  });
+
+  async function handlePurchase() {
+    if (selectedArr.length === 0) return;
+    await purchaseItems.mutateAsync({ itemIds: selectedArr });
+    setSelectedIds(new Set());
+  }
+
+  function handleRemoveClick() {
+    if (hasRecipeItems) {
+      setConfirmRemove(true);
+    } else {
+      doRemove();
+    }
+  }
+
+  async function doRemove() {
+    if (selectedArr.length === 0) return;
+    await batchDelete.mutateAsync({ itemIds: selectedArr });
+    setSelectedIds(new Set());
+    setConfirmRemove(false);
+  }
+
+  // Deselect items that are no longer in the list (e.g. after purchase).
+  const listItemIds = new Set(list.items.map(i => i.id));
+  if (selectedIds.size > 0) {
+    const staleIds = selectedArr.filter(id => !listItemIds.has(id));
+    if (staleIds.length > 0) {
+      setSelectedIds(prev => {
+        const next = new Set(prev);
+        staleIds.forEach(id => next.delete(id));
+        return next;
+      });
+    }
+  }
 
   return (
     <div className="sl-body">
@@ -230,7 +412,8 @@ function ListView({ list }: { list: ShoppingList }) {
               items={items}
               prices={prices}
               refreshing={refreshing}
-              onToggle={(id, checked) => updateItem.mutate({ itemId: id, checked })}
+              selectedIds={selectedIds}
+              onToggleSelect={toggleSelect}
               onDelete={(id) => deleteItem.mutate(id)}
             />
           );
@@ -242,6 +425,15 @@ function ListView({ list }: { list: ShoppingList }) {
           </div>
           <AddItemForm listId={list.id} />
         </section>
+
+        <ActionBar
+          count={selectedIds.size}
+          hasRecipeItems={hasRecipeItems}
+          onPurchase={handlePurchase}
+          onRemove={handleRemoveClick}
+          purchasing={purchaseItems.isPending}
+          removing={batchDelete.isPending}
+        />
       </div>
 
       <aside className="sl-sidebar">
@@ -288,6 +480,14 @@ function ListView({ list }: { list: ShoppingList }) {
           {refreshing ? 'Checking prices…' : 'Refresh prices'}
         </button>
       </aside>
+
+      {confirmRemove && (
+        <ConfirmDialog
+          message="Some selected items are from recipes — removing them won't update the recipe's ingredient status. Remove anyway?"
+          onConfirm={doRemove}
+          onCancel={() => setConfirmRemove(false)}
+        />
+      )}
     </div>
   );
 }

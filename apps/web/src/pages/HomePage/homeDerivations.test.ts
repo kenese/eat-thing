@@ -11,7 +11,7 @@ function inv(partial: Partial<InventoryRow>): InventoryRow {
     qty: partial.qty ?? 1,
     unit: partial.unit ?? 'count',
     brand: null,
-    location: 'fridge',
+    category: 'dairy',
     purchasedAt: null,
     expiresAt: partial.expiresAt ?? null,
     createdAt: '2026-05-12T00:00:00Z',
@@ -112,7 +112,7 @@ describe('computeMeals', () => {
     const r = recipe('r1', [{ name: 'salt', canonicalFoodId: 'cf-salt', qty: 1 }]);
     const inv = [{
       id: 'i1', householdId: 'h-1', canonicalFoodId: 'cf-salt', foodName: 'salt',
-      qty: 100, unit: 'g' as const, brand: null, location: 'pantry' as const,
+      qty: 100, unit: 'g' as const, brand: null, category: 'pantry' as const,
       purchasedAt: null, expiresAt: null,
       createdAt: '2026-05-12T00:00:00Z', updatedAt: '2026-05-12T00:00:00Z',
     }];

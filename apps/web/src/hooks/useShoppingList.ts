@@ -3,6 +3,7 @@ import { api } from '../api/client';
 import type {
   ShoppingList, ShoppingListItem,
   GenerateShoppingListInput, AddShoppingListItemInput, UpdateShoppingListItemInput,
+  PurchaseShoppingListItemsInput, BatchDeleteShoppingListItemsInput,
 } from '@eat/shared';
 
 interface ApiError extends Error { status: number; }
@@ -54,5 +55,26 @@ export function useDeleteShoppingListItem(listId: string) {
     mutationFn: (itemId: string) =>
       api.del<{ id: string }>(`/api/shopping-lists/${listId}/items/${itemId}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['shopping-list', 'current'] }),
+  });
+}
+
+export function usePurchaseShoppingListItems(listId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: PurchaseShoppingListItemsInput) =>
+      api.post<ShoppingList>(`/api/shopping-lists/${listId}/items/purchase`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['shopping-list'] });
+      qc.invalidateQueries({ queryKey: ['inventory'] });
+    },
+  });
+}
+
+export function useBatchDeleteShoppingListItems(listId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: BatchDeleteShoppingListItemsInput) =>
+      api.post<ShoppingList>(`/api/shopping-lists/${listId}/items/batch-delete`, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['shopping-list'] }),
   });
 }

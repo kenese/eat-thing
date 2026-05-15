@@ -1,16 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useFoodSearch } from '../../hooks/useFoodSearch';
 import { useAddInventoryItem, useUpdateInventoryItem } from '../../hooks/useInventory';
-import type { InventoryRow, InventoryLocation, CanonicalFood } from '@eat/shared';
+import type { InventoryRow, CanonicalFood } from '@eat/shared';
+import { CATEGORY_ORDER, CATEGORY_LABEL } from '@eat/taxonomy';
+import type { Category } from '@eat/taxonomy';
 import './ItemForm.css';
 
 interface FormState {
   canonicalFoodId: string;
   foodName: string;
+  category: Category;
   qty: string;
   unit: string;
   brand: string;
-  location: InventoryLocation;
   purchasedAt: string;
   expiresAt: string;
 }
@@ -24,9 +26,10 @@ interface FoodComboboxProps {
   value: string;
   displayName: string;
   onChange: (food: CanonicalFood) => void;
+  onTextChange: (text: string) => void;
 }
 
-function FoodCombobox({ value, displayName, onChange }: FoodComboboxProps) {
+function FoodCombobox({ value, displayName, onChange, onTextChange }: FoodComboboxProps) {
   const [input, setInput] = useState(displayName);
   const [open, setOpen] = useState(false);
   const { data: results = [] } = useFoodSearch(input);
@@ -48,10 +51,14 @@ function FoodCombobox({ value, displayName, onChange }: FoodComboboxProps) {
       <input
         className="form-input"
         type="text"
-        placeholder="Search foods (e.g. milk, flour…)"
+        placeholder="Search or type a new food name…"
         value={input}
         autoComplete="off"
-        onChange={e => { setInput(e.target.value); setOpen(true); }}
+        onChange={e => {
+          setInput(e.target.value);
+          setOpen(true);
+          onTextChange(e.target.value);
+        }}
         onFocus={() => { if (input.trim()) setOpen(true); }}
       />
       {open && results.length > 0 && (
@@ -84,10 +91,10 @@ export function ItemForm({ mode, item, onClose }: ItemFormProps) {
   const [form, setForm] = useState<FormState>({
     canonicalFoodId: item?.canonicalFoodId ?? '',
     foodName: item?.foodName ?? '',
+    category: (item?.category as Category) ?? 'other',
     qty: item != null ? String(item.qty) : '',
     unit: item?.unit ?? 'g',
     brand: item?.brand ?? '',
-    location: item?.location ?? 'pantry',
     purchasedAt: toDateInput(item?.purchasedAt),
     expiresAt: toDateInput(item?.expiresAt),
   });
@@ -97,6 +104,8 @@ export function ItemForm({ mode, item, onClose }: ItemFormProps) {
   const updateMutation = useUpdateInventoryItem(item?.id ?? '');
   const isPending = addMutation.isPending || updateMutation.isPending;
 
+  const isNewFood = mode === 'add' && !form.canonicalFoodId;
+
   function set<K extends keyof FormState>(k: K, v: FormState[K]) {
     setForm(f => ({ ...f, [k]: v }));
   }
@@ -105,25 +114,42 @@ export function ItemForm({ mode, item, onClose }: ItemFormProps) {
     e.preventDefault();
     setError('');
 
-    if (!form.canonicalFoodId) { setError('Please select a food.'); return; }
+    if (!form.foodName.trim()) { setError('Please enter or select a food.'); return; }
+    if (isNewFood && !form.category) { setError('Please select a category.'); return; }
 
     const qty = parseFloat(form.qty);
     if (isNaN(qty) || qty <= 0) { setError('Quantity must be a positive number.'); return; }
 
-    const payload = {
-      qty,
-      unit: form.unit,
-      brand: form.brand.trim() || null,
-      location: form.location,
-      purchasedAt: form.purchasedAt || null,
-      expiresAt: form.expiresAt || null,
-    };
-
     try {
       if (mode === 'add') {
-        await addMutation.mutateAsync({ canonicalFoodId: form.canonicalFoodId, ...payload });
+        if (form.canonicalFoodId) {
+          await addMutation.mutateAsync({
+            canonicalFoodId: form.canonicalFoodId,
+            qty,
+            unit: form.unit,
+            brand: form.brand.trim() || null,
+            purchasedAt: form.purchasedAt || null,
+            expiresAt: form.expiresAt || null,
+          });
+        } else {
+          await addMutation.mutateAsync({
+            foodName: form.foodName.trim(),
+            category: form.category,
+            qty,
+            unit: form.unit,
+            brand: form.brand.trim() || null,
+            purchasedAt: form.purchasedAt || null,
+            expiresAt: form.expiresAt || null,
+          });
+        }
       } else {
-        await updateMutation.mutateAsync(payload);
+        await updateMutation.mutateAsync({
+          qty,
+          unit: form.unit,
+          brand: form.brand.trim() || null,
+          purchasedAt: form.purchasedAt || null,
+          expiresAt: form.expiresAt || null,
+        });
       }
       onClose();
     } catch (err: unknown) {
@@ -153,11 +179,32 @@ export function ItemForm({ mode, item, onClose }: ItemFormProps) {
                 foodName: food.name,
                 unit: food.defaultUnit,
               }))}
+              onTextChange={text => setForm(f => ({
+                ...f,
+                foodName: text,
+                canonicalFoodId: '',
+              }))}
             />
           ) : (
             <div className="form-food-display">
               <span className="form-label">Food</span>
               <span className="form-food-name">{form.foodName}</span>
+            </div>
+          )}
+
+          {isNewFood && (
+            <div className="form-field">
+              <label className="form-label" htmlFor="category">Category *</label>
+              <select
+                id="category"
+                className="form-select"
+                value={form.category}
+                onChange={e => set('category', e.target.value as Category)}
+              >
+                {CATEGORY_ORDER.map(cat => (
+                  <option key={cat} value={cat}>{CATEGORY_LABEL[cat]}</option>
+                ))}
+              </select>
             </div>
           )}
 
@@ -189,21 +236,6 @@ export function ItemForm({ mode, item, onClose }: ItemFormProps) {
                 <option value="count">count</option>
               </select>
             </div>
-          </div>
-
-          <div className="form-field">
-            <label className="form-label" htmlFor="location">Location</label>
-            <select
-              id="location"
-              className="form-select"
-              value={form.location}
-              onChange={e => set('location', e.target.value as InventoryLocation)}
-            >
-              <option value="fridge">Fridge</option>
-              <option value="pantry">Pantry</option>
-              <option value="freezer">Freezer</option>
-              <option value="other">Other</option>
-            </select>
           </div>
 
           <div className="form-field">

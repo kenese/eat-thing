@@ -3,13 +3,13 @@ import { api } from '../api/client';
 import type { InventoryRow, CreateInventoryItemInput, UpdateInventoryItemInput } from '@eat/shared';
 
 interface InventoryParams {
-  location?: string;
+  category?: string;
   q?: string;
 }
 
 export function useInventory(params?: InventoryParams) {
   const qs = new URLSearchParams();
-  if (params?.location) qs.set('location', params.location);
+  if (params?.category) qs.set('category', params.category);
   if (params?.q) qs.set('q', params.q);
   const query = qs.toString();
 

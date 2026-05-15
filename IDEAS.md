@@ -77,6 +77,18 @@ Capacitor or React Native wrapper around the PWA for push notifications (e.g. "y
 
 ---
 
+## While-shopping mode
+
+A "while shopping" flow where the user works through the list aisle by aisle in the store. Tapping an item marks it "in cart" (rather than purchased — purchased should only happen when items are actually paid for and in hand). Supports an optimised view grouped by physical store aisle rather than food category. Items marked "in cart" should feed back into the shopping total displayed in the sidebar. Deferred for now — the current multi-select "Mark purchased" flow covers the post-shop inventory update.
+
+---
+
+## Recipe chip navigation from shopping list
+
+Items sourced from a recipe show the recipe name as a chip (reason chip). Tapping that chip should navigate to the recipe detail page. Currently `sourceRecipeNames` stores recipe names as strings, not IDs, so client-side navigation by ID is not directly possible without a lookup. Options: (a) store `sourceRecipeId` as well, (b) add a server endpoint to resolve name → ID, (c) search the recipe list client-side by name (fuzzy match). Revisit once recipe volume makes the search slow.
+
+---
+
 ## Metric values as shopping-list / cook-event source of truth
 
 Currently `metric_value` on `recipe_ingredients` is display-only. Long-term, these pre-computed values could replace the runtime `toCanonical()` call in the shopping-list generator and cook-event route. This would make aggregation deterministic (no surprise conversion failures at list-generate time) and remove the dependency on `@eat/taxonomy` from the hot path. Would require updating `apps/server/src/lib/shopping-list-generator.ts` and the cook-event route.

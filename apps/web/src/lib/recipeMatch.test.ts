@@ -37,7 +37,7 @@ function inv(canonicalFoodId: string, foodName: string, qty: number, unit: 'g' |
     qty,
     unit,
     brand: null,
-    location: 'pantry',
+    category: 'pantry',
     purchasedAt: null,
     expiresAt: null,
     createdAt: '2026-05-11T00:00:00Z',

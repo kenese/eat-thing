@@ -52,7 +52,7 @@
   padding: 10px 4px;
   border-bottom: 1px solid var(--rule2);
 }
-.sl-row--checked { opacity: 0.55; }
+.sl-row--selected { background: color-mix(in srgb, var(--persimmon) 8%, transparent); }
 
 .sl-check {
   width: 18px;
@@ -219,27 +219,18 @@
   cursor: not-allowed;
 }
 
-/* Add-item form (kept but restyled) */
+/* Add-item form */
 .sl-add-form {
   background: var(--paper);
   border: 1px solid var(--rule);
   border-radius: 10px;
   padding: 12px 14px;
-  display: grid;
-  grid-template-columns: 1fr 80px 80px 100px;
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   align-items: center;
 }
-.sl-add-form input, .sl-add-form select {
-  border: 1px solid var(--rule);
-  border-radius: 6px;
-  padding: 6px 10px;
-  font-family: var(--font-sans);
-  font-size: 13px;
-  outline: none;
-  background: var(--paper);
-}
-.sl-add-form button {
+.sl-add-btn {
   background: var(--ink);
   color: var(--paper);
   border: none;
@@ -249,7 +240,81 @@
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
+  white-space: nowrap;
 }
+.sl-add-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Action bar */
+.sl-action-bar {
+  position: sticky;
+  bottom: 0;
+  background: var(--ink);
+  color: var(--paper);
+  border-radius: 12px 12px 0 0;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 24px;
+}
+.sl-action-bar-count {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(243,245,242,0.7);
+}
+.sl-action-bar-buttons { display: flex; gap: 8px; }
+.sl-action-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 9px 16px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.sl-action-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.sl-action-btn--purchase { background: var(--green); color: var(--paper); }
+.sl-action-btn--remove   { background: rgba(243,245,242,0.14); color: var(--paper); }
+.sl-action-btn--remove:hover { background: var(--warn); }
+
+/* Confirm dialog */
+.sl-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 60;
+  padding: 1rem;
+}
+.sl-confirm-panel {
+  background: var(--paper);
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 400px;
+  width: 100%;
+}
+.sl-confirm-message {
+  font-size: 15px;
+  line-height: 1.5;
+  margin: 0 0 20px;
+}
+.sl-confirm-actions { display: flex; gap: 10px; justify-content: flex-end; }
+.btn-danger {
+  background: var(--warn);
+  color: var(--paper);
+  border: none;
+  border-radius: 8px;
+  padding: 9px 16px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.btn-danger:hover { filter: brightness(1.1); }
 
 @media (max-width: 1024px) {
   .sl-body { grid-template-columns: 1fr; }

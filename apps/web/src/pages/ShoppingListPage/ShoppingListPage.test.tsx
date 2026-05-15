@@ -9,8 +9,11 @@ const hooks = vi.hoisted(() => ({
   useUpdateShoppingListItem: vi.fn(),
   useAddShoppingListItem: vi.fn(),
   useDeleteShoppingListItem: vi.fn(),
+  usePurchaseShoppingListItems: vi.fn(),
+  useBatchDeleteShoppingListItems: vi.fn(),
   usePricesForList: vi.fn(),
   useRefreshPrices: vi.fn(),
+  useFoodSearch: vi.fn(),
 }));
 
 vi.mock('../../hooks/useShoppingList', () => ({
@@ -19,10 +22,15 @@ vi.mock('../../hooks/useShoppingList', () => ({
   useUpdateShoppingListItem: hooks.useUpdateShoppingListItem,
   useAddShoppingListItem: hooks.useAddShoppingListItem,
   useDeleteShoppingListItem: hooks.useDeleteShoppingListItem,
+  usePurchaseShoppingListItems: hooks.usePurchaseShoppingListItems,
+  useBatchDeleteShoppingListItems: hooks.useBatchDeleteShoppingListItems,
 }));
 vi.mock('../../hooks/usePricesForList', () => ({
   usePricesForList: hooks.usePricesForList,
   useRefreshPrices: hooks.useRefreshPrices,
+}));
+vi.mock('../../hooks/useFoodSearch', () => ({
+  useFoodSearch: hooks.useFoodSearch,
 }));
 
 function renderPage() {
@@ -47,6 +55,9 @@ describe('ShoppingListPage prices', () => {
     hooks.useUpdateShoppingListItem.mockReturnValue({ mutate: vi.fn() });
     hooks.useAddShoppingListItem.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
     hooks.useDeleteShoppingListItem.mockReturnValue({ mutate: vi.fn() });
+    hooks.usePurchaseShoppingListItems.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
+    hooks.useBatchDeleteShoppingListItems.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
+    hooks.useFoodSearch.mockReturnValue({ data: [] });
   });
 
   it('shows recipe name on recipe-sourced items', () => {
@@ -79,9 +90,7 @@ describe('ShoppingListPage prices', () => {
     hooks.usePricesForList.mockReturnValue({ data: { prices: [], job: null } });
     hooks.useRefreshPrices.mockReturnValue({ mutate: vi.fn(), isPending: false });
     renderPage();
-    // Eggs → dairy category → "Dairy & eggs" heading
     expect(screen.getByText('Dairy & eggs')).toBeInTheDocument();
-    // Bread → pantry category → "Pantry & dry goods" heading
     expect(screen.getByText('Pantry & dry goods')).toBeInTheDocument();
   });
 
@@ -94,10 +103,8 @@ describe('ShoppingListPage prices', () => {
     });
     hooks.useRefreshPrices.mockReturnValue({ mutate: vi.fn(), isPending: false });
     renderPage();
-    // The price appears in the row cell, section subtotal, and sidebar totals
     const priceEls = screen.getAllByText('$7.49');
     expect(priceEls.length).toBeGreaterThanOrEqual(1);
-    // Confirm the per-item price cell is present
     expect(priceEls.some((el) => el.classList.contains('sl-row-price'))).toBe(true);
   });
 
@@ -131,7 +138,6 @@ describe('ShoppingListPage prices', () => {
     });
     hooks.useRefreshPrices.mockReturnValue({ mutate: vi.fn(), isPending: false });
     renderPage();
-    // Sidebar refresh button shows "Checking prices…" when job is in_progress
     expect(screen.getByText('Checking prices…')).toBeInTheDocument();
   });
 
@@ -150,5 +156,75 @@ describe('ShoppingListPage prices', () => {
     renderPage();
     const sendBtn = screen.getByRole('button', { name: /send to/i });
     expect(sendBtn).toBeDisabled();
+  });
+});
+
+describe('ShoppingListPage multi-select', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    hooks.useCurrentShoppingList.mockReturnValue({ data: baseList, isLoading: false });
+    hooks.useGenerateShoppingList.mockReturnValue({ mutate: vi.fn(), isPending: false });
+    hooks.useUpdateShoppingListItem.mockReturnValue({ mutate: vi.fn() });
+    hooks.useAddShoppingListItem.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
+    hooks.useDeleteShoppingListItem.mockReturnValue({ mutate: vi.fn() });
+    hooks.usePricesForList.mockReturnValue({ data: { prices: [], job: null } });
+    hooks.useRefreshPrices.mockReturnValue({ mutate: vi.fn(), isPending: false });
+    hooks.useFoodSearch.mockReturnValue({ data: [] });
+  });
+
+  it('action bar is hidden when nothing is selected', () => {
+    hooks.usePurchaseShoppingListItems.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
+    hooks.useBatchDeleteShoppingListItems.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
+    renderPage();
+    expect(screen.queryByRole('toolbar', { name: /selection actions/i })).not.toBeInTheDocument();
+  });
+
+  it('shows action bar after selecting an item', () => {
+    hooks.usePurchaseShoppingListItems.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
+    hooks.useBatchDeleteShoppingListItems.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
+    renderPage();
+    fireEvent.click(screen.getByRole('checkbox', { name: /select Eggs/i }));
+    expect(screen.getByRole('toolbar', { name: /selection actions/i })).toBeInTheDocument();
+    expect(screen.getByText('1 item selected')).toBeInTheDocument();
+  });
+
+  it('calls purchase mutation when Mark purchased is clicked', async () => {
+    const mutateAsync = vi.fn().mockResolvedValue({});
+    hooks.usePurchaseShoppingListItems.mockReturnValue({ mutateAsync, isPending: false });
+    hooks.useBatchDeleteShoppingListItems.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
+    renderPage();
+    fireEvent.click(screen.getByRole('checkbox', { name: /select Bread/i }));
+    fireEvent.click(screen.getByRole('button', { name: /mark selected as purchased/i }));
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalledWith({ itemIds: ['i2'] }));
+  });
+
+  it('calls batch delete directly for non-recipe items', async () => {
+    const mutateAsync = vi.fn().mockResolvedValue({});
+    hooks.usePurchaseShoppingListItems.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
+    hooks.useBatchDeleteShoppingListItems.mockReturnValue({ mutateAsync, isPending: false });
+    renderPage();
+    fireEvent.click(screen.getByRole('checkbox', { name: /select Bread/i }));
+    fireEvent.click(screen.getByRole('button', { name: /remove selected items/i }));
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalledWith({ itemIds: ['i2'] }));
+  });
+
+  it('shows confirmation dialog when removing recipe-sourced items', () => {
+    hooks.usePurchaseShoppingListItems.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
+    hooks.useBatchDeleteShoppingListItems.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
+    renderPage();
+    fireEvent.click(screen.getByRole('checkbox', { name: /select Eggs/i }));
+    fireEvent.click(screen.getByRole('button', { name: /remove selected items/i }));
+    expect(screen.getByText(/Some selected items are from recipes/i)).toBeInTheDocument();
+  });
+
+  it('calls batch delete after confirming removal of recipe items', async () => {
+    const mutateAsync = vi.fn().mockResolvedValue({});
+    hooks.usePurchaseShoppingListItems.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
+    hooks.useBatchDeleteShoppingListItems.mockReturnValue({ mutateAsync, isPending: false });
+    renderPage();
+    fireEvent.click(screen.getByRole('checkbox', { name: /select Eggs/i }));
+    fireEvent.click(screen.getByRole('button', { name: /remove selected items/i }));
+    fireEvent.click(screen.getByRole('button', { name: /remove anyway/i }));
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalledWith({ itemIds: ['i1'] }));
   });
 });

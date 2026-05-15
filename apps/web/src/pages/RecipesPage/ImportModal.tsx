@@ -58,7 +58,7 @@ export function ImportModal({ onClose }: ImportModalProps) {
   async function handlePhotoExtract(e: React.FormEvent) {
     e.preventDefault();
     if (!photoFile) return;
-    debugger;
+
     const { base64, mimeType } = await prepareRecipePhotoUpload(photoFile);
     const result = await photoMutation.mutateAsync({ imageBase64: base64, mimeType });
     setPendingPhoto({ base64, mimeType });

@@ -250,7 +250,7 @@ export interface ExtractedRecipe {
 export async function extractFromUrl(url: string): Promise<ExtractedRecipe> {
     const response = await fetch(url, {
         headers: {'User-Agent': 'Mozilla/5.0 (compatible; eat-thing-bot/1.0)'},
-        signal: AbortSignal.timeout(10_000),
+        signal: AbortSignal.timeout(20_000),
     })
     // .then(r => {
     // if (!r.ok) {
@@ -270,6 +270,7 @@ export async function extractFromUrl(url: string): Promise<ExtractedRecipe> {
     const raw = schemaRaw ?? await extractWithGemini(cleanHtmlWithReadability(html));
     if (!raw) throw new Error('Could not extract recipe from this URL');
 
+    console.log('recipe from url', raw);
     const annotated = annotateMetric(raw.ingredients);
     const heroImageUrl = resolveHeroImage(html, url);
 
