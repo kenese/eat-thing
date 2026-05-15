@@ -5,8 +5,11 @@ import { v4 as uuidv4 } from 'uuid';
 import { withHousehold } from '../middleware/with-household.js';
 import { db } from '../db/index.js';
 import { inventoryItems, canonicalFoods } from '../db/schema/index.js';
+import { findOrCreateFood, type FoodCategory } from '../lib/find-or-create-food.js';
 
 const router: ExpressRouter = Router();
+
+const CATEGORIES = ['produce', 'meat', 'dairy', 'pantry', 'frozen', 'drinks', 'other'] as const;
 
 async function markInventoryDirty(householdId: string) {
   await db.execute(
@@ -17,24 +20,23 @@ async function markInventoryDirty(householdId: string) {
   );
 }
 
-type Location = 'fridge' | 'pantry' | 'freezer' | 'other';
-const LOCATIONS: Location[] = ['fridge', 'pantry', 'freezer', 'other'];
-
 const createSchema = z.object({
-  canonicalFoodId: z.string().uuid(),
+  canonicalFoodId: z.string().uuid().optional(),
+  foodName: z.string().trim().min(1).max(200).optional(),
+  category: z.enum(CATEGORIES).optional(),
   qty: z.number().positive(),
   unit: z.string().trim().min(1).max(40),
   brand: z.string().trim().max(100).nullable().optional(),
-  location: z.enum(['fridge', 'pantry', 'freezer', 'other']).default('pantry'),
   purchasedAt: z.string().nullable().optional(),
   expiresAt: z.string().nullable().optional(),
+}).refine(d => d.canonicalFoodId || (d.foodName && d.category), {
+  message: 'Either canonicalFoodId or (foodName + category) must be provided',
 });
 
 const updateSchema = z.object({
   qty: z.number().positive().optional(),
   unit: z.string().trim().min(1).max(40).optional(),
   brand: z.string().trim().max(100).nullable().optional(),
-  location: z.enum(['fridge', 'pantry', 'freezer', 'other']).optional(),
   purchasedAt: z.string().nullable().optional(),
   expiresAt: z.string().nullable().optional(),
 });
@@ -44,10 +46,10 @@ const cols = {
   householdId: inventoryItems.householdId,
   canonicalFoodId: inventoryItems.canonicalFoodId,
   foodName: canonicalFoods.name,
+  category: canonicalFoods.category,
   qty: inventoryItems.qty,
   unit: inventoryItems.unit,
   brand: inventoryItems.brand,
-  location: inventoryItems.location,
   purchasedAt: inventoryItems.purchasedAt,
   expiresAt: inventoryItems.expiresAt,
   createdAt: inventoryItems.createdAt,
@@ -57,14 +59,14 @@ const cols = {
 // sql template for the JOIN — avoids type-widening issue from canonicalFoods.aliases (text[])
 const joinOn = sql`${inventoryItems.canonicalFoodId} = ${canonicalFoods.id}`;
 
-// GET /api/inventory?location=fridge&q=milk
+// GET /api/inventory?category=dairy&q=milk
 router.get('/', withHousehold, async (req, res) => {
   try {
-    const { location, q } = req.query as { location?: string; q?: string };
+    const { category, q } = req.query as { category?: string; q?: string };
 
     const conditions = [eq(inventoryItems.householdId, req.householdId)];
-    if (location && (LOCATIONS as string[]).includes(location)) {
-      conditions.push(eq(inventoryItems.location, location as Location));
+    if (category && (CATEGORIES as readonly string[]).includes(category)) {
+      conditions.push(eq(canonicalFoods.category, category));
     }
     if (q?.trim()) {
       conditions.push(ilike(canonicalFoods.name, `%${q.trim()}%`));
@@ -75,7 +77,7 @@ router.get('/', withHousehold, async (req, res) => {
       .from(inventoryItems)
       .innerJoin(canonicalFoods, joinOn)
       .where(and(...conditions))
-      .orderBy(asc(inventoryItems.location), asc(canonicalFoods.name));
+      .orderBy(asc(canonicalFoods.category), asc(canonicalFoods.name));
 
     res.json(items);
   } catch (err) {
@@ -92,18 +94,23 @@ router.post('/', withHousehold, async (req, res) => {
     return;
   }
 
-  const { canonicalFoodId, qty, unit, brand, location, purchasedAt, expiresAt } = parse.data;
-  const newId = uuidv4(); // pre-generate so TypeScript knows this is string
+  const newId = uuidv4();
 
   try {
+    let foodId = parse.data.canonicalFoodId;
+    if (!foodId) {
+      foodId = await findOrCreateFood(parse.data.foodName!, parse.data.category as FoodCategory, parse.data.unit);
+    }
+
+    const { qty, unit, brand, purchasedAt, expiresAt } = parse.data;
+
     await db.insert(inventoryItems).values({
       id: newId,
       householdId: req.householdId,
-      canonicalFoodId,
+      canonicalFoodId: foodId,
       qty,
       unit,
       brand: brand ?? null,
-      location: location ?? 'pantry',
       purchasedAt: purchasedAt ? new Date(purchasedAt) : null,
       expiresAt: expiresAt ? new Date(expiresAt) : null,
     });
@@ -124,7 +131,6 @@ router.post('/', withHousehold, async (req, res) => {
 
 // PUT /api/inventory/:id
 router.put('/:id', withHousehold, async (req, res) => {
-  // Express 5 types req.params as string | string[] — named params are always string
   const id = req.params['id'] as string;
 
   const parse = updateSchema.safeParse(req.body);
@@ -150,7 +156,6 @@ router.put('/:id', withHousehold, async (req, res) => {
         ...(d.qty !== undefined && { qty: d.qty }),
         ...(d.unit !== undefined && { unit: d.unit }),
         ...('brand' in d && { brand: d.brand ?? null }),
-        ...(d.location !== undefined && { location: d.location }),
         ...('purchasedAt' in d && { purchasedAt: d.purchasedAt ? new Date(d.purchasedAt) : null }),
         ...('expiresAt' in d && { expiresAt: d.expiresAt ? new Date(d.expiresAt) : null }),
         updatedAt: new Date(),

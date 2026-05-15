@@ -101,7 +101,7 @@ router.get('/snapshot/inventory', withWorkerAuth, async (req, res) => {
         qty: inventoryItems.qty,
         unit: inventoryItems.unit,
         brand: inventoryItems.brand,
-        location: inventoryItems.location,
+        category: canonicalFoods.category,
         expiresAt: inventoryItems.expiresAt,
       })
       .from(inventoryItems)
