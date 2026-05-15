@@ -162,7 +162,7 @@ Webpage text:
 ${cleanText}`;
 
     try {
-        const gemini = await generateGeminiJson<GeminiResponse>(prompt, {maxOutputTokens: 2048});
+        const gemini = await generateGeminiJson<GeminiResponse>(prompt, {maxOutputTokens: 8192});
         if (!gemini?.name || !Array.isArray(gemini.sections)) return null;
 
         const ingredients: SchemaRecipeIngredient[] = [];

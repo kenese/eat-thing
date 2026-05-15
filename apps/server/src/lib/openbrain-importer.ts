@@ -134,7 +134,7 @@ Text:
 ${content.slice(0, 6000)}`;
 
   try {
-    return await generateGeminiJson<RawRecipe>(prompt, { maxOutputTokens: 2048 });
+    return await generateGeminiJson<RawRecipe>(prompt, { maxOutputTokens: 8192 });
   } catch {
     return null;
   }
