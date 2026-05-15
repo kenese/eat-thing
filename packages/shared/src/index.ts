@@ -62,6 +62,8 @@ export interface RecipeIngredient {
   foodName: string;
   qty: string;
   unit: string;
+  section: string | null;
+  metricValue: string | null;
   optional: boolean;
   sortOrder: number;
 }
@@ -127,6 +129,8 @@ export interface ImportedIngredient {
   foodName: string | null;
   qty: string;
   unit: string;
+  section: string | null;
+  metric: string | null;
   optional: boolean;
   confidence: 'high' | 'low';
 }
@@ -136,6 +140,7 @@ export interface ImportedRecipe {
   servings: number;
   sourceUrl: string | null;
   sourceImage: string | null;
+  heroImageUrl: string | null;
   instructions: string | null;
   ingredients: ImportedIngredient[];
 }
