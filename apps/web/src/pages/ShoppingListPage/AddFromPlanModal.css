@@ -1,0 +1,66 @@
+.afp-overlay {
+  position: fixed; inset: 0;
+  background: rgba(20, 20, 22, 0.45);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100;
+}
+.afp-panel {
+  background: var(--paper);
+  border-radius: var(--radius-card-lg);
+  padding: 20px 22px;
+  width: min(480px, calc(100vw - 32px));
+  max-height: 80vh;
+  display: flex; flex-direction: column;
+  gap: 14px;
+}
+.afp-header {
+  display: flex; align-items: baseline; justify-content: space-between;
+}
+.afp-title {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 24px;
+  margin: 0;
+}
+.afp-close {
+  background: transparent; border: none; cursor: pointer;
+  font-size: 18px; color: var(--mute);
+}
+.afp-status, .afp-empty {
+  text-align: center;
+  color: var(--ink2);
+  padding: 24px 0;
+}
+.afp-list {
+  list-style: none;
+  display: flex; flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  flex: 1;
+  margin: 0; padding: 0;
+}
+.afp-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-control);
+}
+.afp-label {
+  flex: 1;
+  display: flex; align-items: baseline; gap: 12px;
+  cursor: pointer;
+}
+.afp-date {
+  font-family: var(--font-sans);
+  font-size: 12px; font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--mute);
+  text-transform: uppercase;
+  min-width: 90px;
+}
+.afp-summary {
+  font-size: 14px; font-weight: 500;
+}
+.afp-actions {
+  display: flex; gap: 8px; justify-content: flex-end;
+}
