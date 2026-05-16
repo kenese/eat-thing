@@ -5,7 +5,6 @@ import { ShoppingListPage } from './ShoppingListPage';
 
 const hooks = vi.hoisted(() => ({
   useCurrentShoppingList: vi.fn(),
-  useGenerateShoppingList: vi.fn(),
   useUpdateShoppingListItem: vi.fn(),
   useAddShoppingListItem: vi.fn(),
   useDeleteShoppingListItem: vi.fn(),
@@ -18,12 +17,19 @@ const hooks = vi.hoisted(() => ({
 
 vi.mock('../../hooks/useShoppingList', () => ({
   useCurrentShoppingList: hooks.useCurrentShoppingList,
-  useGenerateShoppingList: hooks.useGenerateShoppingList,
   useUpdateShoppingListItem: hooks.useUpdateShoppingListItem,
   useAddShoppingListItem: hooks.useAddShoppingListItem,
   useDeleteShoppingListItem: hooks.useDeleteShoppingListItem,
   usePurchaseShoppingListItems: hooks.usePurchaseShoppingListItems,
   useBatchDeleteShoppingListItems: hooks.useBatchDeleteShoppingListItems,
+}));
+
+vi.mock('./AddFromPlanModal', () => ({
+  AddFromPlanModal: ({ onClose }: { onClose: () => void }) => (
+    <div data-testid="add-from-plan-modal">
+      <button onClick={onClose}>Close modal</button>
+    </div>
+  ),
 }));
 vi.mock('../../hooks/usePricesForList', () => ({
   usePricesForList: hooks.usePricesForList,
@@ -39,11 +45,11 @@ function renderPage() {
 }
 
 const baseList = {
-  id: 'list-1', householdId: 'h', generatedFromMealPlanId: null,
+  id: 'list-1', householdId: 'h',
   createdAt: '2026-05-10T00:00:00Z', finalizedAt: null,
   items: [
-    { id: 'i1', shoppingListId: 'list-1', canonicalFoodId: 'cf1', name: 'Eggs',  qty: 1, unit: 'count', source: 'recipe', checked: false, category: 'dairy',  sourceRecipeNames: ['Shakshuka'] },
-    { id: 'i2', shoppingListId: 'list-1', canonicalFoodId: 'cf2', name: 'Bread', qty: 1, unit: 'count', source: 'staple', checked: false, category: 'pantry', sourceRecipeNames: null },
+    { id: 'i1', shoppingListId: 'list-1', canonicalFoodId: 'cf1', name: 'Eggs',  qty: 1, unit: 'count', source: 'recipe', checked: false, category: 'dairy',  sourceRecipeNames: ['Shakshuka'], sourceRecipeId: 'r1' },
+    { id: 'i2', shoppingListId: 'list-1', canonicalFoodId: 'cf2', name: 'Bread', qty: 1, unit: 'count', source: 'staple', checked: false, category: 'pantry', sourceRecipeNames: null, sourceRecipeId: null },
   ],
 };
 
@@ -51,7 +57,6 @@ describe('ShoppingListPage prices', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     hooks.useCurrentShoppingList.mockReturnValue({ data: baseList, isLoading: false });
-    hooks.useGenerateShoppingList.mockReturnValue({ mutate: vi.fn(), isPending: false });
     hooks.useUpdateShoppingListItem.mockReturnValue({ mutate: vi.fn() });
     hooks.useAddShoppingListItem.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
     hooks.useDeleteShoppingListItem.mockReturnValue({ mutate: vi.fn() });
@@ -163,7 +168,6 @@ describe('ShoppingListPage multi-select', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     hooks.useCurrentShoppingList.mockReturnValue({ data: baseList, isLoading: false });
-    hooks.useGenerateShoppingList.mockReturnValue({ mutate: vi.fn(), isPending: false });
     hooks.useUpdateShoppingListItem.mockReturnValue({ mutate: vi.fn() });
     hooks.useAddShoppingListItem.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
     hooks.useDeleteShoppingListItem.mockReturnValue({ mutate: vi.fn() });

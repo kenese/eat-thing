@@ -13,7 +13,7 @@ describe('getDevMockResponse', () => {
   });
 
   it('returns a meal plan and recipe details that can produce cook/shop homepage cards', () => {
-    const plan = getDevMockResponse('/api/meal-plans?weekStart=2026-05-11') as {
+    const plan = getDevMockResponse('/api/meal-plans/entries?from=2026-05-11&to=2026-05-27') as {
       entries: Array<{ recipeId: string; recipeName: string; date: string }>;
     };
     const recipe = getDevMockResponse('/api/recipes/recipe-risotto') as {

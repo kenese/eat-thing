@@ -18,6 +18,8 @@ vi.mock('better-auth/node', () => ({
 vi.mock('drizzle-orm', () => ({
   and: (...args: unknown[]) => args,
   eq: () => null,
+  gte: () => null,
+  lte: () => null,
   asc: () => null,
   sql: Object.assign(() => null, { template: () => null }),
 }));
@@ -35,7 +37,6 @@ vi.mock('../db/index.js', () => {
 
 vi.mock('../db/schema/index.js', () => ({
   memberships: { householdId: 'householdId', userId: 'userId' },
-  mealPlans: {},
   mealPlanEntries: {},
   recipes: {},
 }));
@@ -54,18 +55,18 @@ describe('meal-plans router', () => {
 
   it('returns 401 for unauthenticated requests', async () => {
     mocks.getSession.mockResolvedValue(null);
-    const res = await request(app).get('/api/meal-plans?weekStart=2026-05-04');
+    const res = await request(app).get('/api/meal-plans/entries?from=2026-05-14&to=2026-05-30');
     expect(res.status).toBe(401);
   });
 
-  it('returns 400 when weekStart is missing or malformed', async () => {
+  it('returns 400 when from/to are missing or malformed', async () => {
     mocks.getSession.mockResolvedValue({ user: { id: 'user-1' } });
     mocks.membershipLimit.mockResolvedValue([{ householdId: 'hh-1' }]);
 
-    const noParam = await request(app).get('/api/meal-plans');
-    expect(noParam.status).toBe(400);
+    const noParams = await request(app).get('/api/meal-plans/entries');
+    expect(noParams.status).toBe(400);
 
-    const malformed = await request(app).get('/api/meal-plans?weekStart=05-04-2026');
+    const malformed = await request(app).get('/api/meal-plans/entries?from=2026-05-14&to=not-a-date');
     expect(malformed.status).toBe(400);
   });
 
@@ -76,8 +77,7 @@ describe('meal-plans router', () => {
     const res = await request(app)
       .post('/api/meal-plans/entries')
       .send({
-        weekStart: 'not-a-date',
-        date: '2026-05-04',
+        date: 'not-a-date',
         recipeId: '00000000-0000-0000-0000-000000000001',
         servings: 2,
       });
@@ -92,7 +92,6 @@ describe('meal-plans router', () => {
     const res = await request(app)
       .post('/api/meal-plans/entries')
       .send({
-        weekStart: '2026-05-04',
         date: '2026-05-04',
         recipeId: '00000000-0000-0000-0000-000000000001',
         servings: 0,

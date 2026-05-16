@@ -1,9 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 
 function isoDate(d: Date) { return d.toISOString().slice(0, 10); }
-function mondayOf(d: Date) { const day = d.getDay(); const diff = (day + 6) % 7; const m = new Date(d); m.setDate(m.getDate() - diff); return m; }
-const thisMonday = isoDate(mondayOf(new Date()));
-const thisTuesday = isoDate(new Date(new Date(thisMonday).setDate(new Date(thisMonday).getDate() + 1)));
+const tomorrow = isoDate(new Date(Date.now() + 86400000));
 
 const FAKE_SESSION = {
   user: {
@@ -50,15 +48,13 @@ async function stubAuthedShell(page: Page) {
 
     return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
   });
-  await page.route('**/api/meal-plans*', (route) =>
+  await page.route('**/api/meal-plans/entries*', (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        weekStart: thisMonday,
-        mealPlanId: 'plan-1',
         entries: [
-          { id: 'entry-1', mealPlanId: 'plan-1', date: thisTuesday, recipeId: 'recipe-1', recipeName: 'Pasta', servings: 4, status: 'planned' },
+          { id: 'entry-1', date: tomorrow, recipeId: 'recipe-1', recipeName: 'Pasta', servings: 4, status: 'planned' },
         ],
       }),
     }),
@@ -149,7 +145,7 @@ test.describe('authenticated routes load', () => {
 
   test('plan route loads', async ({ page }) => {
     await page.goto('/plan');
-    await expect(page.getByRole('heading', { level: 1, name: 'This week' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Coming up' })).toBeVisible();
   });
 
   test('list route loads', async ({ page }) => {
@@ -215,7 +211,7 @@ test.describe('authenticated routes load', () => {
               rawText: 'cooked rice',
               canonicalFoodId: 'food-rice',
               foodName: 'rice',
-              qty: 300,
+              qty: '300',
               unit: 'g',
               optional: false,
               confidence: 'high',

@@ -155,7 +155,6 @@ export type MealStatus = 'planned' | 'cooked' | 'skipped';
 
 export interface MealPlanEntry {
   id: string;
-  mealPlanId: string;
   date: string; // YYYY-MM-DD
   recipeId: string;
   recipeName: string;
@@ -163,14 +162,11 @@ export interface MealPlanEntry {
   status: MealStatus;
 }
 
-export interface MealPlanWeek {
-  weekStart: string; // YYYY-MM-DD (Monday)
-  mealPlanId: string | null;
+export interface MealPlanEntriesResponse {
   entries: MealPlanEntry[];
 }
 
 export interface CreateMealPlanEntryInput {
-  weekStart: string;
   date: string;
   recipeId: string;
   servings: number;
@@ -234,19 +230,19 @@ export interface ShoppingListItem {
   checked: boolean;
   category: Category;
   sourceRecipeNames: string[] | null;
+  sourceRecipeId: string | null;
 }
 
 export interface ShoppingList {
   id: string;
   householdId: string;
-  generatedFromMealPlanId: string | null;
   createdAt: string;
   finalizedAt: string | null;
   items: ShoppingListItem[];
 }
 
-export interface GenerateShoppingListInput {
-  weekStart: string;
+export interface ApplyPlanToShoppingListInput {
+  entryIds: string[];
 }
 
 export interface AddShoppingListItemInput {

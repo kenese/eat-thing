@@ -1,6 +1,6 @@
 import type {
   InventoryRow,
-  MealPlanWeek,
+  MealPlanEntriesResponse,
   Recipe,
   ShoppingList,
   PricesForListResponse,
@@ -106,14 +106,12 @@ function addDays(iso: string, days: number) {
   return `${year}-${month}-${day}`;
 }
 
-function mealPlan(weekStart: string): MealPlanWeek {
+function mealPlanEntries(from: string): MealPlanEntriesResponse {
   return {
-    weekStart,
-    mealPlanId: 'dev-plan',
     entries: [
-      { id: 'entry-risotto', mealPlanId: 'dev-plan', date: addDays(weekStart, 0), recipeId: 'recipe-risotto', recipeName: 'Spinach risotto', servings: 4, status: 'planned' },
-      { id: 'entry-tacos', mealPlanId: 'dev-plan', date: addDays(weekStart, 1), recipeId: 'recipe-tacos', recipeName: 'Fish tacos', servings: 4, status: 'planned' },
-      { id: 'entry-pasta', mealPlanId: 'dev-plan', date: addDays(weekStart, 2), recipeId: 'recipe-pasta', recipeName: 'Mushroom pasta', servings: 4, status: 'planned' },
+      { id: 'entry-risotto', date: addDays(from, 0), recipeId: 'recipe-risotto', recipeName: 'Spinach risotto', servings: 4, status: 'planned' },
+      { id: 'entry-tacos', date: addDays(from, 1), recipeId: 'recipe-tacos', recipeName: 'Fish tacos', servings: 4, status: 'planned' },
+      { id: 'entry-pasta', date: addDays(from, 2), recipeId: 'recipe-pasta', recipeName: 'Mushroom pasta', servings: 4, status: 'planned' },
     ],
   };
 }
@@ -121,15 +119,14 @@ function mealPlan(weekStart: string): MealPlanWeek {
 const shoppingList: ShoppingList = {
   id: LIST_ID,
   householdId: HOUSEHOLD_ID,
-  generatedFromMealPlanId: 'dev-plan',
   createdAt: '2026-05-12T09:14:00',
   finalizedAt: null,
   items: [
-    { id: 'shop-fish', shoppingListId: LIST_ID, canonicalFoodId: 'food-fish', name: 'white fish', qty: 500, unit: 'g', source: 'recipe', checked: false, category: 'meat', sourceRecipeNames: ['Fish Tacos'] },
-    { id: 'shop-tortillas', shoppingListId: LIST_ID, canonicalFoodId: 'food-tortillas', name: 'tortillas', qty: 8, unit: 'count', source: 'recipe', checked: false, category: 'pantry', sourceRecipeNames: ['Fish Tacos'] },
-    { id: 'shop-limes', shoppingListId: LIST_ID, canonicalFoodId: 'food-limes', name: 'limes', qty: 3, unit: 'count', source: 'recipe', checked: false, category: 'produce', sourceRecipeNames: ['Fish Tacos'] },
-    { id: 'shop-coriander', shoppingListId: LIST_ID, canonicalFoodId: 'food-coriander', name: 'coriander', qty: 1, unit: 'count', source: 'recipe', checked: false, category: 'produce', sourceRecipeNames: ['Fish Tacos'] },
-    { id: 'shop-milk', shoppingListId: LIST_ID, canonicalFoodId: 'food-milk', name: 'milk', qty: 2, unit: 'count', source: 'staple', checked: false, category: 'dairy', sourceRecipeNames: null },
+    { id: 'shop-fish', shoppingListId: LIST_ID, canonicalFoodId: 'food-fish', name: 'white fish', qty: 500, unit: 'g', source: 'recipe', checked: false, category: 'meat', sourceRecipeNames: ['Fish Tacos'], sourceRecipeId: 'recipe-tacos' },
+    { id: 'shop-tortillas', shoppingListId: LIST_ID, canonicalFoodId: 'food-tortillas', name: 'tortillas', qty: 8, unit: 'count', source: 'recipe', checked: false, category: 'pantry', sourceRecipeNames: ['Fish Tacos'], sourceRecipeId: 'recipe-tacos' },
+    { id: 'shop-limes', shoppingListId: LIST_ID, canonicalFoodId: 'food-limes', name: 'limes', qty: 3, unit: 'count', source: 'recipe', checked: false, category: 'produce', sourceRecipeNames: ['Fish Tacos'], sourceRecipeId: 'recipe-tacos' },
+    { id: 'shop-coriander', shoppingListId: LIST_ID, canonicalFoodId: 'food-coriander', name: 'coriander', qty: 1, unit: 'count', source: 'recipe', checked: false, category: 'produce', sourceRecipeNames: ['Fish Tacos'], sourceRecipeId: 'recipe-tacos' },
+    { id: 'shop-milk', shoppingListId: LIST_ID, canonicalFoodId: 'food-milk', name: 'milk', qty: 2, unit: 'count', source: 'staple', checked: false, category: 'dairy', sourceRecipeNames: null, sourceRecipeId: null },
   ],
 };
 
@@ -146,9 +143,9 @@ const prices: PricesForListResponse = {
 
 export function getDevMockResponse(path: string): unknown | null {
   if (path.startsWith('/api/inventory')) return inventory;
-  if (path.startsWith('/api/meal-plans')) {
-    const weekStart = new URL(`http://local${path}`).searchParams.get('weekStart') ?? '2026-05-11';
-    return mealPlan(weekStart);
+  if (path.startsWith('/api/meal-plans/entries')) {
+    const from = new URL(`http://local${path}`).searchParams.get('from') ?? '2026-05-11';
+    return mealPlanEntries(from);
   }
   if (path.startsWith('/api/shopping-lists') && !path.includes('/prices')) return shoppingList;
   if (path === `/api/shopping-lists/${LIST_ID}/prices`) return prices;

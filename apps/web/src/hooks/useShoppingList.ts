@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
 import type {
   ShoppingList, ShoppingListItem,
-  GenerateShoppingListInput, AddShoppingListItemInput, UpdateShoppingListItemInput,
+  ApplyPlanToShoppingListInput, AddShoppingListItemInput, UpdateShoppingListItemInput,
   PurchaseShoppingListItemsInput, BatchDeleteShoppingListItemsInput,
 } from '@eat/shared';
 
@@ -22,11 +22,11 @@ export function useCurrentShoppingList() {
   });
 }
 
-export function useGenerateShoppingList() {
+export function useApplyPlanToShoppingList() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: GenerateShoppingListInput) =>
-      api.post<ShoppingList>('/api/shopping-lists/generate', data),
+    mutationFn: (data: ApplyPlanToShoppingListInput) =>
+      api.post<ShoppingList>('/api/shopping-lists/from-plan', data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['shopping-list'] }),
   });
 }
