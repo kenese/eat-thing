@@ -80,7 +80,7 @@ Scraper on Mac mini. Logs in, reads. No writes to the supermarket account. Built
 ### Slice 2 — Hardening (next)
 
 - [ ] Robustness: detect logged-out state and prompt user; retry/backoff for transient failures
-- [ ] `launchd` plists so both the scraper and the OpenBrain sync worker auto-start on the Mac mini
+- [ ] `launchd` plist so the scraper auto-starts on the Mac mini
 - [x] Fix pre-existing test failures in `scraper.test.ts` (10 tests) and `gemini.test.ts` (1 test) — `SCRAPER_HMAC_SECRET` env var name mismatch + hardcoded API key removed — _2026-05-15_
 
 Pak'nSave and Woolworths adapters exist in `apps/scraper` but are deferred post-MVP (see [IDEAS.md](./IDEAS.md) and D21).
@@ -120,7 +120,7 @@ Deferred (own specs): Shops nav destination, scan-receipt, print, delivery-windo
 - [ ] Telemetry: structured logs + lightweight error reporting (Sentry free tier?)
 - [ ] Taxonomy expansion as new ingredients appear (interactive "add to taxonomy" prompt rather than silent insert)
 - [ ] Backups: Supabase point-in-time + occasional dump to local disk
-- [ ] Multi-household readiness: keep `household_id` discipline in every new query/migration; revisit OpenBrain story when a second household is real
+- [ ] Multi-household readiness: keep `household_id` discipline in every new query/migration
 
 ## Deferred
 
@@ -133,6 +133,7 @@ Deferred (own specs): Shops nav destination, scan-receipt, print, delivery-windo
 
 ## Done
 
+- 2026-05-16 — Removed OpenBrain sync integration entirely: `packages/openbrain` deleted, `sync_dirty` table dropped (migration 0007), `/api/sync` routes removed, `openbrain-worker` deleted, `synced` column dropped from `inventory_items`, OpenBrain tab removed from ImportModal, all fire-and-forget sync calls removed from recipe/inventory/meal-plan/cook-event routes. See D22.
 - 2026-05-15 — Fixed large recipe photo imports: `/api/ingest/photo` now has a scoped 10 MB JSON parser limit, the web importer downsizes large photos before base64 upload, and multipart photo ingestion is captured in IDEAS.md as the longer-term replacement.
 - 2026-05-14 — Fixed meal-plan → shopping-list freshness: adding a recipe to the current week now regenerates and invalidates the derived shopping list so missing ingredients appear without a manual Generate step.
 - 2026-05-07 — Phase 0: deleted `extension/` (Discogs Cart+), unrelated to eat-thing.
