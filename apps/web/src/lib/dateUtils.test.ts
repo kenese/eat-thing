@@ -79,4 +79,15 @@ describe('plan window', () => {
     const days = planWindowDays(today);
     expect(days[2].label).toMatch(/^Sat 16$/);
   });
+
+  it('planWindowDays marks days before today as isPast', () => {
+    const now = new Date('2026-05-17T12:00:00');
+    const days = planWindowDays(now);
+    // TODAY_INDEX = 2, so days[0] and days[1] are past, days[2] is today
+    expect(days[0].isPast).toBe(true);
+    expect(days[1].isPast).toBe(true);
+    expect(days[2].isPast).toBe(false); // today
+    expect(days[2].isToday).toBe(true);
+    expect(days[3].isPast).toBe(false); // future
+  });
 });

@@ -145,7 +145,7 @@ test.describe('authenticated routes load', () => {
 
   test('plan route loads', async ({ page }) => {
     await page.goto('/plan');
-    await expect(page.getByRole('heading', { level: 1, name: 'Coming up' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Plan' })).toBeVisible();
   });
 
   test('list route loads', async ({ page }) => {

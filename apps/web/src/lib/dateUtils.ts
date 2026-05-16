@@ -49,6 +49,7 @@ export interface PlanWindowDay {
   iso: string;
   label: string;
   isToday: boolean;
+  isPast: boolean;
 }
 
 export function planWindow(now: Date = new Date()): { from: string; to: string } {
@@ -69,6 +70,7 @@ export function planWindowDays(now: Date = new Date()): PlanWindowDay[] {
       iso,
       label: `${labels[d.getDay()]} ${d.getDate()}`,
       isToday: iso === todayIso,
+      isPast: iso < todayIso,
     };
   });
 }
