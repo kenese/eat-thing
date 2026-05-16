@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { TopNav } from './components/TopNav';
+import { BottomTabBar } from './components/BottomTabBar';
 import { useSession } from './hooks/useSession';
 import { LoginPage } from './pages/LoginPage';
 import { InventoryPage } from './pages/InventoryPage';
@@ -47,6 +48,7 @@ function AppShell() {
           <Route path="*" element={<Navigate to="/inventory" replace />} />
         </Routes>
       </div>
+      <BottomTabBar />
     </>
   );
 }
