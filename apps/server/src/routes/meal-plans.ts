@@ -1,17 +1,16 @@
 import { Router, type Router as ExpressRouter } from 'express';
 import { z } from 'zod';
-import { and, eq, asc, sql } from 'drizzle-orm';
+import { and, eq, gte, lte, asc, sql } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { withHousehold } from '../middleware/with-household.js';
 import { db } from '../db/index.js';
-import { mealPlans, mealPlanEntries, recipes } from '../db/schema/index.js';
+import { mealPlanEntries, recipes } from '../db/schema/index.js';
 
 const router: ExpressRouter = Router();
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'must be YYYY-MM-DD');
 
 const createEntrySchema = z.object({
-  weekStart: isoDate,
   date: isoDate,
   recipeId: z.string().uuid(),
   servings: z.number().positive().max(100),
@@ -25,7 +24,6 @@ const updateEntrySchema = z.object({
 
 const entryCols = {
   id: mealPlanEntries.id,
-  mealPlanId: mealPlanEntries.mealPlanId,
   date: mealPlanEntries.date,
   recipeId: mealPlanEntries.recipeId,
   recipeName: recipes.name,
@@ -35,39 +33,28 @@ const entryCols = {
 
 const entryJoinOn = sql`${mealPlanEntries.recipeId} = ${recipes.id}`;
 
-async function entriesForPlan(mealPlanId: string) {
-  return db
-    .select(entryCols)
-    .from(mealPlanEntries)
-    .innerJoin(recipes, entryJoinOn)
-    .where(eq(mealPlanEntries.mealPlanId, mealPlanId))
-    .orderBy(asc(mealPlanEntries.date));
-}
-
-// GET /api/meal-plans?weekStart=YYYY-MM-DD
-// Returns the plan for the week (or empty entries if no plan exists yet).
-router.get('/', withHousehold, async (req, res) => {
-  const { weekStart } = req.query as { weekStart?: string };
-  const parse = isoDate.safeParse(weekStart);
+// GET /api/meal-plans/entries?from=YYYY-MM-DD&to=YYYY-MM-DD
+router.get('/entries', withHousehold, async (req, res) => {
+  const { from, to } = req.query as { from?: string; to?: string };
+  const parse = z.object({ from: isoDate, to: isoDate }).safeParse({ from, to });
   if (!parse.success) {
-    res.status(400).json({ error: 'weekStart query param required (YYYY-MM-DD)' });
+    res.status(400).json({ error: 'from and to query params required (YYYY-MM-DD)' });
     return;
   }
 
   try {
-    const [plan] = await db
-      .select({ id: mealPlans.id })
-      .from(mealPlans)
-      .where(and(eq(mealPlans.householdId, req.householdId), eq(mealPlans.weekStart, parse.data)))
-      .limit(1);
+    const entries = await db
+      .select(entryCols)
+      .from(mealPlanEntries)
+      .innerJoin(recipes, entryJoinOn)
+      .where(and(
+        eq(mealPlanEntries.householdId, req.householdId),
+        gte(mealPlanEntries.date, parse.data.from),
+        lte(mealPlanEntries.date, parse.data.to),
+      ))
+      .orderBy(asc(mealPlanEntries.date));
 
-    if (!plan) {
-      res.json({ weekStart: parse.data, mealPlanId: null, entries: [] });
-      return;
-    }
-
-    const entries = await entriesForPlan(plan.id);
-    res.json({ weekStart: parse.data, mealPlanId: plan.id, entries });
+    res.json({ entries });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });
@@ -75,14 +62,13 @@ router.get('/', withHousehold, async (req, res) => {
 });
 
 // POST /api/meal-plans/entries
-// Creates the meal plan lazily if it doesn't exist, then inserts the entry.
 router.post('/entries', withHousehold, async (req, res) => {
   const parse = createEntrySchema.safeParse(req.body);
   if (!parse.success) {
     res.status(400).json({ error: 'Invalid input', details: parse.error.flatten() });
     return;
   }
-  const { weekStart, date, recipeId, servings } = parse.data;
+  const { date, recipeId, servings } = parse.data;
 
   try {
     const [recipe] = await db
@@ -97,29 +83,12 @@ router.post('/entries', withHousehold, async (req, res) => {
     }
 
     const entryId = uuidv4();
-    const planId = await db.transaction(async tx => {
-      const [existing] = await tx
-        .select({ id: mealPlans.id })
-        .from(mealPlans)
-        .where(and(eq(mealPlans.householdId, req.householdId), eq(mealPlans.weekStart, weekStart)))
-        .limit(1);
-
-      let id = existing?.id;
-      if (!id) {
-        id = uuidv4();
-        await tx.insert(mealPlans).values({ id, householdId: req.householdId, weekStart });
-      }
-
-      await tx.insert(mealPlanEntries).values({
-        id: entryId,
-        mealPlanId: id,
-        householdId: req.householdId,
-        date,
-        recipeId,
-        servings,
-      });
-
-      return id;
+    await db.insert(mealPlanEntries).values({
+      id: entryId,
+      householdId: req.householdId,
+      date,
+      recipeId,
+      servings,
     });
 
     const [full] = await db
@@ -128,7 +97,7 @@ router.post('/entries', withHousehold, async (req, res) => {
       .innerJoin(recipes, entryJoinOn)
       .where(eq(mealPlanEntries.id, entryId));
 
-    res.status(201).json({ mealPlanId: planId, entry: full });
+    res.status(201).json(full);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });
@@ -184,7 +153,7 @@ router.delete('/entries/:id', withHousehold, async (req, res) => {
 
   try {
     const [existing] = await db
-      .select({ householdId: mealPlanEntries.householdId, mealPlanId: mealPlanEntries.mealPlanId })
+      .select({ householdId: mealPlanEntries.householdId })
       .from(mealPlanEntries)
       .where(eq(mealPlanEntries.id, id))
       .limit(1);
