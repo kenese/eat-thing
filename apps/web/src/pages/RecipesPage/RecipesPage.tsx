@@ -404,7 +404,10 @@ export function RecipesPage() {
           {cookable.length > 0 && (
             <section className="rx-section">
               <div className="rx-section-header">
-                <span className="rx-section-title">Cook tonight<span className="dot">.</span></span>
+                <span className="rx-section-title">
+                  <span className="rx-section-dot" style={{ background: 'var(--fresh)' }} aria-hidden />
+                  Cook tonight<span className="dot">.</span>
+                </span>
                 <span className="rx-section-count">{cookable.length} {cookable.length === 1 ? 'recipe' : 'recipes'}</span>
                 <span className="rx-section-hint">uses what's on hand</span>
               </div>
@@ -426,7 +429,10 @@ export function RecipesPage() {
           {shoppable.length > 0 && (
             <section className="rx-section">
               <div className="rx-section-header">
-                <span className="rx-section-title">One quick shop<span className="dot">.</span></span>
+                <span className="rx-section-title">
+                  <span className="rx-section-dot" style={{ background: 'var(--persimmon)' }} aria-hidden />
+                  One quick shop<span className="dot">.</span>
+                </span>
                 <span className="rx-section-count">{shoppable.length} {shoppable.length === 1 ? 'recipe' : 'recipes'}</span>
                 <span className="rx-section-hint">1–3 items away</span>
               </div>
@@ -448,7 +454,10 @@ export function RecipesPage() {
           {library.length > 0 && (
             <section className="rx-section">
               <div className="rx-section-header">
-                <span className="rx-section-title">The library<span className="dot">.</span></span>
+                <span className="rx-section-title">
+                  <span className="rx-section-dot" style={{ background: 'var(--green)' }} aria-hidden />
+                  The library<span className="dot">.</span>
+                </span>
                 <span className="rx-section-count">{library.length} {library.length === 1 ? 'recipe' : 'recipes'}</span>
                 <span className="rx-section-hint">all recipes</span>
               </div>
