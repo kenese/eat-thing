@@ -44,4 +44,87 @@ describe('RecipeCard selection', () => {
   });
 });
 
-export { waitFor }; // re-export for SelectionBar tests added in Task 3
+import { SelectionBar } from './RecipesPage';
+
+const selectionRecipes = [
+  { id: 'r1', name: 'Pasta', servings: 4, sourceUrl: null, sourceImage: null, ingredientCount: 5, createdAt: '', updatedAt: '' },
+  { id: 'r2', name: 'Pizza', servings: 2, sourceUrl: null, sourceImage: null, ingredientCount: 3, createdAt: '', updatedAt: '' },
+];
+
+describe('SelectionBar', () => {
+  it('is not visible when nothing is selected', () => {
+    render(
+      <SelectionBar
+        selectedIds={new Set()}
+        recipes={selectionRecipes}
+        onClear={vi.fn()}
+        onAddToPlan={vi.fn()}
+        onDelete={vi.fn()}
+      />
+    );
+    const bar = document.querySelector('.rx-selection-bar');
+    expect(bar).not.toHaveClass('rx-selection-bar--visible');
+  });
+
+  it('shows count when recipes are selected', () => {
+    render(
+      <SelectionBar
+        selectedIds={new Set(['r1', 'r2'])}
+        recipes={selectionRecipes}
+        onClear={vi.fn()}
+        onAddToPlan={vi.fn()}
+        onDelete={vi.fn()}
+      />
+    );
+    expect(screen.getByText('2 selected')).toBeInTheDocument();
+  });
+
+  it('calls onClear when × Clear is clicked', () => {
+    const onClear = vi.fn();
+    render(
+      <SelectionBar
+        selectedIds={new Set(['r1'])}
+        recipes={selectionRecipes}
+        onClear={onClear}
+        onAddToPlan={vi.fn()}
+        onDelete={vi.fn()}
+      />
+    );
+    fireEvent.click(screen.getByText('× Clear'));
+    expect(onClear).toHaveBeenCalledOnce();
+  });
+
+  it('shows inline confirmation when Delete is clicked', () => {
+    render(
+      <SelectionBar
+        selectedIds={new Set(['r1'])}
+        recipes={selectionRecipes}
+        onClear={vi.fn()}
+        onAddToPlan={vi.fn()}
+        onDelete={vi.fn()}
+      />
+    );
+    fireEvent.click(screen.getByRole('button', { name: /^delete$/i }));
+    expect(screen.getByText(/can't be undone/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /confirm/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument();
+  });
+
+  it('calls onDelete and then onClear when Confirm delete is clicked', async () => {
+    const onDelete = vi.fn().mockResolvedValue(undefined);
+    const onClear = vi.fn();
+    render(
+      <SelectionBar
+        selectedIds={new Set(['r1'])}
+        recipes={selectionRecipes}
+        onClear={onClear}
+        onAddToPlan={vi.fn()}
+        onDelete={onDelete}
+      />
+    );
+    fireEvent.click(screen.getByRole('button', { name: /^delete$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /confirm/i }));
+    await waitFor(() => expect(onDelete).toHaveBeenCalledOnce());
+    await waitFor(() => expect(onClear).toHaveBeenCalledOnce());
+  });
+});
