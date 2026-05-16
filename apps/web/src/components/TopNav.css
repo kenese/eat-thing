@@ -77,6 +77,11 @@
   filter: brightness(1.08);
 }
 
+.topnav-link--stub {
+  cursor: default;
+  opacity: 0.35;
+}
+
 @media (max-width: 768px) {
   .topnav { padding: 12px var(--gutter-mobile); gap: 12px; }
   .topnav-links { gap: 14px; }

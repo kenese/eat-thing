@@ -57,6 +57,8 @@ export function TopNav() {
             {item.label}
           </NavLink>
         ))}
+        {/* HANDOFF: shops route — nav tab present but /shops page not yet designed */}
+        <span className="topnav-link topnav-link--stub">shops</span>
       </nav>
       <div className="topnav-meta">
         <span className="topnav-date">{formatDateLabel(today)}</span>

@@ -47,10 +47,11 @@ describe('TopNav', () => {
     expect(screen.getByLabelText('Eat thing')).toBeInTheDocument();
   });
 
-  it('renders the five lowercase nav items in order', () => {
+  it('renders the five lowercase nav links and a shops stub in order', () => {
     renderAt('/');
     const labels = screen.getAllByRole('link').map((l) => l.textContent?.trim());
     expect(labels).toEqual(['home', 'inventory', 'recipes', 'plan', 'list']);
+    expect(screen.getByText('shops')).toBeInTheDocument();
   });
 
   it('does not include a shops link', () => {
