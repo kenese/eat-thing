@@ -23,11 +23,6 @@ vi.mock('../lib/themealdb.js', () => ({
   searchMealDb: vi.fn(),
 }));
 
-vi.mock('../lib/openbrain-importer.js', () => ({
-  listOpenBrainRecipes: vi.fn(),
-  parseOpenBrainThought: vi.fn(),
-}));
-
 vi.mock('../lib/meal-planner-importer.js', () => ({
   listMealPlannerRecipes: vi.fn(),
   parseMealPlannerRecipe: vi.fn(),
@@ -40,7 +35,6 @@ vi.mock('../db/index.js', () => ({
 const { extractFromUrl } = await import('../lib/recipe-extractor.js');
 const { extractFromPhoto } = await import('../lib/photo-extractor.js');
 const { searchMealDb } = await import('../lib/themealdb.js');
-const { listOpenBrainRecipes, parseOpenBrainThought } = await import('../lib/openbrain-importer.js');
 const { listMealPlannerRecipes, parseMealPlannerRecipe } = await import('../lib/meal-planner-importer.js');
 const { default: ingestRouter } = await import('./ingest.js');
 
@@ -138,50 +132,6 @@ describe('ingest router', () => {
       const res = await request(app).get('/api/ingest/search?q=xyz123abc');
       expect(res.status).toBe(200);
       expect(res.body).toHaveLength(0);
-    });
-  });
-
-  describe('GET /openbrain', () => {
-    const MOCK_PREVIEWS = [
-      { id: 'ob-1', title: 'Pasta Bake', preview: 'Servings: 4', alreadyImported: false },
-      { id: 'ob-2', title: 'Chicken Soup', preview: 'Servings: 2', alreadyImported: true },
-    ];
-
-    it('returns list of OpenBrain recipe previews', async () => {
-      vi.mocked(listOpenBrainRecipes).mockResolvedValueOnce(MOCK_PREVIEWS);
-      const res = await request(app).get('/api/ingest/openbrain');
-      expect(res.status).toBe(200);
-      expect(res.body).toHaveLength(2);
-      expect(res.body[0].title).toBe('Pasta Bake');
-      expect(res.body[1].alreadyImported).toBe(true);
-    });
-
-    it('returns 502 when OpenBrain is unreachable', async () => {
-      vi.mocked(listOpenBrainRecipes).mockRejectedValueOnce(new Error('MCP connection failed'));
-      const res = await request(app).get('/api/ingest/openbrain');
-      expect(res.status).toBe(502);
-      expect(res.body.error).toMatch(/MCP connection failed/);
-    });
-  });
-
-  describe('POST /openbrain/parse', () => {
-    it('returns 400 when id is missing', async () => {
-      const res = await request(app).post('/api/ingest/openbrain/parse').send({});
-      expect(res.status).toBe(400);
-    });
-
-    it('returns parsed recipe on success', async () => {
-      vi.mocked(parseOpenBrainThought).mockResolvedValueOnce(MOCK_RECIPE);
-      const res = await request(app).post('/api/ingest/openbrain/parse').send({ id: 'ob-1' });
-      expect(res.status).toBe(200);
-      expect(res.body.name).toBe('Test Recipe');
-    });
-
-    it('returns 422 when thought cannot be parsed', async () => {
-      vi.mocked(parseOpenBrainThought).mockRejectedValueOnce(new Error('Thought not found'));
-      const res = await request(app).post('/api/ingest/openbrain/parse').send({ id: 'ob-missing' });
-      expect(res.status).toBe(422);
-      expect(res.body.error).toMatch(/Thought not found/);
     });
   });
 
