@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, doublePrecision, jsonb, boolean } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, doublePrecision, jsonb } from 'drizzle-orm/pg-core';
 import { households } from './households.js';
 import { canonicalFoods } from './foods.js';
 
@@ -26,5 +26,4 @@ export const cookEvents = pgTable('cook_events', {
   deductions: jsonb('deductions').notNull().default([]),
   // [{ question, answer, inventoryItemId? }] — user responses to ambiguous-unit prompts
   promptsResolved: jsonb('prompts_resolved').notNull().default([]),
-  synced: boolean('synced').notNull().default(false), // flipped by daily OpenBrain roll-up
 });

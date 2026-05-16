@@ -10,7 +10,6 @@ import mealPlansRouter from './routes/meal-plans.js';
 import staplesRouter from './routes/staples.js';
 import shoppingListsRouter from './routes/shopping-lists.js';
 import cookEventsRouter from './routes/cook-events.js';
-import syncRouter from './routes/sync.js';
 import ingestRouter from './routes/ingest.js';
 import scraperRouter from './routes/scraper.js';
 import { getAllowedWebOrigins } from './auth-config.js';
@@ -43,7 +42,6 @@ app.use('/api/meal-plans', mealPlansRouter);
 app.use('/api/staples', staplesRouter);
 app.use('/api/shopping-lists', shoppingListsRouter);
 app.use('/api/cook-events', cookEventsRouter);
-app.use('/api/sync', syncRouter);
 app.use('/api/ingest', ingestRouter);
 app.use('/api/scraper', scraperRouter);
 
