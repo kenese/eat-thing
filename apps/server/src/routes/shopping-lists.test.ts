@@ -23,8 +23,8 @@ vi.mock('../db/index.js', () => {
 });
 vi.mock('../db/schema/index.js', () => ({
   memberships: { householdId: 'householdId', userId: 'userId' },
-  mealPlans: {}, mealPlanEntries: {}, recipes: {}, recipeIngredients: {},
-  inventoryItems: {}, canonicalFoods: {}, staples: {},
+  mealPlanEntries: {}, recipes: {}, recipeIngredients: {},
+  inventoryItems: {}, canonicalFoods: {},
   shoppingLists: {}, shoppingListItems: {},
   scraperJobs: { id: 'id' }, shoppingListPrices: {},
 }));

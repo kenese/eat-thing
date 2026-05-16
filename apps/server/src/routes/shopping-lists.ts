@@ -9,7 +9,7 @@ import { normalizeRecipeAmount } from '../lib/recipe-quantities.js';
 import { amountInUnit } from '../lib/food-amounts.js';
 import {
   mealPlanEntries, recipes, recipeIngredients,
-  inventoryItems, canonicalFoods, staples,
+  inventoryItems, canonicalFoods,
   shoppingLists, shoppingListItems,
   scraperJobs, shoppingListPrices,
 } from '../db/schema/index.js';
