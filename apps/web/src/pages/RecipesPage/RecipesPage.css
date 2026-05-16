@@ -258,3 +258,111 @@
   color: var(--mute);
 }
 .recipes-status.error { color: var(--warn); }
+
+/* ── Selection ─────────────────────────────────────────────── */
+.rx-card-wrapper {
+  position: relative;
+}
+
+.rx-card-wrapper--selected .rx-card {
+  border-color: var(--fresh);
+  border-width: 2px;
+}
+
+.rx-card-select-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--paper);
+  font-size: 13px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  z-index: 3;
+  transition: background 0.14s, border-color 0.14s;
+}
+.rx-card-select-btn:hover {
+  background: rgba(0, 0, 0, 0.5);
+}
+.rx-card-select-btn--active {
+  background: var(--fresh);
+  border-color: var(--fresh);
+}
+.rx-card--dense ~ .rx-card-select-btn {
+  width: 22px;
+  height: 22px;
+  font-size: 11px;
+}
+
+/* ── Selection bar ─────────────────────────────────────────── */
+.rx-selection-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--ink);
+  color: var(--paper);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 24px;
+  z-index: 200;
+  transform: translateY(100%);
+  transition: transform 0.2s ease;
+}
+.rx-selection-bar--visible {
+  transform: translateY(0);
+}
+.rx-selection-bar-count {
+  font-size: 14px;
+  font-weight: 600;
+  flex: 1;
+  min-width: 0;
+}
+.rx-selection-bar-message {
+  font-size: 14px;
+  flex: 1;
+  color: var(--fresh);
+}
+.rx-selection-bar-error {
+  font-size: 14px;
+  flex: 1;
+  color: var(--persimmon);
+}
+.rx-selection-bar-clear {
+  background: none;
+  border: none;
+  color: rgba(243, 245, 242, 0.55);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+}
+.rx-selection-bar-clear:hover { color: var(--paper); }
+.rx-selection-bar-btn {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.rx-selection-bar-delete {
+  background: none;
+  border: 1px solid rgba(243, 245, 242, 0.25);
+  color: var(--paper);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+}
+.rx-selection-bar-delete:hover { border-color: var(--persimmon); color: var(--persimmon); }
+.rx-selection-bar-delete:disabled { opacity: 0.4; cursor: default; }

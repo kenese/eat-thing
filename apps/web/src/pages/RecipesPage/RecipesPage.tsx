@@ -17,49 +17,69 @@ interface MatchInfo {
   missing: string[];
 }
 
-function RecipeCard({
+export function RecipeCard({
   recipe,
   match,
   dense,
+  selected,
   onOpen,
+  onSelect,
 }: {
   recipe: RecipeSummary;
   match: MatchInfo;
   dense?: boolean;
+  selected?: boolean;
   onOpen: () => void;
+  onSelect?: () => void;
 }) {
   return (
-    <button className={`rx-card${dense ? ' rx-card--dense' : ''}`} onClick={onOpen}>
-      <div className="rx-card-image">
-        {recipe.sourceImage ? (
-          <img src={recipe.sourceImage} alt="" />
-        ) : (
-          <span className="rx-card-image-fallback">{recipe.name}</span>
-        )}
-        <div className="rx-card-badge">
-          {match.bucket === 'cookable' ? (
-            <StatusChip kind="cook" />
+    <div className={`rx-card-wrapper${selected ? ' rx-card-wrapper--selected' : ''}`}>
+      <button
+        className={`rx-card${dense ? ' rx-card--dense' : ''}`}
+        onClick={onOpen}
+        aria-label={recipe.name}
+      >
+        <div className="rx-card-image">
+          {recipe.sourceImage ? (
+            <img src={recipe.sourceImage} alt="" />
           ) : (
-            <StatusChip kind="shop" missingCount={match.missing.length} />
+            <span className="rx-card-image-fallback">{recipe.name}</span>
           )}
-        </div>
-        <div className="rx-card-meta-overlay">
-          serves {recipe.servings}
-        </div>
-      </div>
-      <div className="rx-card-body">
-        <div className="rx-card-title">{recipe.name}</div>
-        {!dense && match.missing.length > 0 && (
-          <div className="rx-card-need">
-            need {match.missing.slice(0, 2).join(', ')}
-            {match.missing.length > 2 ? ` & ${match.missing.length - 2} more` : ''}
+          <div className="rx-card-badge">
+            {match.bucket === 'cookable' ? (
+              <StatusChip kind="cook" />
+            ) : (
+              <StatusChip kind="shop" missingCount={match.missing.length} />
+            )}
           </div>
-        )}
-        <div className="rx-card-footer">
-          <span>{recipe.ingredientCount} ingr</span>
+          <div className="rx-card-meta-overlay">
+            serves {recipe.servings}
+          </div>
         </div>
-      </div>
-    </button>
+        <div className="rx-card-body">
+          <div className="rx-card-title">{recipe.name}</div>
+          {!dense && match.missing.length > 0 && (
+            <div className="rx-card-need">
+              need {match.missing.slice(0, 2).join(', ')}
+              {match.missing.length > 2 ? ` & ${match.missing.length - 2} more` : ''}
+            </div>
+          )}
+          <div className="rx-card-footer">
+            <span>{recipe.ingredientCount} ingr</span>
+          </div>
+        </div>
+      </button>
+      {onSelect && (
+        <button
+          className={`rx-card-select-btn${selected ? ' rx-card-select-btn--active' : ''}`}
+          onClick={e => { e.stopPropagation(); onSelect(); }}
+          aria-label={selected ? 'Deselect recipe' : 'Select recipe'}
+          aria-pressed={selected}
+        >
+          {selected ? '✓' : ''}
+        </button>
+      )}
+    </div>
   );
 }
 
