@@ -57,6 +57,13 @@
       "when": 1747440000000,
       "tag": "0007_drop_openbrain_sync",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1747526400000,
+      "tag": "0008_plan_refactor",
+      "breakpoints": true
     }
   ]
 }
