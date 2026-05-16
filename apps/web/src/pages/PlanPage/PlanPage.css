@@ -100,12 +100,20 @@
 .plan-recipe-name { font-size: 14px; font-weight: 600; }
 .plan-recipe-meta { font-size: 11px; color: var(--mute); }
 
-/* Week grid */
-.plan-week {
+/* Horizontal scrolling 17-day rail */
+.plan-week-scroll {
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 8px;
+}
+.plan-week-rail {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(220px, 1fr);
   gap: 12px;
 }
+.plan-week-rail .day-col { scroll-snap-align: start; }
 
 .day-col {
   background: var(--paper);
@@ -234,76 +242,19 @@
 }
 .day-col-extra-btn:hover { opacity: 1; }
 
-/* Fill-day suggestion */
-.plan-fill {
-  margin-top: 32px;
-  background: var(--paper);
-  border: 1px solid var(--rule);
-  border-radius: var(--radius-card-lg);
-  padding: 20px 22px;
-}
-.plan-fill-header {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  margin-bottom: 14px;
-}
-.plan-fill-title {
-  font-family: var(--font-serif);
-  font-style: italic;
-  font-size: 24px;
-  line-height: 1;
-}
-.plan-fill-count {
-  font-family: var(--font-sans);
+.day-col-cap {
   font-size: 11px;
-  font-weight: 600;
   color: var(--mute);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-.plan-fill-hint { margin-left: auto; font-size: 12px; color: var(--ink2); }
-
-.plan-fill-rows { display: flex; flex-direction: column; gap: 8px; }
-.plan-fill-row {
-  display: grid;
-  grid-template-columns: 1fr auto auto auto;
-  gap: 14px;
-  align-items: center;
-  padding: 12px 14px;
-  background: var(--paper2);
-  border: 1px solid var(--rule);
-  border-radius: 10px;
-}
-.plan-fill-row-name { font-size: 15px; font-weight: 600; }
-.plan-fill-row-hint {
-  font-family: var(--font-serif);
   font-style: italic;
-  font-size: 13px;
-  color: var(--ink3);
-  margin-top: 2px;
-}
-.plan-fill-place {
-  background: var(--ink);
-  color: var(--paper);
-  border: none;
-  border-radius: 8px;
-  padding: 8px 12px;
-  font-family: var(--font-sans);
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  margin-top: 6px;
 }
 
 @media (max-width: 1024px) {
-  .plan-week { grid-template-columns: repeat(2, 1fr); }
   .plan-body { grid-template-columns: 1fr; }
+  .plan-week-rail { grid-auto-columns: minmax(180px, 240px); }
 }
 @media (max-width: 640px) {
-  .plan-week { grid-template-columns: 1fr; }
+  .plan-week-rail { grid-auto-columns: minmax(160px, 200px); }
 }
 
 .plan-status {

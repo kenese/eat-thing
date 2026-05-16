@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { useRecipes, useRecipe } from '../../hooks/useRecipes';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { useRecipes } from '../../hooks/useRecipes';
 import { useInventory } from '../../hooks/useInventory';
 import {
   useMealPlanEntries,
@@ -10,13 +10,13 @@ import {
 import { CookModal } from './CookModal';
 import { PageTitle } from '../../components/PageTitle';
 import { StatusChip } from '../../components/StatusChip';
-import { computeMissing } from '../../lib/recipeMatch';
-import type { MealPlanEntry, RecipeSummary, Recipe } from '@eat/shared';
-import { mondayOf, addDays, toIsoDate, weekDays, formatWeekRange, planWindow } from '../../lib/dateUtils';
+import type { MealPlanEntry, Recipe } from '@eat/shared';
+import { planWindow, planWindowDays, TODAY_INDEX } from '../../lib/dateUtils';
 import { useNavigate } from 'react-router-dom';
 import './PlanPage.css';
 
 const DRAG_TYPE = 'application/x-eat-recipe-id';
+const MAX_ENTRIES_PER_DAY = 4;
 
 type DayKind = 'cook' | 'shop' | 'leftover' | 'open';
 
@@ -30,7 +30,6 @@ interface DayEntry {
 function DayCard({
   iso,
   label,
-  context,
   isToday,
   entries,
   onDropRecipe,
@@ -40,7 +39,6 @@ function DayCard({
 }: {
   iso: string;
   label: string;
-  context: string;
   isToday: boolean;
   entries: DayEntry[];
   onDropRecipe: (recipeId: string) => void;
@@ -49,12 +47,14 @@ function DayCard({
   onMarkCookedEntry: (id: string) => void;
 }) {
   const [dragOver, setDragOver] = useState(false);
+  const atCapacity = entries.length >= MAX_ENTRIES_PER_DAY;
 
   const first = entries[0];
   const followUps = entries.slice(1);
   const kind: DayKind = first?.kind ?? 'open';
 
   function onDragOver(e: React.DragEvent) {
+    if (atCapacity) return;
     if (e.dataTransfer.types.includes(DRAG_TYPE)) {
       e.preventDefault();
       e.dataTransfer.dropEffect = 'copy';
@@ -62,6 +62,7 @@ function DayCard({
     }
   }
   function onDrop(e: React.DragEvent) {
+    if (atCapacity) return;
     e.preventDefault();
     setDragOver(false);
     const recipeId = e.dataTransfer.getData(DRAG_TYPE);
@@ -78,7 +79,7 @@ function DayCard({
     >
       <div className="day-col-header">
         <span className="day-col-label">{label}</span>
-        {context && <span className="day-col-context">{context}</span>}
+        {isToday && <span className="day-col-context">today</span>}
       </div>
 
       {first ? (
@@ -89,15 +90,7 @@ function DayCard({
               : <span className="day-col-image-fallback">{first.entry.recipeName}</span>}
           </div>
           <div className="day-col-name">{first.entry.recipeName}</div>
-          {first.missing.length > 0 && (
-            <div className="day-col-need">
-              need {first.missing.slice(0, 2).join(', ')}
-              {first.missing.length > 2 ? ` & ${first.missing.length - 2} more` : ''}
-            </div>
-          )}
-          <div className="day-col-meta">
-            serves {first.entry.servings}
-          </div>
+          <div className="day-col-meta">serves {first.entry.servings}</div>
           <StatusChip kind={kind === 'open' ? 'open' : kind} />
           {followUps.map((fu) => (
             <div key={fu.entry.id} className="day-col-extra">
@@ -132,6 +125,9 @@ function DayCard({
               title="Edit servings"
             />
           </div>
+          {atCapacity && (
+            <div className="day-col-cap">max 4 recipes</div>
+          )}
         </>
       ) : (
         <div className="day-col-empty">
@@ -143,52 +139,16 @@ function DayCard({
   );
 }
 
-function FillStrip({
-  openDay,
-  candidates,
-  onPlace,
-}: {
-  openDay: { iso: string; label: string };
-  candidates: { recipe: RecipeSummary; missing: number; hint: string }[];
-  onPlace: (iso: string, recipeId: string) => void;
-}) {
-  return (
-    <div className="plan-fill">
-      <div className="plan-fill-header">
-        <span className="plan-fill-title">Fill {openDay.label}<span className="dot">.</span></span>
-        <span className="plan-fill-count">{candidates.length} picks</span>
-        <span className="plan-fill-hint">based on what you have &amp; what&apos;s expiring</span>
-      </div>
-      <div className="plan-fill-rows">
-        {candidates.map((c) => (
-          <div key={c.recipe.id} className="plan-fill-row">
-            <div>
-              <div className="plan-fill-row-name">{c.recipe.name}</div>
-              <div className="plan-fill-row-hint">{c.hint}</div>
-            </div>
-            <span style={{ fontSize: 12, color: 'var(--mute)' }}>serves {c.recipe.servings}</span>
-            <StatusChip kind={c.missing === 0 ? 'cook' : 'shop'} missingCount={c.missing > 0 ? c.missing : undefined} />
-            <button className="plan-fill-place" onClick={() => onPlace(openDay.iso, c.recipe.id)}>
-              place in {openDay.label.toLowerCase()} <span style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic' }}>→</span>
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 export function PlanPage() {
   const navigate = useNavigate();
-  const [weekStartDate, setWeekStartDate] = useState(() => mondayOf(new Date()));
-  const todayIso = toIsoDate(new Date());
+  const now = useMemo(() => new Date(), []);
+  const { from, to } = useMemo(() => planWindow(now), [now]);
+  const days = useMemo(() => planWindowDays(now), [now]);
 
-  const days = useMemo(() => weekDays(weekStartDate), [weekStartDate]);
-
-  const { from, to } = useMemo(() => planWindow(weekStartDate), [weekStartDate]);
-  const { data: week, isLoading: planLoading } = useMealPlanEntries(from, to);
+  const { data: entriesResp, isLoading: planLoading } = useMealPlanEntries(from, to);
   const { data: recipes = [] } = useRecipes();
   const { data: inventory = [] } = useInventory({});
+  void inventory; // reserved for richer per-day cook/shop bucketing once recipe ingredients are fetched per-entry
 
   const addEntry = useAddMealPlanEntry();
   const updateEntry = useUpdateMealPlanEntry();
@@ -196,57 +156,29 @@ export function PlanPage() {
 
   const [cookingEntryId, setCookingEntryId] = useState<string | null>(null);
   const cookingEntry = cookingEntryId
-    ? (week?.entries ?? []).find((e) => e.id === cookingEntryId) ?? null
+    ? (entriesResp?.entries ?? []).find((e) => e.id === cookingEntryId) ?? null
     : null;
-
-  // Bucket entries by date and enrich with recipe + missing.
-  const recipeMap = useMemo(() => new Map(recipes.map((r) => [r.id, r])), [recipes]);
-  const fullRecipeQuery = (id: string) => useRecipe(id); // not called in render; helper for the inline expansion
-  void fullRecipeQuery;
 
   const entriesByDay = useMemo(() => {
     const map: Record<string, DayEntry[]> = {};
-    for (const e of week?.entries ?? []) {
-      const recipeSummary = recipeMap.get(e.recipeId);
-      // We don't have ingredients here without a per-recipe fetch; approximate planned entries as cookable.
-      const kind: DayKind = 'cook'; // accurate per-day cook/shop bucketing requires per-entry recipe ingredients;
-                                    // we ship 'cook' as the default and rely on the badge to be refined when the recipe loads.
-      const dayEntry: DayEntry = {
+    for (const e of entriesResp?.entries ?? []) {
+      (map[e.date] ??= []).push({
         entry: e,
-        recipe: undefined as Recipe | undefined, // not loaded in summary; CookModal handles cook-time deduction.
+        recipe: undefined,
         missing: [],
-        kind,
-      };
-      void recipeSummary;
-      (map[e.date] ??= []).push(dayEntry);
+        kind: 'cook',
+      });
     }
     return map;
-  }, [week, recipeMap]);
+  }, [entriesResp]);
 
-  const pantryDays   = Object.values(entriesByDay).filter((es) => es.some((d) => d.kind === 'cook')).length;
-  const leftoverDays = Object.values(entriesByDay).filter((es) => es.some((d) => d.kind === 'leftover')).length;
-  const shopDays     = Object.values(entriesByDay).filter((es) => es.some((d) => d.kind === 'shop')).length;
-  const openDays     = days.filter((d) => !(entriesByDay[d.iso]?.length)).length;
-  void days.length; // totalDays kept for reference; all 7 slots are always rendered
-
-  // Pick the first open day for the Fill strip.
-  const firstOpenDay = days.find((d) => !(entriesByDay[d.iso]?.length));
-
-  // Suggest top 3 not-already-placed recipes ranked by missing.length asc (uses inventory).
-  const suggestions = useMemo(() => {
-    if (!firstOpenDay) return [];
-    const placedIds = new Set((week?.entries ?? []).map((e) => e.recipeId));
-    const ranked = recipes
-      .filter((r) => !placedIds.has(r.id))
-      .map((r) => ({
-        recipe: r,
-        missing: 0, // without ingredients on the summary, treat as cookable; full match would require N fetches.
-        hint: 'a quick pick',
-      }))
-      .slice(0, 3);
-    return ranked;
-  }, [recipes, week, firstOpenDay, inventory]);
-  void computeMissing; // kept available for the future per-entry refinement
+  const totals = useMemo(() => {
+    const pantryDays = Object.values(entriesByDay).filter((es) => es.some((d) => d.kind === 'cook')).length;
+    const shopDays   = Object.values(entriesByDay).filter((es) => es.some((d) => d.kind === 'shop')).length;
+    const leftoverDays = Object.values(entriesByDay).filter((es) => es.some((d) => d.kind === 'leftover')).length;
+    const openDays   = days.filter((d) => !(entriesByDay[d.iso]?.length)).length;
+    return { pantryDays, shopDays, leftoverDays, openDays };
+  }, [entriesByDay, days]);
 
   function handleDrop(date: string, recipeId: string) {
     const recipe = recipes.find((r) => r.id === recipeId);
@@ -257,43 +189,51 @@ export function PlanPage() {
     });
   }
 
+  // Scroll today into position 3 on mount.
+  const weekRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!weekRef.current || planLoading) return;
+    const cols = weekRef.current.querySelectorAll<HTMLDivElement>('.day-col');
+    const todayCol = cols[TODAY_INDEX];
+    if (todayCol) {
+      // Position today as the 3rd visible column from the left.
+      const parentLeft = weekRef.current.getBoundingClientRect().left;
+      const todayLeft = todayCol.getBoundingClientRect().left;
+      weekRef.current.scrollLeft += todayLeft - parentLeft;
+    }
+  }, [planLoading]);
+
   return (
     <div className="plan-page">
       <PageTitle
-        eyebrow={`WEEK ${getISOWeekNumber(weekStartDate)} · ${formatWeekRange(weekStartDate)}`}
-        title="This week"
+        eyebrow="THE PLAN"
+        title="Coming up"
         summary={
           <>
-            <strong>{pantryDays} from the pantry</strong>
+            <strong>{totals.pantryDays} from the pantry</strong>
             {' · '}
-            <span style={{ color: 'var(--persim-deep)', fontWeight: 600 }}>{shopDays} need a shop</span>
+            <span style={{ color: 'var(--persim-deep)', fontWeight: 600 }}>{totals.shopDays} need a shop</span>
             {' · '}
             <span style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: 16 }}>
-              {openDays} open seat{openDays === 1 ? '' : 's'}
+              {totals.openDays} open seat{totals.openDays === 1 ? '' : 's'}
             </span>
-          </>
-        }
-        actions={
-          <>
-            <button className="btn-outline" onClick={() => setWeekStartDate((d) => addDays(d, -7))}>← last week</button>
-            <button className="btn-outline" onClick={() => setWeekStartDate((d) => addDays(d, 7))}>next week →</button>
           </>
         }
       />
 
       <div className="plan-prop-strip">
         <div className="plan-prop-bar" aria-hidden>
-          <div className="plan-prop-bar-seg plan-prop-bar-seg--cook"     style={{ flex: pantryDays   }} />
-          <div className="plan-prop-bar-seg plan-prop-bar-seg--leftover" style={{ flex: leftoverDays }} />
-          <div className="plan-prop-bar-seg plan-prop-bar-seg--shop"     style={{ flex: shopDays     }} />
-          <div className="plan-prop-bar-seg"                              style={{ flex: openDays     }} />
+          <div className="plan-prop-bar-seg plan-prop-bar-seg--cook"     style={{ flex: totals.pantryDays   }} />
+          <div className="plan-prop-bar-seg plan-prop-bar-seg--leftover" style={{ flex: totals.leftoverDays }} />
+          <div className="plan-prop-bar-seg plan-prop-bar-seg--shop"     style={{ flex: totals.shopDays     }} />
+          <div className="plan-prop-bar-seg"                              style={{ flex: totals.openDays     }} />
         </div>
         <div className="plan-prop-legend">
           {[
-            ['cook now',    pantryDays,   'var(--fresh)'],
-            ['leftover',    leftoverDays, 'var(--ink)'],
-            ['needs shop',  shopDays,     'var(--persimmon)'],
-            ['open',        openDays,     'var(--mute)'],
+            ['cook now',    totals.pantryDays,   'var(--fresh)'],
+            ['leftover',    totals.leftoverDays, 'var(--ink)'],
+            ['needs shop',  totals.shopDays,     'var(--persimmon)'],
+            ['open',        totals.openDays,     'var(--mute)'],
           ].map(([label, n, color]) => (
             <div key={label as string} className="plan-prop-legend-item">
               <span className="plan-prop-legend-dot" style={{ background: color as string }} />
@@ -302,9 +242,9 @@ export function PlanPage() {
             </div>
           ))}
         </div>
-        {shopDays > 0 && (
+        {totals.shopDays > 0 && (
           <div className="plan-prop-shop">
-            <div className="plan-prop-shop-label">this week&apos;s shop</div>
+            <div className="plan-prop-shop-label">your shopping list</div>
             <div>
               <a className="plan-prop-shop-cta" href="#" onClick={(e) => { e.preventDefault(); navigate('/list'); }}>
                 view list →
@@ -317,7 +257,7 @@ export function PlanPage() {
       <div className="plan-body">
         <aside className="plan-sidebar">
           <div className="plan-sidebar-header">Recipes<span className="dot">.</span></div>
-          <div className="plan-pick-hint subtle">drag onto a day, or use the fill-day suggestions below</div>
+          <div className="plan-pick-hint subtle">drag onto a day</div>
           <ul className="plan-recipe-list">
             {recipes.map((r) => (
               <li
@@ -338,30 +278,23 @@ export function PlanPage() {
 
         <div>
           {planLoading && <p className="plan-status">Loading…</p>}
-          <div className="plan-week">
-            {!planLoading && days.map((d) => (
-              <DayCard
-                key={d.iso}
-                iso={d.iso}
-                label={d.label}
-                context={d.iso === todayIso ? 'today' : ''}
-                isToday={d.iso === todayIso}
-                entries={entriesByDay[d.iso] ?? []}
-                onDropRecipe={(recipeId) => handleDrop(d.iso, recipeId)}
-                onUpdateEntry={(id, patch) => updateEntry.mutate({ id, ...patch })}
-                onDeleteEntry={(id) => deleteEntry.mutate(id)}
-                onMarkCookedEntry={(id) => setCookingEntryId(id)}
-              />
-            ))}
+          <div className="plan-week-scroll" ref={weekRef}>
+            <div className="plan-week-rail">
+              {!planLoading && days.map((d) => (
+                <DayCard
+                  key={d.iso}
+                  iso={d.iso}
+                  label={d.label}
+                  isToday={d.isToday}
+                  entries={entriesByDay[d.iso] ?? []}
+                  onDropRecipe={(recipeId) => handleDrop(d.iso, recipeId)}
+                  onUpdateEntry={(id, patch) => updateEntry.mutate({ id, ...patch })}
+                  onDeleteEntry={(id) => deleteEntry.mutate(id)}
+                  onMarkCookedEntry={(id) => setCookingEntryId(id)}
+                />
+              ))}
+            </div>
           </div>
-
-          {firstOpenDay && suggestions.length > 0 && (
-            <FillStrip
-              openDay={{ iso: firstOpenDay.iso, label: firstOpenDay.label }}
-              candidates={suggestions}
-              onPlace={(iso, recipeId) => handleDrop(iso, recipeId)}
-            />
-          )}
         </div>
       </div>
 
@@ -374,12 +307,4 @@ export function PlanPage() {
       )}
     </div>
   );
-}
-
-function getISOWeekNumber(d: Date): number {
-  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  const dayNum = date.getUTCDay() || 7;
-  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
-  return Math.ceil(((date.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7);
 }
