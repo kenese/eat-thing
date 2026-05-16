@@ -25,7 +25,7 @@
 .sl-section-title {
   font-family: var(--font-serif);
   font-style: italic;
-  font-size: 22px;
+  font-size: 28px;
   line-height: 1;
 }
 .sl-section-count {
@@ -46,18 +46,18 @@
 
 .sl-row {
   display: grid;
-  grid-template-columns: 18px 1fr 90px 80px 24px;
+  grid-template-columns: 22px 1fr 80px 24px;
   gap: 14px;
-  align-items: center;
+  align-items: start;
   padding: 10px 4px;
   border-bottom: 1px solid var(--rule2);
 }
 .sl-row--selected { background: color-mix(in srgb, var(--persimmon) 8%, transparent); }
 
 .sl-check {
-  width: 18px;
-  height: 18px;
-  border-radius: 5px;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
   border: 1.5px solid var(--rule);
   background: transparent;
   cursor: pointer;
@@ -65,13 +65,20 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
-.sl-check--checked { background: var(--green); border-color: var(--green); }
+.sl-check--checked { background: var(--fresh); border-color: var(--fresh); }
 
+.sl-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
 .sl-row-name {
   display: flex;
   align-items: baseline;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
 }
 .sl-row-label {
@@ -80,7 +87,7 @@
   font-weight: 600;
   letter-spacing: -0.005em;
 }
-.sl-row--checked .sl-row-label { text-decoration: line-through; }
+.sl-row--selected .sl-row-label { text-decoration: line-through; color: var(--mute); }
 .sl-row-qty { font-size: 12px; color: var(--mute); white-space: nowrap; }
 
 .sl-row-reason {

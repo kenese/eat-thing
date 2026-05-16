@@ -106,16 +106,18 @@ function CategorySection({
               onClick={() => onToggleSelect(it.id)}
             >
               {selected && (
-                <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden>
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
                   <path d="M2.5 6.5L5 9L9.5 3.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               )}
             </button>
-            <div className="sl-row-name">
-              <span className="sl-row-label">{it.name}</span>
-              <span className="sl-row-qty">{Math.ceil(it.qty * 10) / 10} {it.unit}</span>
+            <div className="sl-row-main">
+              <div className="sl-row-name">
+                <span className="sl-row-label">{it.name}</span>
+                <span className="sl-row-qty">{Math.ceil(it.qty * 10) / 10} {it.unit}</span>
+              </div>
+              <ReasonChip source={it.source} sourceRecipeNames={it.sourceRecipeNames ?? null} />
             </div>
-            <ReasonChip source={it.source} sourceRecipeNames={it.sourceRecipeNames ?? null} />
             <PriceCell price={prices.get(it.id)} refreshing={refreshing} />
             <button className="sl-row-menu" onClick={() => onDelete(it.id)} aria-label={`Remove ${it.name}`}>✕</button>
           </div>
