@@ -40,3 +40,35 @@ export function formatWeekRange(weekStart: Date): string {
   }
   return `${weekStart.getDate()} ${monthFmt(weekStart)} – ${end.getDate()} ${monthFmt(end)} ${end.getFullYear()}`;
 }
+
+export const TODAY_INDEX = 2;
+export const WINDOW_SIZE = 17;
+
+export interface PlanWindowDay {
+  date: Date;
+  iso: string;
+  label: string;
+  isToday: boolean;
+}
+
+export function planWindow(now: Date = new Date()): { from: string; to: string } {
+  const start = addDays(now, -TODAY_INDEX);
+  const end = addDays(now, WINDOW_SIZE - TODAY_INDEX - 1);
+  return { from: toIsoDate(start), to: toIsoDate(end) };
+}
+
+export function planWindowDays(now: Date = new Date()): PlanWindowDay[] {
+  const todayIso = toIsoDate(now);
+  const start = addDays(now, -TODAY_INDEX);
+  const labels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  return Array.from({ length: WINDOW_SIZE }, (_, i) => {
+    const d = addDays(start, i);
+    const iso = toIsoDate(d);
+    return {
+      date: d,
+      iso,
+      label: `${labels[d.getDay()]} ${d.getDate()}`,
+      isToday: iso === todayIso,
+    };
+  });
+}

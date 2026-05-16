@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mondayOf, addDays, toIsoDate, weekDays, formatWeekRange } from './dateUtils';
+import { mondayOf, addDays, toIsoDate, weekDays, formatWeekRange, planWindow, planWindowDays, TODAY_INDEX, WINDOW_SIZE } from './dateUtils';
 
 describe('mondayOf', () => {
   it('returns the same day when given a Monday', () => {
@@ -44,5 +44,39 @@ describe('formatWeekRange', () => {
 
   it('spans two months when the week crosses one', () => {
     expect(formatWeekRange(new Date(2026, 3, 27))).toMatch(/^27 Apr – 3 May 2026$/);
+  });
+});
+
+describe('plan window', () => {
+  it('TODAY_INDEX is 2 (third visible column)', () => {
+    expect(TODAY_INDEX).toBe(2);
+  });
+
+  it('WINDOW_SIZE is 17 (today minus 2 through today plus 14)', () => {
+    expect(WINDOW_SIZE).toBe(17);
+  });
+
+  it('planWindow returns from/to ISO dates centred on today', () => {
+    const today = new Date('2026-05-16T10:00:00');
+    const { from, to } = planWindow(today);
+    expect(from).toBe('2026-05-14');
+    expect(to).toBe('2026-05-30');
+  });
+
+  it('planWindowDays returns 17 day objects with today at index 2', () => {
+    const today = new Date('2026-05-16T10:00:00');
+    const days = planWindowDays(today);
+    expect(days).toHaveLength(17);
+    expect(days[0].iso).toBe('2026-05-14');
+    expect(days[2].iso).toBe('2026-05-16');
+    expect(days[2].isToday).toBe(true);
+    expect(days[16].iso).toBe('2026-05-30');
+    expect(days[0].isToday).toBe(false);
+  });
+
+  it('planWindowDays labels use short weekday + day of month', () => {
+    const today = new Date('2026-05-16T10:00:00');
+    const days = planWindowDays(today);
+    expect(days[2].label).toMatch(/^Sat 16$/);
   });
 });
