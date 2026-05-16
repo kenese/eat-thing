@@ -169,6 +169,22 @@ export function InventoryPage() {
     return d !== null && d <= 7;
   }).length;
 
+  // Derive location counts from categories: produce/meat/dairy → Fridge, pantry/drinks/other → Pantry, frozen → Freezer
+  const locationCounts = useMemo(() => ({
+    fridge: sortedByCategory.produce.length + sortedByCategory.meat.length + sortedByCategory.dairy.length,
+    pantry: sortedByCategory.pantry.length + sortedByCategory.drinks.length + sortedByCategory.other.length,
+    freezer: sortedByCategory.frozen.length,
+  }), [sortedByCategory]);
+
+  const expiringRows = useMemo(() =>
+    items
+      .map((i) => ({ ...i, d: daysUntil(i.expiresAt) }))
+      .filter((i) => i.d !== null && i.d >= 0 && i.d <= 7)
+      .sort((a, b) => (a.d ?? 0) - (b.d ?? 0))
+      .slice(0, 6),
+    [items],
+  );
+
   const now = new Date();
   const eyebrow = `THE KITCHEN · ${now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }).toLowerCase()}`;
 
@@ -231,24 +247,69 @@ export function InventoryPage() {
       )}
 
       {!isLoading && items.length > 0 && (
-        <>
-          <div className="inv-col-header">
-            <div>qty</div>
-            <div>item</div>
-            <div>added</div>
-            <div>expires</div>
-            <div></div>
+        <div className="inv-body">
+          <div className="inv-main">
+            <div className="inv-col-header">
+              <div>qty</div>
+              <div>item</div>
+              <div>added</div>
+              <div>expires</div>
+              <div></div>
+            </div>
+            {categoriesToRender.map((cat) => (
+              <CategoryGroup
+                key={cat}
+                label={CATEGORY_LABEL[cat]}
+                items={sortedByCategory[cat]}
+                onEdit={(item) => setModal({ mode: 'edit', item })}
+                onDelete={(item) => deleteMutation.mutate(item.id)}
+              />
+            ))}
           </div>
-          {categoriesToRender.map((cat) => (
-            <CategoryGroup
-              key={cat}
-              label={CATEGORY_LABEL[cat]}
-              items={sortedByCategory[cat]}
-              onEdit={(item) => setModal({ mode: 'edit', item })}
-              onDelete={(item) => deleteMutation.mutate(item.id)}
-            />
-          ))}
-        </>
+
+          <aside className="inv-sidebar">
+            <div className="inv-sidebar-card">
+              <div className="inv-sidebar-card-title">By location</div>
+              {[
+                { label: 'fridge', count: locationCounts.fridge },
+                { label: 'pantry', count: locationCounts.pantry },
+                { label: 'freezer', count: locationCounts.freezer },
+              ].map(({ label, count }) => (
+                <div key={label} className="inv-location-row">
+                  <span className="inv-location-label">{label}</span>
+                  <span className="inv-location-count">{count} items</span>
+                </div>
+              ))}
+            </div>
+
+            {expiringRows.length > 0 && (
+              <div className="inv-sidebar-card">
+                <div className="inv-sidebar-card-title">Expiring soon</div>
+                <div className="inv-sidebar-expiring">
+                  {expiringRows.map((it) => (
+                    <div key={it.id} className="inv-sidebar-exp-row">
+                      <span
+                        className="inv-sidebar-exp-days"
+                        style={{ color: (it.d ?? 0) <= 1 ? 'var(--persimmon)' : (it.d ?? 0) <= 3 ? 'var(--persim-deep)' : 'var(--ink3)' }}
+                      >
+                        {it.d}d
+                      </span>
+                      <span className="inv-sidebar-exp-name">{it.foodName}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* HANDOFF: low-stock staples — requires useStaples hook integration */}
+            <div className="inv-sidebar-card">
+              <div className="inv-sidebar-card-title">Low staples</div>
+              <p style={{ fontSize: 13, color: 'var(--mute)', fontFamily: 'var(--font-serif)', fontStyle: 'italic' }}>
+                staple tracking coming soon.
+              </p>
+            </div>
+          </aside>
+        </div>
       )}
 
       {modal && (

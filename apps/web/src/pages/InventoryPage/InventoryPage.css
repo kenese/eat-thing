@@ -86,7 +86,7 @@
 .inv-group-label {
   font-family: var(--font-serif);
   font-style: italic;
-  font-size: 22px;
+  font-size: 28px;
   line-height: 1;
   color: var(--green);
   text-transform: capitalize;
@@ -232,6 +232,98 @@
   color: var(--mute);
 }
 .inv-status.error { color: var(--warn); }
+
+/* Two-pane layout */
+.inv-body {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 24px;
+  align-items: start;
+}
+
+.inv-main { min-width: 0; }
+
+/* Sidebar */
+.inv-sidebar {
+  position: sticky;
+  top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.inv-sidebar-card {
+  background: var(--paper2);
+  border-radius: var(--radius-card);
+  padding: 16px 18px;
+  border: 1px solid var(--rule);
+}
+
+.inv-sidebar-card-title {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mute);
+  margin-bottom: 12px;
+}
+
+.inv-location-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--rule2);
+  font-size: 14px;
+}
+.inv-location-row:last-child { border-bottom: none; }
+
+.inv-location-label {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 16px;
+  color: var(--green);
+}
+
+.inv-location-count {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--mute);
+}
+
+.inv-sidebar-expiring { display: flex; flex-direction: column; gap: 6px; }
+
+.inv-sidebar-exp-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.inv-sidebar-exp-days {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 20px;
+  width: 32px;
+  font-variant-numeric: tabular-nums;
+}
+
+.inv-sidebar-exp-name {
+  font-size: 13px;
+  font-weight: 500;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 1024px) {
+  .inv-body { grid-template-columns: 1fr; }
+  .inv-sidebar { position: static; }
+}
 
 @media (max-width: 768px) {
   .inv-use-week { grid-template-columns: 1fr; }
