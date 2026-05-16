@@ -8,16 +8,13 @@ import { findOrCreateFood, type FoodCategory } from '../lib/find-or-create-food.
 import { normalizeRecipeAmount } from '../lib/recipe-quantities.js';
 import { amountInUnit } from '../lib/food-amounts.js';
 import {
-  mealPlans, mealPlanEntries, recipes, recipeIngredients,
+  mealPlanEntries, recipes, recipeIngredients,
   inventoryItems, canonicalFoods, staples,
   shoppingLists, shoppingListItems,
   scraperJobs, shoppingListPrices,
 } from '../db/schema/index.js';
 
 const router: ExpressRouter = Router();
-
-const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'must be YYYY-MM-DD');
-const generateSchema = z.object({ weekStart: isoDate });
 
 const addItemSchema = z.object({
   name: z.string().trim().min(1).max(200),
@@ -53,6 +50,7 @@ const listItemCols = {
   checked: shoppingListItems.checked,
   category: canonicalFoods.category,
   sourceRecipeNames: shoppingListItems.sourceRecipeNames,
+  sourceRecipeId: shoppingListItems.sourceRecipeId,
 };
 
 function withCategory<T extends { category: string | null }>(row: T): Omit<T, 'category'> & { category: Category } {
@@ -63,7 +61,6 @@ function withCategory<T extends { category: string | null }>(row: T): Omit<T, 'c
 const listCols = {
   id: shoppingLists.id,
   householdId: shoppingLists.householdId,
-  generatedFromMealPlanId: shoppingLists.generatedFromMealPlanId,
   createdAt: shoppingLists.createdAt,
   finalizedAt: shoppingLists.finalizedAt,
 };
@@ -78,23 +75,24 @@ async function itemsForList(listId: string) {
   return rows.map(withCategory);
 }
 
-// POST /api/shopping-lists/generate
-router.post('/generate', withHousehold, async (req, res) => {
-  const parse = generateSchema.safeParse(req.body);
+const fromPlanSchema = z.object({
+  entryIds: z.array(z.string().uuid()),
+});
+
+// POST /api/shopping-lists/from-plan
+// Replaces all recipe-sourced items on the current list with a fresh derivation from
+// the given meal-plan entries. Manual and staple items are left untouched.
+// Creates a new shopping list if none exists.
+router.post('/from-plan', withHousehold, async (req, res) => {
+  const parse = fromPlanSchema.safeParse(req.body);
   if (!parse.success) {
     res.status(400).json({ error: 'Invalid input', details: parse.error.flatten() });
     return;
   }
-  const { weekStart } = parse.data;
+  const { entryIds } = parse.data;
   const hid = req.householdId;
 
   try {
-    const [plan] = await db
-      .select({ id: mealPlans.id })
-      .from(mealPlans)
-      .where(and(eq(mealPlans.householdId, hid), eq(mealPlans.weekStart, weekStart)))
-      .limit(1);
-
     type RawIng = {
       canonicalFoodId: string; foodName: string;
       unit: string; qty: string;
@@ -102,9 +100,10 @@ router.post('/generate', withHousehold, async (req, res) => {
       densityGPerMl: number | null;
       countToGrams: number | null;
       recipeName: string;
+      recipeId: string;
     };
 
-    const rawIngredients: RawIng[] = plan
+    const rawIngredients: RawIng[] = entryIds.length > 0
       ? await db
           .select({
             canonicalFoodId: recipeIngredients.canonicalFoodId,
@@ -116,18 +115,24 @@ router.post('/generate', withHousehold, async (req, res) => {
             densityGPerMl: canonicalFoods.densityGPerMl,
             countToGrams: canonicalFoods.countToGrams,
             recipeName: recipes.name,
+            recipeId: recipes.id,
           })
           .from(mealPlanEntries)
           .innerJoin(recipes, eq(mealPlanEntries.recipeId, recipes.id))
           .innerJoin(recipeIngredients, eq(recipeIngredients.recipeId, recipes.id))
           .innerJoin(canonicalFoods, eq(recipeIngredients.canonicalFoodId, canonicalFoods.id))
           .where(and(
-            eq(mealPlanEntries.mealPlanId, plan.id),
+            eq(mealPlanEntries.householdId, hid),
+            inArray(mealPlanEntries.id, entryIds),
             eq(recipeIngredients.optional, false),
           ))
       : [];
 
-    type FoodInfo = { foodName: string; unit: string; qty: number; densityGPerMl: number | null; countToGrams: number | null; recipeNames: Set<string> };
+    type FoodInfo = {
+      foodName: string; unit: string; qty: number;
+      densityGPerMl: number | null; countToGrams: number | null;
+      recipeNames: Set<string>; recipeIds: Set<string>;
+    };
     const needed = new Map<string, FoodInfo>();
     for (const row of rawIngredients) {
       const amount = normalizeRecipeAmount(row.qty, row.unit);
@@ -138,6 +143,7 @@ router.post('/generate', withHousehold, async (req, res) => {
       if (cur) {
         cur.qty += amount.qty * ratio;
         cur.recipeNames.add(row.recipeName);
+        cur.recipeIds.add(row.recipeId);
       } else {
         needed.set(key, {
           foodName: row.foodName,
@@ -146,6 +152,7 @@ router.post('/generate', withHousehold, async (req, res) => {
           densityGPerMl: row.densityGPerMl,
           countToGrams: row.countToGrams,
           recipeNames: new Set([row.recipeName]),
+          recipeIds: new Set([row.recipeId]),
         });
       }
     }
@@ -167,8 +174,13 @@ router.post('/generate', withHousehold, async (req, res) => {
       invByFood.set(r.canonicalFoodId, rows);
     }
 
-    type ItemInsert = { canonicalFoodId: string; name: string; qty: number; unit: string; source: 'recipe' | 'staple' | 'manual'; checked: boolean; sourceRecipeNames: string[] | null };
-    const toInsert: ItemInsert[] = [];
+    type ItemInsert = {
+      canonicalFoodId: string; name: string; qty: number; unit: string;
+      source: 'recipe'; checked: boolean;
+      sourceRecipeNames: string[];
+      sourceRecipeId: string;
+    };
+    const recipeItemsToInsert: ItemInsert[] = [];
 
     for (const [key, info] of needed) {
       const [foodId] = key.split('::');
@@ -179,47 +191,54 @@ router.post('/generate', withHousehold, async (req, res) => {
       const gap = info.qty - available;
 
       if (gap > 0.001) {
-        toInsert.push({ canonicalFoodId: foodId, name: info.foodName, qty: gap, unit: info.unit, source: 'recipe', checked: false, sourceRecipeNames: [...info.recipeNames] });
+        const firstRecipeId = info.recipeIds.values().next().value as string;
+        recipeItemsToInsert.push({
+          canonicalFoodId: foodId,
+          name: info.foodName,
+          qty: gap,
+          unit: info.unit,
+          source: 'recipe',
+          checked: false,
+          sourceRecipeNames: [...info.recipeNames],
+          sourceRecipeId: firstRecipeId,
+        });
       }
     }
 
-    const staplesRows = await db
-      .select({
-        canonicalFoodId: staples.canonicalFoodId,
-        foodName: canonicalFoods.name,
-        thresholdQty: staples.thresholdQty,
-        thresholdUnit: staples.thresholdUnit,
-        densityGPerMl: canonicalFoods.densityGPerMl,
-        countToGrams: canonicalFoods.countToGrams,
-      })
-      .from(staples)
-      .innerJoin(canonicalFoods, sql`${staples.canonicalFoodId} = ${canonicalFoods.id}`)
-      .where(eq(staples.householdId, hid));
+    // Find or create current list, then replace recipe-sourced items.
+    const listId = await db.transaction(async tx => {
+      const [existing] = await tx
+        .select({ id: shoppingLists.id })
+        .from(shoppingLists)
+        .where(eq(shoppingLists.householdId, hid))
+        .orderBy(desc(shoppingLists.createdAt))
+        .limit(1);
 
-    for (const st of staplesRows) {
-      let available = 0;
-      for (const inv of invByFood.get(st.canonicalFoodId) ?? []) {
-        available += amountInUnit(inv, st.thresholdUnit, st) ?? 0;
+      let id = existing?.id;
+      if (!id) {
+        id = uuidv4();
+        await tx.insert(shoppingLists).values({ id, householdId: hid });
       }
-      const gap = st.thresholdQty - available;
-      if (gap > 0.001) {
-        toInsert.push({ canonicalFoodId: st.canonicalFoodId, name: st.foodName, qty: gap, unit: st.thresholdUnit, source: 'staple', checked: false, sourceRecipeNames: null });
-      }
-    }
 
-    const listId = uuidv4();
-    await db.transaction(async tx => {
-      await tx.insert(shoppingLists).values({ id: listId, householdId: hid, generatedFromMealPlanId: plan?.id ?? null });
-      if (toInsert.length > 0) {
+      // Delete only recipe-sourced items
+      await tx.delete(shoppingListItems).where(and(
+        eq(shoppingListItems.shoppingListId, id),
+        eq(shoppingListItems.source, 'recipe'),
+      ));
+
+      // Insert new recipe-sourced items
+      if (recipeItemsToInsert.length > 0) {
         await tx.insert(shoppingListItems).values(
-          toInsert.map(item => ({ id: uuidv4(), shoppingListId: listId, householdId: hid, ...item })),
+          recipeItemsToInsert.map(item => ({ id: uuidv4(), shoppingListId: id!, householdId: hid, ...item })),
         );
       }
+
+      return id;
     });
 
     const [list] = await db.select(listCols).from(shoppingLists).where(eq(shoppingLists.id, listId));
     const items = await itemsForList(listId);
-    res.status(201).json({ ...list, items });
+    res.status(200).json({ ...list, items });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });

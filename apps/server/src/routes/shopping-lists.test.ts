@@ -43,22 +43,8 @@ describe('shopping-lists router', () => {
 
   it('returns 401 for unauthenticated requests', async () => {
     mocks.getSession.mockResolvedValue(null);
-    const res = await request(app).post('/api/shopping-lists/generate').send({ weekStart: '2026-05-05' });
+    const res = await request(app).post('/api/shopping-lists/from-plan').send({});
     expect(res.status).toBe(401);
-  });
-
-  it('POST /generate rejects missing weekStart', async () => {
-    mocks.getSession.mockResolvedValue({ user: { id: 'u1' } });
-    mocks.membershipLimit.mockResolvedValue([{ householdId: 'hh-1' }]);
-    const res = await request(app).post('/api/shopping-lists/generate').send({});
-    expect(res.status).toBe(400);
-  });
-
-  it('POST /generate rejects malformed weekStart', async () => {
-    mocks.getSession.mockResolvedValue({ user: { id: 'u1' } });
-    mocks.membershipLimit.mockResolvedValue([{ householdId: 'hh-1' }]);
-    const res = await request(app).post('/api/shopping-lists/generate').send({ weekStart: 'not-a-date' });
-    expect(res.status).toBe(400);
   });
 
   it('PUT item rejects non-boolean checked', async () => {
@@ -131,6 +117,28 @@ describe('shopping-lists router', () => {
     const res = await request(app)
       .post('/api/shopping-lists/list-id/items')
       .send({ name: 'Dish soap', qty: 1, unit: 'count' });
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects from-plan POST with missing entryIds', async () => {
+    mocks.getSession.mockResolvedValue({ user: { id: 'user-1' } });
+    mocks.membershipLimit.mockResolvedValue([{ householdId: 'hh-1' }]);
+
+    const res = await request(app)
+      .post('/api/shopping-lists/from-plan')
+      .send({});
+
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects from-plan POST with non-uuid entryIds', async () => {
+    mocks.getSession.mockResolvedValue({ user: { id: 'user-1' } });
+    mocks.membershipLimit.mockResolvedValue([{ householdId: 'hh-1' }]);
+
+    const res = await request(app)
+      .post('/api/shopping-lists/from-plan')
+      .send({ entryIds: ['not-a-uuid'] });
+
     expect(res.status).toBe(400);
   });
 });
