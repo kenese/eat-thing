@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import {
-  useCurrentShoppingList, useGenerateShoppingList,
+  useCurrentShoppingList, useApplyPlanToShoppingList,
   useUpdateShoppingListItem, useAddShoppingListItem, useDeleteShoppingListItem,
   usePurchaseShoppingListItems, useBatchDeleteShoppingListItems,
 } from '../../hooks/useShoppingList';
@@ -15,7 +15,6 @@ import type {
 } from '@eat/shared';
 import { CATEGORY_LABEL, CATEGORY_ORDER } from '@eat/taxonomy';
 import type { Category as TaxCategory } from '@eat/taxonomy';
-import { mondayOf, toIsoDate } from '../../lib/dateUtils';
 import './ShoppingListPage.css';
 
 type SourceTab = 'all' | ShoppingSource;
@@ -494,10 +493,8 @@ function ListView({ list }: { list: ShoppingList }) {
 
 export function ShoppingListPage() {
   const { data: list, isLoading } = useCurrentShoppingList();
-  const generate = useGenerateShoppingList();
+  const generate = useApplyPlanToShoppingList();
   const [showStaples, setShowStaples] = useState(false);
-
-  const thisWeekStart = toIsoDate(mondayOf(new Date()));
 
   const now = new Date();
   const builtAt = `AUTO-BUILT · LAST UPDATED ${now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }).toLowerCase()}`;
@@ -522,7 +519,7 @@ export function ShoppingListPage() {
             <button className="btn-outline" onClick={() => setShowStaples(true)}>staples</button>
             <button
               className="btn-primary"
-              onClick={() => generate.mutate({ weekStart: thisWeekStart })}
+              onClick={() => generate.mutate({ entryIds: [] })}
               disabled={generate.isPending}
             >
               {generate.isPending ? 'Generating…' : 'Generate for this week'}

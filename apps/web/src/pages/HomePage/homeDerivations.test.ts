@@ -83,7 +83,6 @@ function recipe(id: string, ingredients: { name: string; canonicalFoodId: string
 function entry(date: string, recipeId: string): MealPlanEntry {
   return {
     id: `entry-${date}`,
-    mealPlanId: 'plan-1',
     date,
     recipeId,
     recipeName: `Recipe ${recipeId}`,
@@ -152,6 +151,7 @@ function listItem(partial: { name: string; category: Category; qty?: number; che
     checked: partial.checked ?? false,
     category: partial.category,
     sourceRecipeNames: null,
+    sourceRecipeId: null,
   };
 }
 
@@ -166,7 +166,7 @@ describe('computeShopSummary', () => {
 
   it('returns empty state when list has no items', () => {
     const list: ShoppingList = {
-      id: 'sl-1', householdId: 'h-1', generatedFromMealPlanId: null,
+      id: 'sl-1', householdId: 'h-1',
       createdAt: '2026-05-11T09:14:00Z', finalizedAt: null, items: [],
     };
     const r = computeShopSummary(list, [], new Date('2026-05-12T08:00:00'));
@@ -175,7 +175,7 @@ describe('computeShopSummary', () => {
 
   it('groups items by category and caps aisles at 4 by count desc', () => {
     const list: ShoppingList = {
-      id: 'sl-1', householdId: 'h-1', generatedFromMealPlanId: null,
+      id: 'sl-1', householdId: 'h-1',
       createdAt: '2026-05-11T09:14:00Z', finalizedAt: null,
       items: [
         listItem({ name: 'apple',   category: 'produce' }),
@@ -199,7 +199,7 @@ describe('computeShopSummary', () => {
 
   it('sums unchecked-item prices for total', () => {
     const list: ShoppingList = {
-      id: 'sl-1', householdId: 'h-1', generatedFromMealPlanId: null,
+      id: 'sl-1', householdId: 'h-1',
       createdAt: '2026-05-11T09:14:00Z', finalizedAt: null,
       items: [
         listItem({ id: 'a', name: 'apple', category: 'produce', qty: 2 }),
@@ -219,7 +219,7 @@ describe('computeShopSummary', () => {
 
   it('returns null total when no prices exist', () => {
     const list: ShoppingList = {
-      id: 'sl-1', householdId: 'h-1', generatedFromMealPlanId: null,
+      id: 'sl-1', householdId: 'h-1',
       createdAt: '2026-05-11T09:14:00Z', finalizedAt: null,
       items: [listItem({ name: 'apple', category: 'produce' })],
     };
@@ -229,7 +229,7 @@ describe('computeShopSummary', () => {
 
   it('formats the built timestamp as short-day + lowercase am/pm', () => {
     const list: ShoppingList = {
-      id: 'sl-1', householdId: 'h-1', generatedFromMealPlanId: null,
+      id: 'sl-1', householdId: 'h-1',
       createdAt: '2026-05-10T09:14:00', // local time, Sunday 9:14 am
       finalizedAt: null,
       items: [listItem({ name: 'apple', category: 'produce' })],

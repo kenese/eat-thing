@@ -11,12 +11,12 @@ export function useCookPreview(mealPlanEntryId: string | null) {
   });
 }
 
-export function useCreateCookEvent(weekStart: string) {
+export function useCreateCookEvent() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: CreateCookEventInput) => api.post<CookEvent>('/api/cook-events', data),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['meal-plan', weekStart] });
+      qc.invalidateQueries({ queryKey: ['meal-plan-entries'] });
       qc.invalidateQueries({ queryKey: ['inventory'] });
     },
   });

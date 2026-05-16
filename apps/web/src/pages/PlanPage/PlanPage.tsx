@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useRecipes, useRecipe } from '../../hooks/useRecipes';
 import { useInventory } from '../../hooks/useInventory';
 import {
-  useMealPlanWeek,
+  useMealPlanEntries,
   useAddMealPlanEntry,
   useUpdateMealPlanEntry,
   useDeleteMealPlanEntry,
@@ -12,7 +12,7 @@ import { PageTitle } from '../../components/PageTitle';
 import { StatusChip } from '../../components/StatusChip';
 import { computeMissing } from '../../lib/recipeMatch';
 import type { MealPlanEntry, RecipeSummary, Recipe } from '@eat/shared';
-import { mondayOf, addDays, toIsoDate, weekDays, formatWeekRange } from '../../lib/dateUtils';
+import { mondayOf, addDays, toIsoDate, weekDays, formatWeekRange, planWindow } from '../../lib/dateUtils';
 import { useNavigate } from 'react-router-dom';
 import './PlanPage.css';
 
@@ -181,18 +181,18 @@ function FillStrip({
 export function PlanPage() {
   const navigate = useNavigate();
   const [weekStartDate, setWeekStartDate] = useState(() => mondayOf(new Date()));
-  const weekStart = toIsoDate(weekStartDate);
   const todayIso = toIsoDate(new Date());
 
   const days = useMemo(() => weekDays(weekStartDate), [weekStartDate]);
 
-  const { data: week, isLoading: planLoading } = useMealPlanWeek(weekStart);
+  const { from, to } = useMemo(() => planWindow(weekStartDate), [weekStartDate]);
+  const { data: week, isLoading: planLoading } = useMealPlanEntries(from, to);
   const { data: recipes = [] } = useRecipes();
   const { data: inventory = [] } = useInventory({});
 
   const addEntry = useAddMealPlanEntry();
-  const updateEntry = useUpdateMealPlanEntry(weekStart);
-  const deleteEntry = useDeleteMealPlanEntry(weekStart);
+  const updateEntry = useUpdateMealPlanEntry();
+  const deleteEntry = useDeleteMealPlanEntry();
 
   const [cookingEntryId, setCookingEntryId] = useState<string | null>(null);
   const cookingEntry = cookingEntryId
@@ -251,7 +251,6 @@ export function PlanPage() {
   function handleDrop(date: string, recipeId: string) {
     const recipe = recipes.find((r) => r.id === recipeId);
     addEntry.mutate({
-      weekStart,
       date,
       recipeId,
       servings: recipe?.servings ?? 1,
@@ -370,7 +369,6 @@ export function PlanPage() {
         <CookModal
           mealPlanEntryId={cookingEntry.id}
           recipeName={cookingEntry.recipeName}
-          weekStart={weekStart}
           onClose={() => setCookingEntryId(null)}
         />
       )}

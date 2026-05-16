@@ -6,13 +6,12 @@ import './CookModal.css';
 interface Props {
   mealPlanEntryId: string;
   recipeName: string;
-  weekStart: string;
   onClose: () => void;
 }
 
-export function CookModal({ mealPlanEntryId, recipeName, weekStart, onClose }: Props) {
+export function CookModal({ mealPlanEntryId, recipeName, onClose }: Props) {
   const { data: preview, isLoading, error } = useCookPreview(mealPlanEntryId);
-  const createCookEvent = useCreateCookEvent(weekStart);
+  const createCookEvent = useCreateCookEvent();
   const [promptAnswers, setPromptAnswers] = useState<Record<string, string>>({});
 
   if (isLoading) {

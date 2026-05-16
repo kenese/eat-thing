@@ -1,11 +1,11 @@
 import { useMemo } from 'react';
 import { useQueries } from '@tanstack/react-query';
 import { useInventory } from '../../hooks/useInventory';
-import { useMealPlanWeek } from '../../hooks/useMealPlan';
+import { useMealPlanEntries } from '../../hooks/useMealPlan';
 import { useCurrentShoppingList } from '../../hooks/useShoppingList';
 import { usePricesForList } from '../../hooks/usePricesForList';
 import { api } from '../../api/client';
-import { mondayOf, toIsoDate } from '../../lib/dateUtils';
+import { planWindow } from '../../lib/dateUtils';
 import {
   computeMeals,
   computeExpiring,
@@ -33,10 +33,10 @@ export interface HomeData {
 }
 
 export function useHomeData(now: Date = new Date()): HomeData {
-  const weekStart = useMemo(() => toIsoDate(mondayOf(now)), [now]);
+  const { from, to } = useMemo(() => planWindow(now), [now]);
 
   const inventoryQ = useInventory();
-  const mealPlanQ  = useMealPlanWeek(weekStart);
+  const mealPlanQ  = useMealPlanEntries(from, to);
   const shopListQ  = useCurrentShoppingList();
   const pricesQ    = usePricesForList(shopListQ.data?.id ?? null);
 
