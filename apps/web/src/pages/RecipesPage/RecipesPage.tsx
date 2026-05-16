@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useRecipes, useRecipe } from '../../hooks/useRecipes';
+import { useRecipes, useRecipe, useDeleteRecipe } from '../../hooks/useRecipes';
 import { useInventory } from '../../hooks/useInventory';
+import { useAddToNextEmptyDays } from '../../hooks/useMealPlan';
 import { RecipeForm } from './RecipeForm';
 import { ImportModal } from './ImportModal';
 import { PageTitle } from '../../components/PageTitle';
@@ -143,6 +144,119 @@ function EditorialHero({
   );
 }
 
+export function SelectionBar({
+  selectedIds,
+  recipes,
+  onClear,
+  onAddToPlan,
+  onDelete,
+}: {
+  selectedIds: Set<string>;
+  recipes: RecipeSummary[];
+  onClear: () => void;
+  onAddToPlan: () => Promise<{ addedTo: string[]; skipped: string[] }>;
+  onDelete: () => Promise<void>;
+}) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [isPending, setIsPending] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const count = selectedIds.size;
+
+  async function handleAddToPlan() {
+    setIsPending(true);
+    setMessage(null);
+    setError(null);
+    try {
+      const { addedTo, skipped } = await onAddToPlan();
+      let msg = addedTo.length > 0 ? `Added to ${addedTo.join(', ')}` : 'No empty days found.';
+      if (skipped.length > 0) {
+        const skippedNames = skipped.map(id => recipes.find(r => r.id === id)?.name ?? id);
+        msg += ` ${skipped.length} recipe${skipped.length > 1 ? 's' : ''} had no available day: ${skippedNames.join(', ')}.`;
+      }
+      setMessage(msg);
+      setTimeout(() => { setMessage(null); onClear(); }, 3000);
+    } catch {
+      setError('Failed to add to plan. Try again.');
+    } finally {
+      setIsPending(false);
+    }
+  }
+
+  async function handleDeleteConfirm() {
+    setIsPending(true);
+    try {
+      await onDelete();
+      setConfirmDelete(false);
+      onClear();
+    } catch {
+      setError('Some recipes could not be deleted. Try again.');
+      setConfirmDelete(false);
+    } finally {
+      setIsPending(false);
+    }
+  }
+
+  return (
+    <div
+      className={`rx-selection-bar${count > 0 ? ' rx-selection-bar--visible' : ''}`}
+      aria-label="Selection actions"
+    >
+      {message ? (
+        <span className="rx-selection-bar-message">{message}</span>
+      ) : error ? (
+        <>
+          <span className="rx-selection-bar-error">{error}</span>
+          <button className="rx-selection-bar-clear" onClick={() => setError(null)}>Dismiss</button>
+        </>
+      ) : confirmDelete ? (
+        <>
+          <span className="rx-selection-bar-count">
+            Delete {count} recipe{count > 1 ? 's' : ''}? This can&apos;t be undone.
+          </span>
+          <button
+            className="btn-primary rx-selection-bar-btn"
+            onClick={handleDeleteConfirm}
+            disabled={isPending}
+            aria-label="Confirm"
+          >
+            {isPending ? 'Deleting…' : 'Confirm'}
+          </button>
+          <button
+            className="btn-outline rx-selection-bar-btn"
+            onClick={() => setConfirmDelete(false)}
+            disabled={isPending}
+            aria-label="Cancel"
+          >
+            Cancel
+          </button>
+        </>
+      ) : (
+        <>
+          <span className="rx-selection-bar-count">{count} selected</span>
+          <button className="rx-selection-bar-clear" onClick={onClear}>× Clear</button>
+          <button
+            className="btn-primary rx-selection-bar-btn"
+            onClick={handleAddToPlan}
+            disabled={isPending || count === 0}
+          >
+            {isPending ? 'Adding…' : 'Add to plan'}
+          </button>
+          <button
+            className="rx-selection-bar-delete"
+            onClick={() => setConfirmDelete(true)}
+            disabled={isPending || count === 0}
+            aria-label="Delete"
+          >
+            Delete
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
 export function RecipesPage() {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -160,6 +274,34 @@ export function RecipesPage() {
     q: debouncedSearch || undefined,
   });
   const { data: inventory = [] } = useInventory({});
+
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const addToNextEmptyDays = useAddToNextEmptyDays();
+  const deleteRecipe = useDeleteRecipe();
+
+  function toggleSelection(id: string) {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function clearSelection() {
+    setSelectedIds(new Set());
+  }
+
+  async function handleAddSelectedToPlan() {
+    const items = [...selectedIds].map(id => {
+      const recipe = recipes.find(r => r.id === id);
+      return { recipeId: id, servings: recipe?.servings ?? 2 };
+    });
+    return addToNextEmptyDays.mutateAsync(items);
+  }
+
+  async function handleDeleteSelected() {
+    await Promise.all([...selectedIds].map(id => deleteRecipe.mutateAsync(id)));
+  }
 
   // Hero / side features need full recipe objects (ingredients) — fetch them when picked.
   const sortedByMatch = useMemo(() => {
@@ -268,7 +410,14 @@ export function RecipesPage() {
               </div>
               <div className="rx-grid">
                 {cookable.map(({ recipe, match }) => (
-                  <RecipeCard key={recipe.id} recipe={recipe} match={match} onOpen={() => setModal({ mode: 'edit', id: recipe.id })} />
+                  <RecipeCard
+                    key={recipe.id}
+                    recipe={recipe}
+                    match={match}
+                    selected={selectedIds.has(recipe.id)}
+                    onSelect={() => toggleSelection(recipe.id)}
+                    onOpen={() => setModal({ mode: 'edit', id: recipe.id })}
+                  />
                 ))}
               </div>
             </section>
@@ -283,7 +432,14 @@ export function RecipesPage() {
               </div>
               <div className="rx-grid">
                 {shoppable.map(({ recipe, match }) => (
-                  <RecipeCard key={recipe.id} recipe={recipe} match={match} onOpen={() => setModal({ mode: 'edit', id: recipe.id })} />
+                  <RecipeCard
+                    key={recipe.id}
+                    recipe={recipe}
+                    match={match}
+                    selected={selectedIds.has(recipe.id)}
+                    onSelect={() => toggleSelection(recipe.id)}
+                    onOpen={() => setModal({ mode: 'edit', id: recipe.id })}
+                  />
                 ))}
               </div>
             </section>
@@ -298,7 +454,15 @@ export function RecipesPage() {
               </div>
               <div className="rx-grid rx-grid--dense">
                 {library.map(({ recipe, match }) => (
-                  <RecipeCard key={recipe.id} recipe={recipe} match={match} dense onOpen={() => setModal({ mode: 'edit', id: recipe.id })} />
+                  <RecipeCard
+                    key={recipe.id}
+                    recipe={recipe}
+                    match={match}
+                    dense
+                    selected={selectedIds.has(recipe.id)}
+                    onSelect={() => toggleSelection(recipe.id)}
+                    onOpen={() => setModal({ mode: 'edit', id: recipe.id })}
+                  />
                 ))}
               </div>
             </section>
@@ -311,7 +475,14 @@ export function RecipesPage() {
       ) : (
         <div className="rx-grid">
           {visible.map(({ recipe, match }) => (
-            <RecipeCard key={recipe.id} recipe={recipe} match={match} onOpen={() => setModal({ mode: 'edit', id: recipe.id })} />
+            <RecipeCard
+              key={recipe.id}
+              recipe={recipe}
+              match={match}
+              selected={selectedIds.has(recipe.id)}
+              onSelect={() => toggleSelection(recipe.id)}
+              onOpen={() => setModal({ mode: 'edit', id: recipe.id })}
+            />
           ))}
         </div>
       )}
@@ -324,8 +495,19 @@ export function RecipesPage() {
           mode={modal.mode}
           recipeId={modal.mode === 'edit' ? modal.id : undefined}
           onClose={() => setModal(null)}
+          onAddToPlan={async (recipeId, servings) =>
+            addToNextEmptyDays.mutateAsync([{ recipeId, servings }])
+          }
         />
       )}
+
+      <SelectionBar
+        selectedIds={selectedIds}
+        recipes={recipes}
+        onClear={clearSelection}
+        onAddToPlan={handleAddSelectedToPlan}
+        onDelete={handleDeleteSelected}
+      />
     </div>
   );
 }
