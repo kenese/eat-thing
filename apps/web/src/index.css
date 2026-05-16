@@ -71,3 +71,36 @@ body {
     padding: 16px var(--gutter-mobile) 24px;
   }
 }
+
+/* Utility: italic-serif "why" caption — reuse on any explanatory caption */
+.caption-serif {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--ink3);
+  line-height: 1.35;
+}
+
+/* Utility: eyebrow label — reuse above any section or page title */
+.eyebrow {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
+/* Outline button variant for use on ink-background cards */
+.btn-outline--on-dark {
+  background: transparent;
+  color: var(--paper);
+  border: 1.5px solid rgba(243, 245, 242, 0.45);
+  border-radius: var(--radius-control);
+  padding: 10px 14px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.btn-outline--on-dark:hover { border-color: var(--paper); }
