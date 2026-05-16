@@ -1,12 +1,15 @@
-// Meal Plan page — weekly grid. Crisp + Persimmon system.
-// The plan sits between Inventory (what you have) and Recipes (what you
-// could cook) → it's where decisions get committed for the week.
+// Meal Plan — date stream. Crisp + Persimmon system.
+//
+// New model: planning is no longer "this week, mon→sun". Any date can
+// hold up to 4 recipes. The page opens with today as the 3rd visible
+// day (2 past days on the left) and scrolls ~2 weeks forward. There's
+// a "load date" affordance to jump anywhere.
 //
 // Read priority:
-//  1. Per-day card: meal name, can-cook status, "uses N expiring" hint
-//  2. Week summary strip: pantry-only days vs shop-needed days, $ estimate
-//  3. Slot ideas / quick-fill suggestions from Recipes inventory match
-//  4. Open seats — empty days you can drag a recipe onto
+//  1. Per-day card: meal name(s), can-cook status, "uses N expiring" hint
+//  2. Horizon strip up top: 16-day overview, today highlighted
+//  3. Open-seat suggestions from inventory-aware recipes
+//  4. Auto-shop preview — what gets bought on the next shop day
 
 const MP = {
   paper:   '#f3f5f2',
@@ -29,21 +32,59 @@ const MP_FONT = {
   serif: '"Lora", serif',
 };
 
-// "today" + 6 days. Per slot: meal + missing[] for inventory-match logic.
-const WEEK = [
-  { day:'Mon', date:'May 11', label:'today',    meal:{ slotId:'rx-r1', name:'Cacio e pepe',                   time:20, servings:2, missing:[],         tags:['pantry','pasta'] } },
-  { day:'Tue', date:'May 12', label:'tomorrow', meal:{ slotId:'rx-r3', name:'Charred broccoli & lentils',     time:35, servings:4, missing:[],         tags:['veg','one-pan'] } },
-  { day:'Wed', date:'May 13', label:'',         meal:{ slotId:'rx-r6', name:'Roast chicken, lemon, fennel',   time:90, servings:4, missing:['whole chicken','thyme','dijon'], tags:['sunday','roast'] }, shopDay:true },
-  { day:'Thu', date:'May 14', label:'',         meal:{ slotId:'mp-leftover', name:'Chicken stock noodles',    time:25, servings:3, missing:[],         tags:['leftover','quick'] }, leftover:true },
-  { day:'Fri', date:'May 15', label:'',         meal:{ slotId:'rx-r7', name:'Pizza, sausage & honey',         time:60, servings:4, missing:['mozzarella','italian sausage'], tags:['friday','dough'] } },
-  { day:'Sat', date:'May 16', label:'',         meal:{ slotId:'rx-r4', name:'Saturday omelette, soft herbs',  time:15, servings:2, missing:[],         tags:['eggs','quick'] } },
-  { day:'Sun', date:'May 17', label:'',         meal:null }, // open seat
+// 16 days: may 9 → may 24. Today = may 11 (mon), at index 2 → 3rd visible.
+const DAYS = [
+  { d:9,  wk:'sat', past:true,  meals:[
+    { name:'Spaghetti aglio e olio', cooked:true, time:18 },
+  ]},
+  { d:10, wk:'sun', past:true,  meals:[
+    { name:'Stock noodles · leftover', cooked:true, time:25 },
+  ]},
+  { d:11, wk:'mon', today:true, label:'today', meals:[
+    { slotId:'mp-cacio',   name:'Cacio e pepe',
+      time:20, servings:2, missing:[], tag:'all pantry' },
+  ]},
+  { d:12, wk:'tue', label:'tomorrow', meals:[
+    { slotId:'mp-broc',    name:'Charred broccoli & lentils',
+      time:35, servings:4, missing:[], tag:'one-pan' },
+  ]},
+  { d:13, wk:'wed', meals:[
+    { slotId:'mp-roast',   name:'Roast chicken, lemon, fennel',
+      time:90, servings:4, missing:['whole chicken','thyme','dijon'], tag:'sunday-y' },
+  ], shopDay:true },
+  { d:14, wk:'thu', meals:[
+    { slotId:'mp-leftover',name:'Chicken stock noodles',
+      time:25, servings:3, missing:[], tag:'leftover' },
+  ], leftover:true },
+  { d:15, wk:'fri', meals:[
+    { slotId:'mp-pizza',   name:'Pizza, sausage & honey',
+      time:60, servings:4, missing:['mozzarella','italian sausage'], tag:'dough' },
+    {                       name:'Bitter greens salad',
+      time:10, servings:4, missing:[], tag:'pantry side' },
+  ]},
+  { d:16, wk:'sat', meals:[
+    { slotId:'mp-omel',    name:'Saturday omelette, soft herbs',
+      time:15, servings:2, missing:[], tag:'eggs' },
+  ]},
+  { d:17, wk:'sun', meals:[] },
+  { d:18, wk:'mon', meals:[] },
+  { d:19, wk:'tue', meals:[
+    { name:'Shakshuka', time:30, servings:3, missing:['canned tomato','feta'], tag:'eggs' },
+  ]},
+  { d:20, wk:'wed', meals:[] },
+  { d:21, wk:'thu', meals:[] },
+  { d:22, wk:'fri', meals:[] },
+  { d:23, wk:'sat', meals:[] },
+  { d:24, wk:'sun', meals:[] },
 ];
 
 const SUGGEST = [
-  { id:'r5',  name:'Spaghetti aglio e olio',          time:18, missing:[],                 hint:'all pantry' },
-  { id:'r8',  name:'Shakshuka',                       time:30, missing:['canned tomatoes','feta'], hint:'add to wed shop' },
-  { id:'r2',  name:'Buttermilk biscuits + cilantro',  time:40, missing:[],                 hint:'uses 3 expiring' },
+  { id:'r5', name:'Spaghetti aglio e olio',          time:18, missing:[],
+    hint:'all pantry · 18m' },
+  { id:'r8', name:'Shakshuka',                       time:30,
+    missing:['canned tomatoes','feta'], hint:'add to next shop · 30m' },
+  { id:'r2', name:'Buttermilk biscuits + cilantro',  time:40, missing:[],
+    hint:'uses 3 expiring · 40m' },
 ];
 
 function MpHeader() {
@@ -87,41 +128,182 @@ function MpHeader() {
   );
 }
 
-function StatusChip({ kind }) {
+function StatusChip({ kind, small }) {
   // kind: 'cook' | 'shop' | 'leftover' | 'open'
   const styles = {
-    cook:     { bg: MP.fresh,     fg: MP.paper, label: 'cook now' },
-    shop:     { bg: MP.persimmon, fg: MP.paper, label: 'needs shop' },
-    leftover: { bg: MP.ink,       fg: MP.paper, label: 'leftover' },
-    open:     { bg: 'transparent',fg: MP.mute,  label: 'open seat', border: true },
+    cook:     { bg: MP.fresh,      fg: MP.paper, label: 'cook now' },
+    shop:     { bg: MP.persimmon,  fg: MP.paper, label: 'needs shop' },
+    leftover: { bg: MP.ink,        fg: MP.paper, label: 'leftover' },
+    open:     { bg: 'transparent', fg: MP.mute,  label: 'open seat', border: true },
   }[kind];
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 6,
-      padding: '3px 8px', borderRadius: 999,
+      padding: small ? '2px 7px' : '3px 8px',
+      borderRadius: 999,
       background: styles.bg, color: styles.fg,
       border: styles.border ? `1px dashed ${MP.mute}` : 'none',
-      fontFamily: MP_FONT.sans, fontSize: 10, fontWeight: 700,
+      fontFamily: MP_FONT.sans,
+      fontSize: small ? 9 : 10, fontWeight: 700,
       letterSpacing: '0.1em', textTransform: 'uppercase',
+      whiteSpace: 'nowrap',
     }}>
-      {!styles.border && <span style={{ width: 4, height: 4, borderRadius: '50%', background: styles.fg, opacity: 0.9 }} />}
+      {!styles.border && (
+        <span style={{
+          width: 4, height: 4, borderRadius: '50%',
+          background: styles.fg, opacity: 0.9,
+        }} />
+      )}
       {styles.label}
     </span>
   );
 }
 
-function DayCard({ d, isToday }) {
-  const m = d.meal;
-  const kind = !m ? 'open' : d.leftover ? 'leftover' : m.missing.length === 0 ? 'cook' : 'shop';
+// Horizon strip — 16 day pills, today highlighted, past dimmed.
+function HorizonStrip({ days }) {
+  return (
+    <div style={{
+      display: 'grid', gridTemplateColumns: `repeat(${days.length}, 1fr)`,
+      gap: 6,
+    }}>
+      {days.map((day, i) => {
+        const has = day.meals.length > 0;
+        const multi = day.meals.length > 1;
+        const isToday = day.today;
+        const isPast = day.past;
+        return (
+          <div key={i} style={{
+            padding: '8px 4px 7px', borderRadius: 10,
+            background: isToday ? MP.ink : 'transparent',
+            color: isToday ? MP.paper : isPast ? MP.mute : MP.ink,
+            opacity: isPast ? 0.55 : 1,
+            border: isToday ? 'none' : `1px solid ${isPast ? MP.rule2 : MP.rule}`,
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', gap: 3, textAlign: 'center',
+          }}>
+            <div style={{
+              fontFamily: MP_FONT.sans, fontSize: 9, fontWeight: 700,
+              letterSpacing: '0.12em', textTransform: 'uppercase',
+              opacity: 0.85,
+            }}>{day.wk}</div>
+            <div style={{
+              fontFamily: MP_FONT.serif, fontStyle: 'italic',
+              fontSize: 18, lineHeight: 1, fontWeight: 400,
+            }}>{day.d}</div>
+            {has ? (
+              multi ? (
+                <div style={{
+                  fontFamily: MP_FONT.sans, fontSize: 9, fontWeight: 700,
+                  color: isToday ? MP.persimmon : MP.persimDeep,
+                }}>{day.meals.length}×</div>
+              ) : (
+                <div style={{
+                  width: 4, height: 4, borderRadius: '50%',
+                  background: isToday ? MP.persimmon : MP.fresh,
+                }} />
+              )
+            ) : (
+              <div style={{ height: 4 }} />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// Compact stacked meal row — used when a day has 2+ meals, and as the
+// secondary line(s) on a single-meal card if it's a past/cooked entry.
+function MealRow({ meal, dark, past }) {
+  const kind =
+    meal.cooked ? 'cooked'
+    : meal.missing && meal.missing.length > 0 ? 'shop'
+    : 'cook';
+
+  if (meal.cooked) {
+    return (
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 8,
+        padding: '7px 0',
+        borderTop: `1px solid ${dark ? '#ffffff14' : MP.rule2}`,
+      }}>
+        <svg width="13" height="13" viewBox="0 0 12 12" fill="none">
+          <path d="M2 6.5L4.5 9L10 3.5"
+            stroke={MP.fresh} strokeWidth="1.8"
+            strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        <div style={{
+          flex: 1, fontSize: 13, fontWeight: 500,
+          color: dark ? `${MP.paper}b3` : MP.ink2,
+          textDecoration: 'line-through',
+          textDecorationColor: dark ? '#ffffff33' : MP.rule,
+          minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}>{meal.name}</div>
+        <div style={{
+          fontFamily: MP_FONT.serif, fontStyle: 'italic',
+          fontSize: 11, color: MP.mute,
+        }}>cooked</div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 8,
+      padding: '8px 0',
+      borderTop: `1px solid ${dark ? '#ffffff14' : MP.rule2}`,
+    }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{
+          fontFamily: MP_FONT.sans, fontSize: 13, fontWeight: 600,
+          letterSpacing: '-0.005em', lineHeight: 1.25,
+          color: dark ? MP.paper : MP.ink,
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>{meal.name}</div>
+        {meal.missing && meal.missing.length > 0 ? (
+          <div style={{
+            fontFamily: MP_FONT.serif, fontStyle: 'italic',
+            fontSize: 11, color: dark ? `${MP.paper}b3` : MP.ink3,
+            marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>need {meal.missing[0]}{meal.missing.length > 1 ? ` & ${meal.missing.length - 1} more` : ''}</div>
+        ) : meal.tag ? (
+          <div style={{
+            fontFamily: MP_FONT.serif, fontStyle: 'italic',
+            fontSize: 11, color: dark ? `${MP.paper}99` : MP.mute,
+            marginTop: 2,
+          }}>{meal.time}m · {meal.tag}</div>
+        ) : null}
+      </div>
+      <StatusChip kind={kind} small />
+    </div>
+  );
+}
+
+function DayCard({ d }) {
+  const isToday = d.today;
+  const isPast = d.past;
+  const meals = d.meals;
+  const empty = meals.length === 0;
+  const primary = meals[0];
+  const rest = meals.slice(1);
+
+  // Card-level chip for single-meal days
+  const primaryKind = !primary ? 'open'
+    : primary.cooked ? 'cooked'
+    : d.leftover ? 'leftover'
+    : primary.missing && primary.missing.length > 0 ? 'shop'
+    : 'cook';
 
   return (
     <div style={{
       background: isToday ? MP.ink : MP.paper,
       color: isToday ? MP.paper : MP.ink,
       border: isToday ? 'none' : `1px solid ${MP.rule}`,
-      borderRadius: 12, padding: '14px 14px 14px',
+      borderRadius: 12, padding: '14px 14px 12px',
       display: 'flex', flexDirection: 'column', gap: 10,
-      minHeight: 200, position: 'relative',
+      minHeight: 280, position: 'relative',
+      opacity: isPast ? 0.6 : 1,
     }}>
       {/* day header */}
       <div style={{
@@ -131,16 +313,23 @@ function DayCard({ d, isToday }) {
           fontFamily: MP_FONT.sans, fontSize: 11, fontWeight: 700,
           letterSpacing: '0.12em', textTransform: 'uppercase',
           color: isToday ? MP.persimmon : MP.mute,
-        }}>{d.day} · {d.date.split(' ')[1]}</div>
+        }}>{d.wk} · {d.d}</div>
         {d.label && (
           <div style={{
             fontFamily: MP_FONT.serif, fontStyle: 'italic',
             fontSize: 12, color: isToday ? `${MP.paper}99` : MP.ink3,
           }}>{d.label}</div>
         )}
+        {meals.length > 1 && (
+          <div style={{
+            fontFamily: MP_FONT.sans, fontSize: 10, fontWeight: 700,
+            color: isToday ? MP.persimmon : MP.persimDeep,
+            letterSpacing: '0.04em',
+          }}>{meals.length} meals</div>
+        )}
       </div>
 
-      {!m ? (
+      {empty ? (
         <div style={{
           flex: 1, display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center',
@@ -152,51 +341,89 @@ function DayCard({ d, isToday }) {
             fontFamily: MP_FONT.serif, fontStyle: 'italic',
             fontSize: 22, color: MP.ink3,
           }}>open seat</div>
-          <div style={{ fontSize: 11, marginTop: 6 }}>drop a recipe</div>
+          <div style={{
+            fontFamily: MP_FONT.sans, fontSize: 11, marginTop: 8,
+            color: MP.persimmon, fontWeight: 700, letterSpacing: '0.02em',
+          }}>+ add recipe</div>
+        </div>
+      ) : primary.cooked ? (
+        // Past day — no image, just check + name + cooked
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+          <div style={{
+            display: 'flex', alignItems: 'flex-start', gap: 8,
+            padding: '4px 0 10px',
+          }}>
+            <svg width="16" height="16" viewBox="0 0 12 12" fill="none" style={{ marginTop: 2 }}>
+              <path d="M2 6.5L4.5 9L10 3.5"
+                stroke={MP.fresh} strokeWidth="2"
+                strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <div style={{
+              flex: 1,
+              fontFamily: MP_FONT.sans, fontSize: 15, fontWeight: 600,
+              color: MP.ink2, lineHeight: 1.25,
+              textDecoration: 'line-through', textDecorationColor: MP.rule,
+            }}>{primary.name}</div>
+          </div>
+          <div style={{ flex: 1 }} />
+          <div style={{
+            fontFamily: MP_FONT.serif, fontStyle: 'italic',
+            fontSize: 13, color: MP.mute,
+          }}>cooked · {primary.time}m</div>
         </div>
       ) : (
         <>
-          {/* image */}
+          {/* primary meal — image + title */}
           <image-slot
-            id={m.slotId}
+            id={primary.slotId}
             shape="rounded"
             radius={8}
-            placeholder={`drop ${m.name.split(',')[0].toLowerCase()}`}
+            placeholder={`drop ${primary.name.split(',')[0].toLowerCase()}`}
             style={{
-              width: '100%', height: 96, display: 'block',
+              width: '100%',
+              height: rest.length > 0 ? 70 : 96,
+              display: 'block',
               background: isToday ? '#1a2520' : MP.cream,
             }}
           />
           <div style={{
-            fontFamily: MP_FONT.sans, fontSize: 18, fontWeight: 600,
-            letterSpacing: '-0.012em', lineHeight: 1.18,
+            fontFamily: MP_FONT.sans,
+            fontSize: rest.length > 0 ? 15 : 17,
+            fontWeight: 600, letterSpacing: '-0.012em', lineHeight: 1.2,
             color: isToday ? MP.paper : MP.ink,
-          }}>{m.name}</div>
+          }}>{primary.name}</div>
 
-          {m.missing.length > 0 && (
+          {primary.missing && primary.missing.length > 0 && (
             <div style={{
               fontFamily: MP_FONT.serif, fontStyle: 'italic',
-              fontSize: 13, lineHeight: 1.35,
+              fontSize: 12, lineHeight: 1.35,
               color: isToday ? `${MP.paper}b3` : MP.ink3,
             }}>
-              need {m.missing.slice(0, 2).join(', ')}{m.missing.length > 2 ? ` & ${m.missing.length - 2} more` : ''}
+              need {primary.missing.slice(0, 2).join(', ')}
+              {primary.missing.length > 2 ? ` & ${primary.missing.length - 2} more` : ''}
             </div>
           )}
+
+          {/* additional meals stacked */}
+          {rest.map((m, i) => (
+            <MealRow key={i} meal={m} dark={isToday} />
+          ))}
 
           <div style={{ flex: 1 }} />
 
           <div style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            fontFamily: MP_FONT.sans, fontSize: 11,
-            color: isToday ? `${MP.paper}b3` : MP.mute,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            gap: 8,
           }}>
-            <span style={{ fontVariantNumeric: 'tabular-nums' }}>{m.time}m</span>
-            <span style={{ opacity: 0.5 }}>·</span>
-            <span>serves {m.servings}</span>
-          </div>
-
-          <div>
-            <StatusChip kind={kind} />
+            <div style={{
+              fontFamily: MP_FONT.sans, fontSize: 11,
+              color: isToday ? `${MP.paper}b3` : MP.mute,
+            }}>
+              <span style={{ fontVariantNumeric: 'tabular-nums' }}>{primary.time}m</span>
+              <span style={{ opacity: 0.5, margin: '0 6px' }}>·</span>
+              <span>serves {primary.servings}</span>
+            </div>
+            <StatusChip kind={primaryKind} />
           </div>
         </>
       )}
@@ -205,18 +432,41 @@ function DayCard({ d, isToday }) {
 }
 
 function MealPlan() {
-  const pantryDays   = WEEK.filter(d => d.meal && d.meal.missing.length === 0 && !d.leftover).length;
-  const leftoverDays = WEEK.filter(d => d.leftover).length;
-  const shopDays     = WEEK.filter(d => d.meal && d.meal.missing.length > 0).length;
-  const openDays     = WEEK.filter(d => !d.meal).length;
-  const todayIdx     = 0;
+  // Day-strip is horizontally scrollable across all 16 days. Initial
+  // scroll position lands with today as the 2nd visible card (1 past
+  // day on the left, 5 future on the right). User can scroll further
+  // left for prev days (future: auto-load more) and right for ~2 wks.
+  const stripRef = React.useRef(null);
+  React.useEffect(() => {
+    const el = stripRef.current;
+    if (!el) return;
+    // Find today's card and align it to the 2nd slot.
+    const cards = el.querySelectorAll('[data-day]');
+    const todayEl = el.querySelector('[data-today="1"]');
+    if (!todayEl || cards.length < 2) return;
+    // Width of one card + gap → scroll today.offsetLeft minus one slot
+    const cardW = cards[1].offsetLeft - cards[0].offsetLeft;
+    el.scrollLeft = Math.max(0, todayEl.offsetLeft - cardW);
+  }, []);
+
+  // Summary across the next 7 days from today (today + 6)
+  const todayIdx = DAYS.findIndex(d => d.today);
+  const next7 = DAYS.slice(todayIdx, todayIdx + 7);
+  const pantryMeals = next7.flatMap(d => d.meals).filter(m => !m.cooked && (!m.missing || m.missing.length === 0)).length;
+  const shopMeals   = next7.flatMap(d => d.meals).filter(m => m.missing && m.missing.length > 0).length;
+  const openDays    = next7.filter(d => d.meals.length === 0).length;
+
+  // Open-seat suggestion targets — the first few empty future days
+  const openSlots = DAYS.filter(d => !d.past && !d.today && d.meals.length === 0);
+
+  // Total shop count across the horizon (used in the CTA badge)
+  const needsShopMeals = DAYS.flatMap(d => d.meals).filter(m => m.missing && m.missing.length > 0).length;
 
   return (
     <div style={{
-      width: '100%', height: '100%', overflow: 'hidden',
+      width: '100%', height: '100%', overflowY: 'auto', overflowX: 'hidden',
       background: MP.paper, color: MP.ink,
       fontFamily: MP_FONT.sans, fontSize: 14, lineHeight: 1.4,
-      display: 'flex', flexDirection: 'column',
     }}>
       <MpHeader />
 
@@ -229,102 +479,160 @@ function MealPlan() {
           <div style={{
             fontFamily: MP_FONT.sans, fontSize: 11, color: MP.mute,
             letterSpacing: '0.14em', textTransform: 'uppercase', fontWeight: 600,
-          }}>week 19 · 11 – 17 may</div>
+          }}>may 2026</div>
           <div style={{
             fontFamily: MP_FONT.serif, fontStyle: 'italic',
             fontSize: 56, lineHeight: 1, fontWeight: 400, letterSpacing: '-0.02em',
             marginTop: 6,
-          }}>This week<span style={{ color: MP.persimmon }}>.</span></div>
+          }}>Plan<span style={{ color: MP.persimmon }}>.</span></div>
           <div style={{ fontSize: 14, color: MP.ink2, marginTop: 8 }}>
-            <span style={{ fontWeight: 600, color: MP.ink }}>{pantryDays} from the pantry</span> ·{' '}
-            <span style={{ fontWeight: 600, color: MP.persimDeep }}>{shopDays} need a shop</span> ·{' '}
-            <span style={{ fontFamily: MP_FONT.serif, fontStyle: 'italic', fontSize: 16 }}>{openDays} open seat</span>
+            <span style={{ fontWeight: 600, color: MP.ink }}>{pantryMeals} from the pantry</span> ·{' '}
+            <span style={{ fontWeight: 600, color: MP.persimDeep }}>{shopMeals} need a shop</span> ·{' '}
+            <span style={{ fontFamily: MP_FONT.serif, fontStyle: 'italic', fontSize: 16 }}>{openDays} open</span>
+            <span style={{ color: MP.mute, marginLeft: 6 }}>· next 7 days</span>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {/* scroll back / today / scroll forward */}
           <button style={{
             background: 'transparent', color: MP.ink2,
             border: `1px solid ${MP.rule}`, borderRadius: 8,
-            padding: '10px 14px', fontFamily: MP_FONT.sans,
-            fontSize: 13, fontWeight: 500, cursor: 'pointer',
-          }}>← last week</button>
+            width: 38, height: 38, padding: 0,
+            fontFamily: MP_FONT.serif, fontStyle: 'italic',
+            fontSize: 18, fontWeight: 400, cursor: 'pointer',
+          }}>←</button>
+          <button style={{
+            background: 'transparent', color: MP.ink,
+            border: `1px solid ${MP.rule}`, borderRadius: 8,
+            padding: '0 14px', height: 38,
+            fontFamily: MP_FONT.sans, fontSize: 13, fontWeight: 600,
+            cursor: 'pointer',
+          }}>today</button>
           <button style={{
             background: 'transparent', color: MP.ink2,
             border: `1px solid ${MP.rule}`, borderRadius: 8,
-            padding: '10px 14px', fontFamily: MP_FONT.sans,
-            fontSize: 13, fontWeight: 500, cursor: 'pointer',
-          }}>next week →</button>
+            width: 38, height: 38, padding: 0,
+            fontFamily: MP_FONT.serif, fontStyle: 'italic',
+            fontSize: 18, fontWeight: 400, cursor: 'pointer',
+          }}>→</button>
+          {/* load date — calendar icon */}
+          <button style={{
+            background: 'transparent', color: MP.ink2,
+            border: `1px solid ${MP.rule}`, borderRadius: 8,
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            padding: '0 12px', height: 38,
+            fontFamily: MP_FONT.sans, fontSize: 13, fontWeight: 500,
+            cursor: 'pointer',
+          }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+              <rect x="3" y="5" width="18" height="16" rx="2.5"
+                stroke="currentColor" strokeWidth="1.6" />
+              <line x1="3" y1="10" x2="21" y2="10"
+                stroke="currentColor" strokeWidth="1.6" />
+              <line x1="8" y1="3" x2="8" y2="7"
+                stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+              <line x1="16" y1="3" x2="16" y2="7"
+                stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
+            <span>load date</span>
+          </button>
           <button style={{
             background: MP.persimmon, color: MP.paper, border: 'none',
-            borderRadius: 8, padding: '10px 16px',
+            borderRadius: 8, padding: '0 16px', height: 38,
             fontFamily: MP_FONT.sans, fontSize: 13, fontWeight: 700,
-            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
-          }}>regenerate list <span style={{ fontFamily: MP_FONT.serif, fontStyle:'italic', fontSize: 16 }}>→</span></button>
+            cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6,
+          }}>
+            add recipes to list
+            <span style={{
+              background: 'rgba(255,255,255,0.2)', borderRadius: 999,
+              padding: '1px 7px', fontSize: 11, fontWeight: 700,
+              fontVariantNumeric: 'tabular-nums',
+            }}>{needsShopMeals}</span>
+            <span style={{ fontFamily: MP_FONT.serif, fontStyle: 'italic', fontSize: 16 }}>→</span>
+          </button>
         </div>
       </div>
 
-      {/* Summary strip — proportions of pantry / leftover / shop / open */}
+      {/* Horizon strip — 16 day pills, today is 3rd */}
       <div style={{
-        padding: '14px 36px 18px',
+        padding: '12px 36px 16px',
         borderTop: `1px solid ${MP.rule}`,
         borderBottom: `1px solid ${MP.rule}`,
-        display: 'flex', alignItems: 'center', gap: 20,
+        background: MP.paper,
       }}>
         <div style={{
-          flex: 1, height: 8, borderRadius: 999,
-          background: MP.cream, overflow: 'hidden',
-          display: 'flex',
+          display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
+          marginBottom: 10,
         }}>
-          <div style={{ flex: pantryDays,   background: MP.fresh }} />
-          <div style={{ flex: leftoverDays, background: MP.ink }} />
-          <div style={{ flex: shopDays,     background: MP.persimmon }} />
-          <div style={{ flex: openDays,     background: 'transparent' }} />
+          <div style={{
+            fontFamily: MP_FONT.sans, fontSize: 10, fontWeight: 700,
+            color: MP.mute, letterSpacing: '0.14em', textTransform: 'uppercase',
+          }}>16-day horizon · 9 – 24 may</div>
+          <div style={{
+            display: 'flex', gap: 14,
+            fontFamily: MP_FONT.sans, fontSize: 11, color: MP.ink2,
+          }}>
+            {[
+              ['cook now',  pantryMeals, MP.fresh],
+              ['needs shop', shopMeals,  MP.persimmon],
+              ['leftover', next7.filter(d => d.leftover).length, MP.ink],
+              ['open',     openDays,     MP.mute, true],
+            ].map(([label, n, c, dashed], i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{
+                  width: 7, height: 7, borderRadius: '50%',
+                  background: dashed ? 'transparent' : c,
+                  border: dashed ? `1.5px dashed ${c}` : 'none',
+                }} />
+                <span>{label}</span>
+                <span style={{ color: MP.mute, fontVariantNumeric: 'tabular-nums' }}>{n}</span>
+              </div>
+            ))}
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: 18, fontFamily: MP_FONT.sans, fontSize: 12 }}>
-          {[
-            ['cook now',  pantryDays,   MP.fresh],
-            ['leftover',  leftoverDays, MP.ink],
-            ['needs shop',shopDays,     MP.persimmon],
-            ['open',      openDays,     MP.mute, true],
-          ].map(([label, n, c, dashed], i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{
-                width: 8, height: 8, borderRadius: '50%',
-                background: dashed ? 'transparent' : c,
-                border: dashed ? `1.5px dashed ${c}` : 'none',
-              }} />
-              <span style={{ color: MP.ink2 }}>{label}</span>
-              <span style={{ color: MP.mute, fontVariantNumeric: 'tabular-nums' }}>{n}</span>
-            </div>
-          ))}
-        </div>
-        <div style={{
-          paddingLeft: 18, borderLeft: `1px solid ${MP.rule}`,
-          fontFamily: MP_FONT.sans, fontSize: 12, color: MP.ink2,
-        }}>
-          <div style={{ fontSize: 11, color: MP.mute, letterSpacing: '0.06em', textTransform: 'uppercase' }}>wed shop</div>
-          <div><span style={{ fontFamily: MP_FONT.serif, fontStyle: 'italic', fontSize: 16, color: MP.persimDeep }}>$48.20</span> · 13 items</div>
-        </div>
+        <HorizonStrip days={DAYS} />
       </div>
 
-      {/* Scrollable plan */}
-      <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: '24px 36px 32px' }}>
-        {/* The week — 7 cards */}
-        <div style={{
-          display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)',
-          gap: 12, marginBottom: 32,
-        }}>
-          {WEEK.map((d, i) => (
-            <DayCard key={d.day} d={d} isToday={i === todayIdx} />
-          ))}
+      {/* Plan body — normal page flow, only the day-strip scrolls horizontally */}
+      <div style={{ padding: '24px 0 32px' }}>
+        {/* Horizontal day strip — all 16 days, scrolls left/right.
+            Today is positioned as the 2nd visible card on mount.
+            Negative margins + matching padding let cards bleed to the
+            viewport edge while the lower content stays gutter-aligned. */}
+        <div
+          ref={stripRef}
+          style={{
+            overflowX: 'auto', overflowY: 'hidden',
+            scrollSnapType: 'x proximity',
+            padding: '4px 36px 16px',
+            marginBottom: 32,
+            // hide scrollbar visually but keep functional
+            scrollbarWidth: 'thin',
+          }}
+        >
+          <div style={{
+            display: 'grid',
+            gridAutoFlow: 'column',
+            gridAutoColumns: '162px',
+            gap: 12,
+            paddingBottom: 4, // room for any scrollbar
+          }}>
+            {DAYS.map((d) => (
+              <div key={d.d} data-day={d.d} data-today={d.today ? 1 : 0}
+                style={{ scrollSnapAlign: 'start' }}>
+                <DayCard d={d} />
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Lower row: suggestions + shop preview */}
+        {/* Lower row: suggestions + shop preview — normal flow */}
         <div style={{
+          padding: '0 36px',
           display: 'grid', gridTemplateColumns: '1.4fr 1fr',
           gap: 20,
         }}>
-          {/* Slot ideas for sunday's open seat */}
+          {/* Fill open seats */}
           <section style={{
             background: MP.paper, border: `1px solid ${MP.rule}`,
             borderRadius: 14, padding: '20px 22px',
@@ -333,11 +641,11 @@ function MealPlan() {
               <span style={{
                 fontFamily: MP_FONT.serif, fontStyle: 'italic',
                 fontSize: 24, lineHeight: 1, color: MP.ink,
-              }}>Fill Sunday<span style={{ color: MP.persimmon }}>.</span></span>
+              }}>Open seats<span style={{ color: MP.persimmon }}>.</span></span>
               <span style={{
                 fontFamily: MP_FONT.sans, fontSize: 11, fontWeight: 600,
                 color: MP.mute, letterSpacing: '0.12em', textTransform: 'uppercase',
-              }}>three picks</span>
+              }}>{openSlots.length} days ahead · three picks</span>
               <span style={{ flex: 1 }} />
               <span style={{ fontSize: 12, color: MP.ink2 }}>based on what you have & what's expiring</span>
             </div>
@@ -365,13 +673,13 @@ function MealPlan() {
                     borderRadius: 8, padding: '8px 12px',
                     fontFamily: MP_FONT.sans, fontSize: 12, fontWeight: 700,
                     cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
-                  }}>place in sun <span style={{ fontFamily: MP_FONT.serif, fontStyle:'italic' }}>→</span></button>
+                  }}>pick day <span style={{ fontFamily: MP_FONT.serif, fontStyle:'italic' }}>→</span></button>
                 </div>
               ))}
             </div>
           </section>
 
-          {/* Auto-shop preview */}
+          {/* Auto-shop preview — next shop in the horizon */}
           <section style={{
             background: MP.ink, color: MP.paper, borderRadius: 14,
             padding: '20px 22px',
@@ -381,7 +689,7 @@ function MealPlan() {
               <div style={{
                 fontFamily: MP_FONT.sans, fontSize: 11, fontWeight: 700,
                 color: MP.persimmon, letterSpacing: '0.14em', textTransform: 'uppercase',
-              }}>auto-shop · queued</div>
+              }}>next shop · queued</div>
               <div style={{
                 fontFamily: MP_FONT.serif, fontStyle: 'italic',
                 fontSize: 34, lineHeight: 1.05, marginTop: 4,

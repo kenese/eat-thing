@@ -29,7 +29,7 @@ const SL_FONT = {
 };
 
 // reason: 'meal:Wed' | 'meal:Fri' | 'staple' | 'manual'
-const ITEMS = [
+const SL_ITEMS = [
   { aisle:'produce',  name:'fennel',           qty:'2 bulbs',  price:4.80, reason:'meal:Wed', checked:false },
   { aisle:'produce',  name:'lemons',           qty:'4',        price:3.20, reason:'meal:Wed', checked:false },
   { aisle:'produce',  name:'parsley',          qty:'1 bunch',  price:1.80, reason:'meal:Wed', checked:true  },
@@ -199,9 +199,9 @@ function AisleSection({ aisle, items }) {
 }
 
 function ShoppingList() {
-  const total = ITEMS.reduce((s, it) => s + it.price, 0);
+  const total = SL_ITEMS.reduce((s, it) => s + it.price, 0);
   const byAisle = {};
-  ITEMS.forEach(it => {
+  SL_ITEMS.forEach(it => {
     (byAisle[it.aisle] ||= []).push(it);
   });
   const aisleOrder = ['produce', 'butcher', 'dairy', 'pantry', 'frozen', 'other'];
@@ -231,7 +231,7 @@ function ShoppingList() {
             marginTop: 6,
           }}>The list<span style={{ color: SL.persimmon }}>.</span></div>
           <div style={{ fontSize: 14, color: SL.ink2, marginTop: 8 }}>
-            <span style={{ fontWeight: 600, color: SL.ink }}>{ITEMS.length} items</span> across {aisleOrder.filter(a => byAisle[a]).length} aisles · for{' '}
+            <span style={{ fontWeight: 600, color: SL.ink }}>{SL_ITEMS.length} items</span> across {aisleOrder.filter(a => byAisle[a]).length} aisles · for{' '}
             <span style={{ fontFamily: SL_FONT.serif, fontStyle: 'italic', fontSize: 16 }}>this week's plan</span>
           </div>
         </div>
@@ -260,11 +260,11 @@ function ShoppingList() {
       }}>
         <div style={{ display: 'flex', gap: 4 }}>
           {[
-            ['all',      'All',         ITEMS.length],
-            ['mealWed',  'Wed roast',   ITEMS.filter(i => i.reason === 'meal:Wed').length, SL.persimmon],
-            ['mealFri',  'Fri pizza',   ITEMS.filter(i => i.reason === 'meal:Fri').length, SL.persimmon],
-            ['staples',  'Staples',     ITEMS.filter(i => i.reason === 'staple').length, SL.green],
-            ['manual',   'You added',   ITEMS.filter(i => i.reason === 'manual').length],
+            ['all',      'All',         SL_ITEMS.length],
+            ['mealWed',  'Wed roast',   SL_ITEMS.filter(i => i.reason === 'meal:Wed').length, SL.persimmon],
+            ['mealFri',  'Fri pizza',   SL_ITEMS.filter(i => i.reason === 'meal:Fri').length, SL.persimmon],
+            ['staples',  'Staples',     SL_ITEMS.filter(i => i.reason === 'staple').length, SL.green],
+            ['manual',   'You added',   SL_ITEMS.filter(i => i.reason === 'manual').length],
           ].map(([k, label, n, dot], i) => (
             <div key={k} style={{
               padding: '7px 12px', borderRadius: 999,

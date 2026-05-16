@@ -727,4 +727,402 @@ function MList() {
   );
 }
 
-Object.assign(window, { MHome, MInventory, MRecipes, MList });
+// ── Screen 5 — Meal Plan ─────────────────────────────────────────────────
+//
+// New model: planning is no longer "this week, mon→sun". It's any date
+// with up to 4 recipes assigned. Plan opens with today as the 3rd entry
+// (2 past days visible above) and you can scroll ~2 weeks forward.
+//
+// Layout:
+//  • Title + "load date" (calendar) + add-recipe (+) buttons
+//  • Horizontal date strip — quick visual orientation, today highlighted
+//  • Vertical day stream — past days dimmed, today is an ink hero, future
+//    days are compact rows. Empty days are an "open seat + add" target.
+//  • Sticky bottom: "add recipes to list" — promotes missing ingredients
+//    from the planned recipes into the shopping list.
+
+function MPlanDayPill({ day }) {
+  const has = day.meals.length > 0;
+  const multi = day.meals.length > 1;
+  const isToday = day.today;
+  const isPast = day.past;
+  return (
+    <div style={{
+      flex: '1 0 0', minWidth: 0, height: 64,
+      padding: '8px 2px 6px',
+      borderRadius: 12,
+      background: isToday ? M.ink : 'transparent',
+      color: isToday ? '#fff' : isPast ? M.mute : M.ink,
+      opacity: isPast ? 0.55 : 1,
+      border: isToday ? 'none' : `1px solid ${isPast ? M.rule2 : M.rule}`,
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      gap: 3, textAlign: 'center',
+    }}>
+      <div style={{
+        fontFamily: M_FONT.sans, fontSize: 9, fontWeight: 700,
+        letterSpacing: '0.12em', textTransform: 'uppercase',
+        opacity: isToday ? 0.85 : 0.9,
+      }}>{day.wk}</div>
+      <div style={{
+        fontFamily: M_FONT.serif, fontStyle: 'italic',
+        fontSize: 22, lineHeight: 1, fontWeight: 400,
+      }}>{day.d}</div>
+      {has ? (
+        multi ? (
+          <div style={{
+            fontFamily: M_FONT.sans, fontSize: 9, fontWeight: 700,
+            color: isToday ? M.persimmon : M.persimDeep,
+            letterSpacing: '0.04em',
+          }}>{day.meals.length}×</div>
+        ) : (
+          <div style={{
+            width: 5, height: 5, borderRadius: '50%',
+            background: isToday ? M.persimmon : M.fresh,
+            marginTop: 1,
+          }} />
+        )
+      ) : (
+        <div style={{ height: 5, marginTop: 1 }} />
+      )}
+    </div>
+  );
+}
+
+function MPlanDayLabel({ day }) {
+  const isToday = day.today;
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 8,
+      padding: '8px 0 6px',
+    }}>
+      <div style={{
+        fontFamily: M_FONT.sans, fontSize: 10, fontWeight: 700,
+        letterSpacing: '0.14em', textTransform: 'uppercase',
+        color: isToday ? M.persimmon : M.mute,
+      }}>{day.wk} · may {day.d}</div>
+      {isToday && (
+        <div style={{
+          fontFamily: M_FONT.serif, fontStyle: 'italic',
+          fontSize: 13, color: M.ink2,
+        }}>today<span style={{ color: M.persimmon }}>.</span></div>
+      )}
+      <div style={{
+        flex: 1, marginLeft: 2,
+        borderTop: `1px solid ${isToday ? `${M.persimmon}55` : M.rule2}`,
+      }} />
+      {day.meals.length > 1 && (
+        <div style={{
+          fontFamily: M_FONT.sans, fontSize: 10, fontWeight: 600,
+          color: M.mute, letterSpacing: '0.04em',
+        }}>{day.meals.length} meals</div>
+      )}
+    </div>
+  );
+}
+
+function MPlanTodayMeal({ meal }) {
+  return (
+    <div style={{
+      background: M.ink, color: '#fff', borderRadius: 12,
+      padding: 10, display: 'flex', alignItems: 'center', gap: 12,
+    }}>
+      <image-slot
+        id={meal.slotId}
+        shape="rounded"
+        radius={8}
+        placeholder={meal.name.split(',')[0].toLowerCase()}
+        style={{ width: 64, height: 64, display: 'block', background: '#1a2520', flexShrink: 0 }}
+      />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{
+          fontFamily: M_FONT.serif, fontStyle: 'italic',
+          fontSize: 19, lineHeight: 1.1, fontWeight: 400,
+        }}>{meal.name}<span style={{ color: M.persimmon }}>.</span></div>
+        <div style={{
+          fontFamily: M_FONT.sans, fontSize: 11,
+          color: 'rgba(255,255,255,0.65)', marginTop: 4,
+        }}>
+          {meal.time}m · serves {meal.servings} · <span style={{ fontFamily: M_FONT.serif, fontStyle: 'italic' }}>{meal.tag}</span>
+        </div>
+      </div>
+      <MStatusChip kind={meal.kind} />
+    </div>
+  );
+}
+
+function MPlanMealRow({ meal, past }) {
+  if (meal.cooked) {
+    return (
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 10,
+        padding: '7px 0',
+      }}>
+        <svg width="14" height="14" viewBox="0 0 12 12" fill="none">
+          <path d="M2 6.5L4.5 9L10 3.5" stroke={M.fresh} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+        <div style={{
+          flex: 1, fontSize: 14, color: M.ink2,
+          textDecoration: 'line-through', textDecorationColor: M.rule,
+        }}>{meal.name}</div>
+        <div style={{
+          fontFamily: M_FONT.serif, fontStyle: 'italic',
+          fontSize: 12, color: M.mute,
+        }}>cooked</div>
+      </div>
+    );
+  }
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'flex-start', gap: 12,
+      padding: '8px 0',
+    }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{
+          fontFamily: M_FONT.sans, fontSize: 14, fontWeight: 600,
+          letterSpacing: '-0.005em', lineHeight: 1.25,
+        }}>{meal.name}</div>
+        {meal.missing && meal.missing.length > 0 && (
+          <div style={{
+            fontFamily: M_FONT.serif, fontStyle: 'italic',
+            fontSize: 12, color: M.ink3, marginTop: 2, lineHeight: 1.3,
+          }}>
+            need {meal.missing.slice(0, 2).join(', ')}
+            {meal.missing.length > 2 ? ` & ${meal.missing.length - 2} more` : ''}
+          </div>
+        )}
+        {meal.tag && !meal.missing?.length && (
+          <div style={{
+            fontFamily: M_FONT.serif, fontStyle: 'italic',
+            fontSize: 12, color: M.ink3, marginTop: 2, lineHeight: 1.3,
+          }}>{meal.time}m · {meal.tag}</div>
+        )}
+      </div>
+      <MStatusChip kind={meal.kind} />
+    </div>
+  );
+}
+
+function MPlanOpenSeat() {
+  return (
+    <div style={{
+      padding: '11px 14px', borderRadius: 10,
+      border: `1.5px dashed ${M.rule}`, background: M.paper2,
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    }}>
+      <span style={{
+        fontFamily: M_FONT.serif, fontStyle: 'italic',
+        fontSize: 14, color: M.ink3,
+      }}>open seat</span>
+      <span style={{
+        fontFamily: M_FONT.sans, fontSize: 12, fontWeight: 700,
+        color: M.persimmon, letterSpacing: '0.02em',
+      }}>+ add recipe</span>
+    </div>
+  );
+}
+
+function MPlanDayBlock({ day }) {
+  const isToday = day.today;
+  const isPast = day.past;
+  const has = day.meals.length > 0;
+  return (
+    <div style={{
+      marginBottom: isToday ? 14 : 10,
+      opacity: isPast ? 0.5 : 1,
+    }}>
+      <MPlanDayLabel day={day} />
+      {!has ? (
+        <MPlanOpenSeat />
+      ) : isToday ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {day.meals.map((m, i) => <MPlanTodayMeal key={i} meal={m} />)}
+        </div>
+      ) : (
+        <div>
+          {day.meals.map((m, i) => (
+            <div key={i} style={{
+              borderTop: i > 0 ? `1px solid ${M.rule2}` : 'none',
+            }}>
+              <MPlanMealRow meal={m} past={isPast} />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MPlan() {
+  // 16 days: may 9–24. Today = may 11 (mon, idx 2 → 3rd in row).
+  const days = [
+    { d: 9,  wk: 'sat', past: true,  meals: [
+      { name: 'Spaghetti aglio e olio', cooked: true },
+    ]},
+    { d: 10, wk: 'sun', past: true,  meals: [
+      { name: 'Stock noodles · leftover', cooked: true },
+    ]},
+    { d: 11, wk: 'mon', today: true, meals: [
+      { slotId: 'mp-m-cacio', name: 'Cacio e pepe', kind: 'cook',
+        time: 20, servings: 2, tag: 'all pantry' },
+    ]},
+    { d: 12, wk: 'tue', meals: [
+      { name: 'Charred broccoli & lentils', kind: 'cook', time: 35, tag: 'one-pan' },
+    ]},
+    { d: 13, wk: 'wed', meals: [
+      { name: 'Roast chicken, lemon & fennel', kind: 'shop', time: 90,
+        missing: ['whole chicken', 'thyme', 'dijon'] },
+    ]},
+    { d: 14, wk: 'thu', meals: [
+      { name: 'Chicken stock noodles', kind: 'leftover', time: 25, tag: 'from wed' },
+    ]},
+    { d: 15, wk: 'fri', meals: [
+      { name: 'Pizza, sausage & honey', kind: 'shop', time: 60,
+        missing: ['mozzarella', 'italian sausage'] },
+      { name: 'Bitter greens salad', kind: 'cook', time: 10, tag: 'pantry side' },
+    ]},
+    { d: 16, wk: 'sat', meals: [
+      { name: 'Saturday omelette', kind: 'cook', time: 15, tag: 'eggs' },
+    ]},
+    { d: 17, wk: 'sun', meals: [] },
+    { d: 18, wk: 'mon', meals: [] },
+    { d: 19, wk: 'tue', meals: [
+      { name: 'Shakshuka', kind: 'shop', time: 30, missing: ['canned tomato', 'feta'] },
+    ]},
+    { d: 20, wk: 'wed', meals: [] },
+    { d: 21, wk: 'thu', meals: [] },
+    { d: 22, wk: 'fri', meals: [] },
+    { d: 23, wk: 'sat', meals: [] },
+    { d: 24, wk: 'sun', meals: [] },
+  ];
+
+  // For the horizontal strip: 2 past + today + 4 future = 7 visible
+  const stripDays = days.slice(0, 7);
+
+  // Summary across the next 7 days from today (today + 6)
+  const next7 = days.slice(2, 9);
+  const shopCount = next7.reduce((n, d) => n + d.meals.filter(m => m.kind === 'shop').length, 0);
+  const cookCount = next7.reduce((n, d) => n + d.meals.filter(m => m.kind === 'cook').length, 0);
+
+  // Recipes that contribute to the list (anything with missing items)
+  const needsShop = days.flatMap(d => d.meals).filter(m => m.missing && m.missing.length > 0);
+
+  return (
+    <div style={{
+      width: 402, height: 874, position: 'relative',
+      background: M.paper, color: M.ink,
+      fontFamily: M_FONT.sans, overflow: 'hidden',
+    }}>
+      <div style={{
+        position: 'absolute', top: 50, left: 0, right: 0, bottom: 84,
+        overflow: 'hidden', display: 'flex', flexDirection: 'column',
+      }}>
+        {/* Title + actions */}
+        <div style={{
+          padding: '8px 20px 10px',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+        }}>
+          <div>
+            <MEyebrow>may 2026</MEyebrow>
+            <MTitle size={42}>Plan</MTitle>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {/* Load date — calendar icon */}
+            <button style={{
+              width: 38, height: 38, borderRadius: 19,
+              background: 'transparent', border: `1px solid ${M.rule}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', color: M.ink, padding: 0,
+            }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <rect x="3" y="5" width="18" height="16" rx="2.5"
+                  stroke="currentColor" strokeWidth="1.6" />
+                <line x1="3" y1="10" x2="21" y2="10"
+                  stroke="currentColor" strokeWidth="1.6" />
+                <line x1="8" y1="3" x2="8" y2="7"
+                  stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                <line x1="16" y1="3" x2="16" y2="7"
+                  stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+              </svg>
+            </button>
+            <button style={{
+              background: M.persimmon, color: '#fff', border: 'none',
+              width: 38, height: 38, borderRadius: 19,
+              fontSize: 22, fontWeight: 600, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>+</button>
+          </div>
+        </div>
+
+        {/* Date strip — today is 3rd, 2 past on the left, scroll right for 2 weeks */}
+        <div style={{
+          padding: '4px 20px 6px',
+          display: 'flex', gap: 6,
+        }}>
+          {stripDays.map((d, i) => <MPlanDayPill key={i} day={d} />)}
+          {/* Edge fade to suggest more days off-screen */}
+          <div style={{
+            flex: '0 0 auto', width: 16, alignSelf: 'stretch',
+            background: 'linear-gradient(to right, rgba(243,245,242,0), rgba(243,245,242,1))',
+            marginLeft: -16, pointerEvents: 'none',
+          }} />
+        </div>
+
+        {/* Summary */}
+        <div style={{
+          padding: '10px 20px 4px',
+          fontSize: 12, color: M.ink2,
+          display: 'flex', alignItems: 'baseline', gap: 6,
+        }}>
+          <span style={{ fontWeight: 700, color: M.ink, fontVariantNumeric: 'tabular-nums' }}>{cookCount}</span>
+          <span style={{ color: M.ink3 }}>ready</span>
+          <span style={{ color: M.mute }}>·</span>
+          <span style={{ fontWeight: 700, color: M.persimDeep, fontVariantNumeric: 'tabular-nums' }}>{shopCount}</span>
+          <span style={{ color: M.ink3 }}>need a shop</span>
+          <span style={{ flex: 1 }} />
+          <span style={{
+            fontFamily: M_FONT.serif, fontStyle: 'italic',
+            fontSize: 12, color: M.mute,
+          }}>next 7 days</span>
+        </div>
+
+        {/* Day stream */}
+        <div style={{
+          flex: 1, overflow: 'hidden',
+          padding: '10px 20px 14px',
+        }}>
+          {days.map((day) => <MPlanDayBlock key={day.d} day={day} />)}
+        </div>
+      </div>
+
+      {/* Sticky CTA — add recipes to list */}
+      <div style={{
+        position: 'absolute', left: 0, right: 0, bottom: 84,
+        padding: '10px 20px 10px',
+        background: 'rgba(243,245,242,0.96)',
+        backdropFilter: 'blur(20px)',
+        borderTop: `1px solid ${M.rule}`,
+      }}>
+        <button style={{
+          width: '100%', padding: '13px 16px', borderRadius: 12,
+          background: M.persimmon, color: '#fff', border: 'none',
+          fontFamily: M_FONT.sans, fontSize: 14, fontWeight: 700,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          cursor: 'pointer',
+        }}>
+          <span>add recipes to list</span>
+          <span style={{
+            fontFamily: M_FONT.sans, fontSize: 12, fontWeight: 600,
+            opacity: 0.85, display: 'flex', alignItems: 'center', gap: 8,
+          }}>
+            <span>{needsShop.length} need shop</span>
+            <span style={{ fontFamily: M_FONT.serif, fontStyle: 'italic', fontSize: 17 }}>→</span>
+          </span>
+        </button>
+      </div>
+
+      <MTabBar active="plan" />
+    </div>
+  );
+}
+
+Object.assign(window, { MHome, MInventory, MRecipes, MList, MPlan });

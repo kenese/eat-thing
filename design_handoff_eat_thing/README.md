@@ -4,7 +4,7 @@
 
 Eat Thing is a household food-management app (inventory, recipes, meal planning, auto-generated shopping lists, supermarket integration via Playwright). This package contains a full set of high-fidelity desktop screens covering the product's primary surfaces, plus the design system that ties them together.
 
-The current production site has no homepage and no committed visual language. This handoff replaces that with a coherent system across **Home, Inventory, Recipes, Meal Plan, and Shopping List** — all five screens share the same header, palette, type, components, and microcopy voice.
+The current production site has no homepage and no committed visual language. This handoff replaces that with a coherent system across **Home, Inventory, Recipes, Meal Plan, and Shopping List** at desktop, plus **Home, Pantry, Recipes, and List** for mobile — the same system condensed for phone. All screens share the same header, palette, type, components, and microcopy voice.
 
 ## About the Design Files
 
@@ -14,7 +14,7 @@ The HTML/JSX files in this bundle are **design references**, not production code
 
 ## Fidelity
 
-**High-fidelity.** Colors, typography, spacing, and component shapes are locked. Recreate pixel-perfectly. The only thing you should re-derive is the responsive behavior (the mocks are 1280px desktop only — mobile is not yet designed).
+**High-fidelity.** Colors, typography, spacing, and component shapes are locked. Recreate pixel-perfectly. Mobile screens are designed at **402×874** (iPhone 15 Pro logical size); desktop at **1280** wide. Tablet is not in this handoff — it can scale off either end.
 
 ---
 
@@ -105,12 +105,13 @@ Image-led browse.
 
 ### 4 · Meal Plan (`meal-plan.jsx`)
 
-7-day grid.
+**Date stream, not a fixed week.** Planning is no longer scoped to a mon→sun frame — any date can hold up to 4 recipes. The page opens with **today as the 3rd visible day** (2 past days dimmed on the left) and the horizon strip covers ~16 days forward. A `load date` button jumps anywhere.
 
-- Title `This week.` + summary (`3 from the pantry · 2 need a shop · 1 open seat`)
-- **Proportion bar** below the filter strip showing pantry / leftover / shop / open as colored segments
-- **7 day cards** in a 7-column grid. Today is the ink card with persimmon accent. Open Sunday is a dashed empty slot. Each card has: day label, recipe thumbnail (image-slot), recipe name, italic-serif `need X, Y & N more` line if missing, status chip bottom.
-- **Lower row:** "Fill Sunday." suggestion list (3 inventory-aware picks with `place in sun →` buttons), and "Wednesday, 4:30 pm" auto-shop preview on ink, grouped by reason (`for wed roast`, `for fri pizza`, `weekly staples`).
+- Title `Plan.` + eyebrow `may 2026` + summary (`3 from the pantry · 2 need a shop · 1 open · next 7 days`)
+- **Date-strip controls** in the title row: `← / today / → / load date` + persimmon `add recipes to list` CTA with a count pill (replaces the old `regenerate list`)
+- **Horizon strip** — 16 day pills in a single row, today filled ink + persimmon accent, past days dimmed, fresh-green dot for days with a meal, persimmon `N×` for multi-meal days. Tap to jump.
+- **7 day cards** in a 7-column grid. Today is the ink card. Past days show a `cooked` checkmark + line-through name. Multi-meal days stack a smaller primary card with secondary `MealRow` entries beneath (no image, just name + missing-line + small chip). Empty days are a dashed `open seat · + add recipe` target.
+- **Lower row:** `Open seats.` suggestion list (3 inventory-aware picks with `pick day →` buttons — user chooses which empty date to place into), and `Wednesday, 4:30 pm` auto-shop preview on ink, grouped by reason (`for wed roast`, `for fri pizza`, `weekly staples`).
 
 ### 5 · Shopping List (`shopping-list.jsx`)
 
@@ -124,6 +125,61 @@ The Playwright handoff.
   - Totals card with italic-serif `est. total` label and big tabular number
   - Persimmon `send to whole foods →` button
   - Ink agent-status card: fresh-green dot, eyebrow `playwright agent · idle`, italic-serif explainer copy
+
+---
+
+## Mobile (`mobile.jsx`)
+
+Designed at **402×874**. Five screens cover the primary phone contexts: home, pantry, recipes, plan, and list.
+
+**Shared chrome:**
+- **Status bar** is the device's native iOS — not part of the app.
+- **Bottom tab bar** (5 tabs, inline SVG icons + 10px labels): `home / pantry / recipes / plan / list`. Active tab is full-ink + 700 weight + 12% ink fill on the icon; inactive is `mute` + 500 weight. Tab bar floats on `rgba(243,245,242,0.94)` with `backdrop-filter: blur(20px)`.
+- **Page top** is consistent: eyebrow (10px 700 0.16em tracking) above the big italic-serif page title (40–44px Lora italic). Persimmon period stays.
+- **Primary action** in the top-right is a 38×38 persimmon circular `+` button.
+- **No emoji.** Inline SVG line icons only.
+
+### M1 · Home — "Tonight"
+
+- Title `Tonight.` + ink hero recipe card with image, persimmon eyebrow chip, italic-serif title, `→` CTA
+- Horizontal-scroll "Use this week." expiring chips — today's item inverted to ink card + persimmon italic-serif day number
+- 3-day glance: `TUE / WED / THU` rows with status chips
+
+### M2 · Pantry — by expiry
+
+- Title `Pantry.` + summary line (`29 on hand · 9 expiring`)
+- Search input (paper2 background, ⌕ glyph)
+- Horizontal-scroll location pills (`All / Expiring / Fridge / Pantry / Freezer`)
+- Section subtitle `by expiry` (italic serif, green)
+- Flat list rows: name + qty inline, italic-serif `Nd` on the right (urgent ≤3 days). Days ≤1 use warn red, ≤3 persimmon, ≤7 persimDeep, otherwise fresh-green.
+
+### M3 · Recipes — image-led
+
+- Title `Recipes.` + eyebrow `5 cookable now`
+- Filter chips (`All / Cook now / Quick shop / Library`)
+- Image-hero recipe card with status badge top-left, time-overlay bottom-right
+- 2-up grid of image-top recipe cards
+
+### M4 · Plan — date stream
+
+- Title `Plan.` + eyebrow `may 2026` + two top-right buttons: outlined calendar (`load date`) and persimmon `+` (add recipe)
+- **Date strip** (7 pills visible, today is 3rd so 2 past dimmed on the left, scrollable horizontally for ~2 weeks forward): weekday short above large Lora-italic day number; today is ink-filled with persimmon dot; multi-meal days show a small `N×` instead of a dot
+- **Summary line:** `N ready · N need a shop · next 7 days`
+- **Day stream** (vertical scroll): each day is a section with a small dashed-rule label (`MON · MAY 11`). Today's label is persimmon with the italic-serif word `today.` next to it.
+  - **Today:** ink card, 64×64 thumbnail, italic-serif recipe title, status chip on the right
+  - **Other future days:** plain row — recipe name (sans 600), italic-serif `need X & N more` or `Nm · tag` underneath, status chip on the right. Multi-meal days stack 2+ rows with a `2 meals` count in the day label.
+  - **Past days:** opacity 0.5, line-through name, italic-serif `cooked` indicator
+  - **Empty days:** dashed `open seat   + add recipe`
+- **Sticky bottom CTA:** persimmon `add recipes to list   N need shop →`
+
+### M5 · List — in-store check-off
+
+- Title `The list.` + italic-serif persimmon dollar amount in the corner
+- Reason filter chips
+- Aisle sections (`Produce. / Butcher. / Dairy.`) with italic-serif persimmon-period titles
+- 22×22 custom checkboxes, fresh-green when checked + line-through item name
+- Each item has italic-serif reason caption below name
+- Sticky bottom panel: persimmon `send to Whole Foods · $58.29 →` button + fresh-green agent-status line
 
 ---
 
@@ -157,13 +213,19 @@ This handoff is visual; the prototypes are static. Behaviors to wire:
 ## Files in This Bundle
 
 - `README.md` — this document
-- `direction-3-greengrocer-v2.jsx` — Home (parameterized; use `GG_CRISP` + persimmon override `{...GG_CRISP, blue: '#d96e2e'}` and `GG_FONTS_SCHIBSTED_LORA`)
-- `inventory-ledger.jsx` — Inventory
-- `recipes.jsx` — Recipes
-- `meal-plan.jsx` — Meal Plan
-- `shopping-list.jsx` — Shopping List
-- `Eat Thing - Directions.html` — the canvas wrapper showing all artboards side-by-side (open this to see the full system)
-- `design-canvas.jsx`, `image-slot.js` — utilities the prototypes depend on (not part of the production design system)
+- `screenshots/` — reference renders. **These are indicative snapshots, not the source of truth — when in doubt, open `Eat Thing - Directions.html` to see the live canvas.**
+  - `01-home.png` … `05-shopping-list.png` — desktop (1280 wide)
+  - `06-mobile-home.png` … `10-mobile-list.png` — mobile (in iPhone frame)
+- `direction-3-greengrocer-v2.jsx` — desktop Home
+- `inventory-ledger.jsx` — desktop Inventory
+- `recipes.jsx` — desktop Recipes
+- `meal-plan.jsx` — desktop Meal Plan
+- `shopping-list.jsx` — desktop Shopping List
+- `mobile.jsx` — all five mobile screens (`MHome / MInventory / MRecipes / MPlan / MList`)
+- `ios-frame.jsx` — iPhone bezel used only for the design canvas; **not part of production**
+- `image-slot.js` — drop-target placeholder used in the prototypes; replace with `<img>` in production
+- `design-canvas.jsx` — design tool only, not for production
+- `Eat Thing - Directions.html` — the canvas wrapper showing all artboards side-by-side
 
 ---
 
@@ -175,7 +237,9 @@ No raster assets in this bundle. Recipe photography is user-supplied via `<image
 
 ## Open Questions for the Implementer
 
-1. **Mobile.** Not designed yet. The meal-plan 7-column grid and shopping list two-pane both need re-cuts. Flag if you start on mobile before designs land.
+1. **Tablet.** Not designed. Desktop layouts should hold down to ~960px; below that, fall back to the mobile layout.
 2. **Empty states.** Inventory with 0 items, recipe library with 0 recipes — not yet designed. Use the same visual vocabulary (italic serif "nothing here yet" + persimmon CTA).
 3. **Cook flow modal.** The deduction prompt (`how many garlic bulbs left?`) is the next screen on the design queue.
 4. **Onboarding.** First-time inventory setup is the hardest UX problem in the product and is unaddressed here.
+5. **Shops / agent status view.** A dedicated screen for Playwright connection state, run history, and manual override is not yet designed.
+6. **`load date` picker.** The calendar-icon button on both desktop and mobile plan screens is a placeholder — the actual date-picker affordance (modal? inline mini-cal?) needs design + a clear definition of what "load" means (scroll-to vs. recenter-strip).

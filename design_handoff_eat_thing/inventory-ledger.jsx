@@ -35,7 +35,7 @@ const dPlus = (d) => {
 };
 const dMinus = (d) => dPlus(-d);
 
-const ITEMS = [
+const INV_ITEMS = [
   // Fridge — soonest first
   { id:'1',  foodName:'buttermilk',     qty:0.5, unit:'pt', brand:'Strauss',     location:'fridge',  spot:'top shelf',     purchasedAt:dMinus(5),  expiresAt:dPlus(1) },
   { id:'2',  foodName:'cilantro',       qty:1,   unit:'bn', brand:null,          location:'fridge',  spot:'crisper',        purchasedAt:dMinus(3),  expiresAt:dPlus(2) },
@@ -146,7 +146,7 @@ function InvHeader() {
 
 // ─── Use-it-up chip strip ────────────────────────────────────────────────
 function UseItUpStrip() {
-  const soon = ITEMS
+  const soon = INV_ITEMS
     .map(i => ({ ...i, d: daysUntil(i.expiresAt) }))
     .filter(i => i.d != null && i.d <= 3)
     .sort((a, b) => a.d - b.d)
@@ -306,9 +306,9 @@ function LocationGroup({ location, label, items, hoveredId, defaultOpen = true }
 
 // ─── Main page ───────────────────────────────────────────────────────────
 function InventoryLedger() {
-  const counts = ITEMS.reduce((acc, i) => { acc[i.location] = (acc[i.location] || 0) + 1; return acc; }, {});
-  const total = ITEMS.length;
-  const expSoon = ITEMS.filter(i => { const d = daysUntil(i.expiresAt); return d != null && d <= 7; }).length;
+  const counts = INV_ITEMS.reduce((acc, i) => { acc[i.location] = (acc[i.location] || 0) + 1; return acc; }, {});
+  const total = INV_ITEMS.length;
+  const expSoon = INV_ITEMS.filter(i => { const d = daysUntil(i.expiresAt); return d != null && d <= 7; }).length;
   // make one row "hovered" so the hover affordance is visible in the artboard
   const hoveredId = '3';
 
@@ -465,7 +465,7 @@ function InventoryLedger() {
             key={loc}
             location={loc}
             label={label}
-            items={ITEMS.filter(i => i.location === loc).sort((a, b) => {
+            items={INV_ITEMS.filter(i => i.location === loc).sort((a, b) => {
               const da = daysUntil(a.expiresAt);
               const db = daysUntil(b.expiresAt);
               if (da == null && db == null) return 0;

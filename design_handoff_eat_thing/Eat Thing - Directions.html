@@ -30,6 +30,8 @@
 <script type="text/babel" src="recipes.jsx"></script>
 <script type="text/babel" src="meal-plan.jsx"></script>
 <script type="text/babel" src="shopping-list.jsx"></script>
+<script type="text/babel" src="mobile.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
 
 <script type="text/babel" data-presets="env,react">
 function App() {
@@ -123,6 +125,28 @@ function App() {
       >
         <DCArtboard id="list-main" label="L1 · List — aisles + checkout sidebar" width={1280} height={1100}>
           <ShoppingList />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection
+        id="mobile"
+        title="Mobile — iPhone, four screens"
+        subtitle="The kitchen is mostly a phone context. Same system, condensed."
+      >
+        <DCArtboard id="m-home"      label="M1 · Home — tonight at a glance"   width={402} height={874}>
+          <IOSDevice><MHome /></IOSDevice>
+        </DCArtboard>
+        <DCArtboard id="m-inventory" label="M2 · Pantry — by expiry"           width={402} height={874}>
+          <IOSDevice><MInventory /></IOSDevice>
+        </DCArtboard>
+        <DCArtboard id="m-recipes"   label="M3 · Recipes — image-led"         width={402} height={874}>
+          <IOSDevice><MRecipes /></IOSDevice>
+        </DCArtboard>
+        <DCArtboard id="m-plan"      label="M4 · Plan — date stream"          width={402} height={874}>
+          <IOSDevice><MPlan /></IOSDevice>
+        </DCArtboard>
+        <DCArtboard id="m-list"      label="M5 · List — in-store check-off"   width={402} height={874}>
+          <IOSDevice><MList /></IOSDevice>
         </DCArtboard>
       </DCSection>
 
