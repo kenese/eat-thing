@@ -16,7 +16,7 @@ Household food management app. Inventory ↔ recipes ↔ meal plans ↔ shopping
 ## Stack at a glance
 - Turborepo monorepo: `apps/web` (PWA) · `apps/server` (Express + Better-Auth + Drizzle) · `apps/scraper` (Playwright on home Mac mini) · `packages/shared` · `packages/taxonomy`.
 - Postgres on Supabase. Photos on Supabase Storage.
-- Frontend + API on Vercel. Background workers (scraper, OpenBrain sync) on the home Mac mini, supervised by `launchd`. Workers poll the Vercel API outbound — no inbound port at home.
+- Frontend + API on Vercel. Background workers (scraper) on the home Mac mini, supervised by `launchd`. Workers poll the Vercel API outbound — no inbound port at home.
 - Auth: Better-Auth with Google OAuth.
 - Storage units canonical (g / ml / count); display layer converts.
 
