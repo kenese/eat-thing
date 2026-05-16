@@ -322,3 +322,8 @@
   .plan-week-rail { grid-auto-columns: minmax(160px, 200px); }
   .plan-recipe-grid { grid-template-columns: repeat(2, 1fr); }
 }
+@media (max-width: 768px) {
+  .plan-title-controls { flex-wrap: wrap; gap: 8px; }
+  .plan-recipe-grid { grid-template-columns: repeat(2, 1fr); }
+  .plan-add-to-list-btn { width: 100%; justify-content: center; }
+}

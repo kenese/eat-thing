@@ -261,6 +261,13 @@
   .rx-grid, .rx-grid--dense { grid-template-columns: 1fr; }
   .rx-hero-title { font-size: 40px; }
 }
+@media (max-width: 768px) {
+  .rx-hero { grid-template-columns: 1fr; }
+  .rx-hero-main { grid-template-columns: 1fr; min-height: auto; }
+  .rx-hero-image { display: none; }
+  .rx-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .rx-grid--dense { grid-template-columns: repeat(2, 1fr); }
+}
 
 .recipes-status {
   padding: 40px;
