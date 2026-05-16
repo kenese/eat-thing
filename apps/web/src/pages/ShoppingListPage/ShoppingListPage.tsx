@@ -1,12 +1,13 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import {
-  useCurrentShoppingList, useApplyPlanToShoppingList,
+  useCurrentShoppingList,
   useUpdateShoppingListItem, useAddShoppingListItem, useDeleteShoppingListItem,
   usePurchaseShoppingListItems, useBatchDeleteShoppingListItems,
 } from '../../hooks/useShoppingList';
 import { useFoodSearch } from '../../hooks/useFoodSearch';
 import { usePricesForList, useRefreshPrices } from '../../hooks/usePricesForList';
 import { StaplesModal } from './StaplesModal';
+import { AddFromPlanModal } from './AddFromPlanModal';
 import { PageTitle } from '../../components/PageTitle';
 import { FilterStrip } from '../../components/FilterStrip';
 import { AgentStatusCard, type AgentState } from '../../components/AgentStatusCard';
@@ -493,8 +494,16 @@ function ListView({ list }: { list: ShoppingList }) {
 
 export function ShoppingListPage() {
   const { data: list, isLoading } = useCurrentShoppingList();
-  const generate = useApplyPlanToShoppingList();
   const [showStaples, setShowStaples] = useState(false);
+  const [showAddFromPlan, setShowAddFromPlan] = useState(false);
+
+  const currentListRecipeIds = useMemo(() => {
+    const set = new Set<string>();
+    for (const item of list?.items ?? []) {
+      if (item.sourceRecipeId) set.add(item.sourceRecipeId);
+    }
+    return set;
+  }, [list]);
 
   const now = new Date();
   const builtAt = `AUTO-BUILT · LAST UPDATED ${now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }).toLowerCase()}`;
@@ -511,7 +520,7 @@ export function ShoppingListPage() {
               <span style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: 16 }}>this week's plan</span>
             </>
           ) : (
-            <span style={{ color: 'var(--mute)' }}>No list yet — generate one for this week to begin.</span>
+            <span style={{ color: 'var(--mute)' }}>No list yet — click &quot;Add from planned recipes&quot; to begin.</span>
           )
         }
         actions={
@@ -519,10 +528,9 @@ export function ShoppingListPage() {
             <button className="btn-outline" onClick={() => setShowStaples(true)}>staples</button>
             <button
               className="btn-primary"
-              onClick={() => generate.mutate({ entryIds: [] })}
-              disabled={generate.isPending}
+              onClick={() => setShowAddFromPlan(true)}
             >
-              {generate.isPending ? 'Generating…' : 'Generate for this week'}
+              Add from planned recipes
             </button>
           </>
         }
@@ -533,13 +541,19 @@ export function ShoppingListPage() {
       {!isLoading && !list && (
         <div className="list-empty">
           <p>No shopping list yet.</p>
-          <p className="list-empty-hint">Click "Generate for this week" to build one from your meal plan and staples.</p>
+          <p className="list-empty-hint">Click &quot;Add from planned recipes&quot; to build one from your plan.</p>
         </div>
       )}
 
       {!isLoading && list && <ListView list={list} />}
 
       {showStaples && <StaplesModal onClose={() => setShowStaples(false)} />}
+      {showAddFromPlan && (
+        <AddFromPlanModal
+          currentListRecipeIds={currentListRecipeIds}
+          onClose={() => setShowAddFromPlan(false)}
+        />
+      )}
     </div>
   );
 }
