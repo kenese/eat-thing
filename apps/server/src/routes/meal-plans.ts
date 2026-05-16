@@ -8,15 +8,6 @@ import { mealPlans, mealPlanEntries, recipes } from '../db/schema/index.js';
 
 const router: ExpressRouter = Router();
 
-async function markMealPlanDirty(householdId: string, mealPlanId: string) {
-  await db.execute(
-    sql`INSERT INTO sync_dirty (id, household_id, resource_type, resource_id, dirty_since)
-        VALUES (${uuidv4()}, ${householdId}, 'meal_plan', ${mealPlanId}, now())
-        ON CONFLICT (household_id, resource_type, resource_id)
-        DO UPDATE SET dirty_since = now(), claimed_at = null`,
-  );
-}
-
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'must be YYYY-MM-DD');
 
 const createEntrySchema = z.object({
@@ -138,7 +129,6 @@ router.post('/entries', withHousehold, async (req, res) => {
       .where(eq(mealPlanEntries.id, entryId));
 
     res.status(201).json({ mealPlanId: planId, entry: full });
-    markMealPlanDirty(req.householdId, planId).catch(err => console.error('sync_dirty write failed', err));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });
@@ -182,7 +172,6 @@ router.put('/entries/:id', withHousehold, async (req, res) => {
       .where(eq(mealPlanEntries.id, id));
 
     res.json(full);
-    markMealPlanDirty(req.householdId, full.mealPlanId).catch(err => console.error('sync_dirty write failed', err));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });
@@ -205,7 +194,6 @@ router.delete('/entries/:id', withHousehold, async (req, res) => {
 
     await db.delete(mealPlanEntries).where(eq(mealPlanEntries.id, id));
     res.json({ id });
-    markMealPlanDirty(req.householdId, existing.mealPlanId).catch(err => console.error('sync_dirty write failed', err));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });

@@ -3,7 +3,6 @@ import { z } from 'zod';
 import { and, eq, ilike, asc, sql } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { withHousehold } from '../middleware/with-household.js';
-import { syncRecipe } from '@eat/openbrain';
 import { uploadPhoto } from '../lib/supabase-storage.js';
 import { db } from '../db/index.js';
 import { recipes, recipeIngredients, canonicalFoods } from '../db/schema/index.js';
@@ -197,8 +196,6 @@ router.post('/', withHousehold, async (req, res) => {
     const [recipe] = await db.select().from(recipes).where(eq(recipes.id, recipeId));
     const fullIngredients = await loadRecipeIngredients(recipeId);
     res.status(201).json({ ...recipe, ingredients: fullIngredients });
-    syncRecipe({ id: recipe.id, name: recipe.name, servings: recipe.servings, sourceUrl: recipe.sourceUrl, instructions: recipe.instructions, ingredients: fullIngredients.map(i => ({ foodName: i.foodName, qty: i.qty, unit: i.unit, optional: i.optional })) })
-      .catch(err => console.error('OpenBrain recipe sync failed', err));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });
@@ -274,8 +271,6 @@ router.put('/:id', withHousehold, async (req, res) => {
     const [recipe] = await db.select().from(recipes).where(eq(recipes.id, id));
     const fullIngredients = await loadRecipeIngredients(id);
     res.json({ ...recipe, ingredients: fullIngredients });
-    syncRecipe({ id: recipe.id, name: recipe.name, servings: recipe.servings, sourceUrl: recipe.sourceUrl, instructions: recipe.instructions, ingredients: fullIngredients.map(i => ({ foodName: i.foodName, qty: i.qty, unit: i.unit, optional: i.optional })) })
-      .catch(err => console.error('OpenBrain recipe sync failed', err));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });

@@ -1,6 +1,6 @@
 import { Router, type Router as ExpressRouter } from 'express';
 import { z } from 'zod';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { withHousehold } from '../middleware/with-household.js';
 import { db } from '../db/index.js';
@@ -232,13 +232,6 @@ router.post('/', withHousehold, async (req, res) => {
           .set({ status: 'cooked' })
           .where(eq(mealPlanEntries.id, mealPlanEntryId));
       }
-
-      await tx.execute(
-        sql`INSERT INTO sync_dirty (id, household_id, resource_type, resource_id, dirty_since)
-            VALUES (${uuidv4()}, ${req.householdId}, 'inventory', ${req.householdId}, now())
-            ON CONFLICT (household_id, resource_type, resource_id)
-            DO UPDATE SET dirty_since = now(), claimed_at = null`,
-      );
     });
 
     const [event] = await db
