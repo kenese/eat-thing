@@ -123,3 +123,16 @@ Each decision: short title, date, context, decision, rationale. Keep it terse â€
 **Context:** The existing OpenBrain bulk import reads recipe thoughts and parses prose/markdown, but Meal Planner is part of the OpenBrain ecosystem and stores recipes with structured fields.
 **Decision:** New OpenBrain ecosystem recipe imports read from Meal Planner first. OpenBrain recipe-thought import remains as a legacy fallback for old notes.
 **Rationale:** Structured Meal Planner payloads reduce LLM parsing, preserve quantities/servings more reliably, and still satisfy the intent of importing from the OpenBrain ecosystem. Eat-thing remains the source of truth after import.
+
+## D22 â€” Remove OpenBrain sync integration (2026-05-16)
+
+Removed the full OpenBrain sync integration: `packages/openbrain`, the `sync_dirty` table,
+`/api/sync` routes, `openbrain-worker`, the `synced` column on `inventory_items`, the OpenBrain
+import tab in the ImportModal, and all associated server-side sync fire-and-forgets.
+
+**Why:** OpenBrain is no longer the integration target. The Meal Planner integration (via MCP)
+replaces it as the recipe source, and we have no need for inventory/meal-plan push sync to
+an external brain store. Removing dead code simplifies the codebase and eliminates a launchd
+worker that wasn't running.
+
+**What's kept:** Meal Planner import (MCP), URL import, photo import, MealDB search.
