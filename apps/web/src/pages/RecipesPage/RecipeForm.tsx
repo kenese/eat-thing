@@ -294,9 +294,10 @@ interface RecipeFormProps {
   initialData?: ImportedRecipe;
   pendingPhoto?: { base64: string; mimeType: string };
   onClose: () => void;
+  onAddToPlan?: (recipeId: string, servings: number) => Promise<{ addedTo: string[]; skipped: string[] }>;
 }
 
-export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose }: RecipeFormProps) {
+export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose, onAddToPlan }: RecipeFormProps) {
   const { data: existing, isLoading: isLoadingExisting } = useRecipe(mode === 'edit' && recipeId ? recipeId : null);
 
   const [name, setName] = useState(initialData?.name ?? '');
@@ -321,6 +322,8 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose 
   const [photoBase64, setPhotoBase64] = useState<string | null>(pendingPhoto?.base64 ?? null);
   const [photoMimeType, setPhotoMimeType] = useState<string | null>(pendingPhoto?.mimeType ?? null);
   const [readOnly, setReadOnly] = useState(mode === 'edit');
+  const [addToPlanStatus, setAddToPlanStatus] = useState<'idle' | 'pending' | 'success' | 'error'>('idle');
+  const [addToPlanLabel, setAddToPlanLabel] = useState('Add to plan');
 
   useEffect(() => {
     if (mode === 'edit' && existing && !hydrated) {
@@ -469,6 +472,30 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose 
 
               <div className="form-actions">
                 <button type="button" className="btn-secondary" onClick={onClose}>Close</button>
+                {onAddToPlan && recipeId && (
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    disabled={addToPlanStatus === 'pending'}
+                    aria-label={addToPlanLabel}
+                    onClick={async () => {
+                      setAddToPlanStatus('pending');
+                      try {
+                        const { addedTo } = await onAddToPlan(recipeId, Number(servings));
+                        const label = addedTo[0] ? `Added to ${addedTo[0]}` : 'Added to plan';
+                        setAddToPlanLabel(label);
+                        setAddToPlanStatus('success');
+                        setTimeout(() => { setAddToPlanStatus('idle'); setAddToPlanLabel('Add to plan'); }, 2500);
+                      } catch {
+                        setAddToPlanLabel('Failed — try again');
+                        setAddToPlanStatus('error');
+                        setTimeout(() => { setAddToPlanStatus('idle'); setAddToPlanLabel('Add to plan'); }, 2500);
+                      }
+                    }}
+                  >
+                    {addToPlanStatus === 'pending' ? 'Adding…' : addToPlanLabel}
+                  </button>
+                )}
                 <button type="button" className="btn-primary" onClick={() => setReadOnly(false)}>Edit</button>
               </div>
             </div>
