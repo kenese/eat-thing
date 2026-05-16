@@ -34,6 +34,7 @@ async function mealToImportedRecipe(meal: MealDbMeal): Promise<ImportedRecipe> {
       rawText: ing.name,
       canonicalFoodId: m.canonicalFoodId,
       foodName: m.foodName,
+      canonicalDefaultUnit: m.canonicalDefaultUnit,
       qty: parsed.qty,
       unit: parsed.unit,
       section: null,

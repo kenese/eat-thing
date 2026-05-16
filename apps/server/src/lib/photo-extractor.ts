@@ -75,6 +75,7 @@ Rules:
       rawText: ing.name,
       canonicalFoodId: m.canonicalFoodId,
       foodName: m.foodName,
+      canonicalDefaultUnit: m.canonicalDefaultUnit,
       qty: ing.qty,
       unit: ing.unit,
       section: ing.section,

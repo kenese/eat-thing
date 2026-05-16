@@ -101,6 +101,8 @@ function extractSchemaNode(node: Record<string, unknown>): RawExtracted | null {
     return {name, servings, instructions, ingredients};
 }
 
+const INGREDIENT_UNITS = ['g', 'gram', 'grams', 'gr', 'ml', 'milliliter', 'milliliters', 'kg', 'kilogram', 'kilograms', 'l', 'liter', 'liters', 'litre', 'litres', 'cup', 'cups', 'tbsp', 'tablespoon', 'tablespoons', 'tsp', 'teaspoon', 'teaspoons', 'oz', 'ounce', 'ounces', 'lb', 'pound', 'pounds'];
+
 // Very basic ingredient string parser — qty unit name
 function parseIngredientString(raw: string): SchemaRecipeIngredient {
     const cleaned = raw.trim().replace(/¼/g, '1/4').replace(/½/g, '1/2').replace(/¾/g, '3/4');
@@ -113,12 +115,20 @@ function parseIngredientString(raw: string): SchemaRecipeIngredient {
     if (numMatch) {
         qty = numMatch[1];
         nameStart = qty.includes(' ') ? 2 : 1;
+
+        // Handle unit fused directly to the number with no space (e.g. "1kg", "500ml", "1.5l")
+        const fusedUnit = (parts[0] ?? '').slice(qty.split(' ')[0].length).toLowerCase();
+        if (INGREDIENT_UNITS.includes(fusedUnit)) {
+            unit = fusedUnit;
+        }
     }
 
-    const unitStr = (parts[nameStart] ?? '').toLowerCase();
-    if (['g', 'gram', 'grams', 'gr', 'ml', 'milliliter', 'milliliters', 'kg', 'kilogram', 'kilograms', 'l', 'liter', 'liters', 'litre', 'litres', 'cup', 'cups', 'tbsp', 'tablespoon', 'tablespoons', 'tsp', 'teaspoon', 'teaspoons', 'oz', 'ounce', 'ounces', 'lb', 'pound', 'pounds'].includes(unitStr)) {
-        unit = parts[nameStart] ?? '';
-        nameStart++;
+    if (!unit) {
+        const unitStr = (parts[nameStart] ?? '').toLowerCase();
+        if (INGREDIENT_UNITS.includes(unitStr)) {
+            unit = parts[nameStart] ?? '';
+            nameStart++;
+        }
     }
 
     const name = parts.slice(nameStart).join(' ') || raw;
@@ -270,7 +280,11 @@ export async function extractFromUrl(url: string): Promise<ExtractedRecipe> {
     const raw = schemaRaw ?? await extractWithGemini(cleanHtmlWithReadability(html));
     if (!raw) throw new Error('Could not extract recipe from this URL');
 
-    console.log('recipe from url', raw);
+    if (schemaRaw) {
+        console.log('recipe from url - via scema', schemaRaw);
+    } else {
+        console.log('recipe from url - via llm', raw);
+    }
     const annotated = annotateMetric(raw.ingredients);
     const heroImageUrl = resolveHeroImage(html, url);
 
@@ -282,6 +296,7 @@ export async function extractFromUrl(url: string): Promise<ExtractedRecipe> {
             rawText: ing.name,
             canonicalFoodId: m.canonicalFoodId,
             foodName: m.foodName,
+            canonicalDefaultUnit: m.canonicalDefaultUnit,
             qty: ing.qty,
             unit: ing.unit,
             section: ing.section ?? null,

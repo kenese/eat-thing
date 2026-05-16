@@ -39,6 +39,7 @@ export function ImportModal({ onClose }: ImportModalProps) {
   async function handleUrlExtract(e: React.FormEvent) {
     e.preventDefault();
     const result = await urlMutation.mutateAsync(urlInput.trim());
+    debugger;
     setImported(result);
   }
 

@@ -55,6 +55,7 @@ describe('openbrain importer', () => {
         rawText: 'pasta',
         canonicalFoodId: 'food-1',
         foodName: 'pasta',
+        canonicalDefaultUnit: null,
         confidence: 'high',
       },
     ]);

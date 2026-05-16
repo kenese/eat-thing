@@ -157,6 +157,7 @@ export async function parseOpenBrainThought(thoughtId: string): Promise<Imported
       rawText: ing.name,
       canonicalFoodId: m.canonicalFoodId,
       foodName: m.foodName,
+      canonicalDefaultUnit: m.canonicalDefaultUnit,
       qty: ing.qty,
       unit: ing.unit,
       section: null,

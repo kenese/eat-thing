@@ -39,6 +39,7 @@ export async function parseMealPlannerRecipe(id: string): Promise<ImportedRecipe
       rawText: ingredient.name,
       canonicalFoodId: match.canonicalFoodId,
       foodName: match.foodName,
+      canonicalDefaultUnit: match.canonicalDefaultUnit,
       qty: ingredient.quantity,
       unit: ingredient.unit,
       section: null,

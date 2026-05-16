@@ -55,12 +55,14 @@ describe('meal planner importer', () => {
         rawText: 'spaghetti',
         canonicalFoodId: 'cf-pasta',
         foodName: 'spaghetti',
+        canonicalDefaultUnit: null,
         confidence: 'high',
       },
       {
         rawText: 'lemon',
         canonicalFoodId: 'cf-lemon',
         foodName: 'lemon',
+        canonicalDefaultUnit: null,
         confidence: 'high',
       },
     ]);

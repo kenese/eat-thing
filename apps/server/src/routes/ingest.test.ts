@@ -52,7 +52,7 @@ const MOCK_RECIPE = {
   heroImageUrl: 'https://example.com/hero.jpg' as string | null,
   instructions: 'Mix and bake.',
   ingredients: [
-    { rawText: 'flour', canonicalFoodId: 'cf-1', foodName: 'flour', qty: '200', unit: 'g', section: null as null, metric: '200 g' as string | null, optional: false, confidence: 'high' as const },
+    { rawText: 'flour', canonicalFoodId: 'cf-1', foodName: 'flour', canonicalDefaultUnit: 'g' as string | null, qty: '200', unit: 'g', section: null as null, metric: '200 g' as string | null, optional: false, confidence: 'high' as const },
   ],
 };
 

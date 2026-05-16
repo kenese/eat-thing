@@ -98,6 +98,7 @@ export interface RecipeIngredientInput {
   canonicalFoodId: string;
   qty: string;
   unit: string;
+  metricValue?: string | null;
   optional?: boolean;
 }
 
@@ -129,6 +130,7 @@ export interface ImportedIngredient {
   rawText: string;
   canonicalFoodId: string | null;
   foodName: string | null;
+  canonicalDefaultUnit: string | null;
   qty: string;
   unit: string;
   section: string | null;

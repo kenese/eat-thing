@@ -6,15 +6,16 @@ export interface MatchedIngredient {
   rawText: string;
   canonicalFoodId: string | null;
   foodName: string | null;
+  canonicalDefaultUnit: string | null;
   confidence: 'high' | 'low';
 }
 
-type FoodRow = { id: string; name: string; aliases: string[] };
+type FoodRow = { id: string; name: string; aliases: string[]; defaultUnit: string };
 
 let _foods: FoodRow[] | null = null;
 async function getAllFoods(): Promise<FoodRow[]> {
   if (_foods) return _foods;
-  _foods = await db.select({ id: canonicalFoods.id, name: canonicalFoods.name, aliases: canonicalFoods.aliases }).from(canonicalFoods);
+  _foods = await db.select({ id: canonicalFoods.id, name: canonicalFoods.name, aliases: canonicalFoods.aliases, defaultUnit: canonicalFoods.defaultUnit }).from(canonicalFoods);
   return _foods;
 }
 
@@ -61,15 +62,15 @@ export async function matchIngredients(names: string[]): Promise<MatchedIngredie
   for (const raw of names) {
     const exact = findExact(raw, foods);
     if (exact) {
-      results.push({ rawText: raw, canonicalFoodId: exact.id, foodName: exact.name, confidence: 'high' });
+      results.push({ rawText: raw, canonicalFoodId: exact.id, foodName: exact.name, canonicalDefaultUnit: exact.defaultUnit, confidence: 'high' });
       continue;
     }
     const contains = findContains(raw, foods);
     if (contains) {
-      results.push({ rawText: raw, canonicalFoodId: contains.id, foodName: contains.name, confidence: 'low' });
+      results.push({ rawText: raw, canonicalFoodId: contains.id, foodName: contains.name, canonicalDefaultUnit: contains.defaultUnit, confidence: 'low' });
       continue;
     }
-    results.push({ rawText: raw, canonicalFoodId: null, foodName: null, confidence: 'low' });
+    results.push({ rawText: raw, canonicalFoodId: null, foodName: null, canonicalDefaultUnit: null, confidence: 'low' });
     needsLlm.push(raw);
   }
 
@@ -81,6 +82,7 @@ export async function matchIngredients(names: string[]): Promise<MatchedIngredie
         if (match) {
           item.canonicalFoodId = match.id;
           item.foodName = match.name;
+          item.canonicalDefaultUnit = match.defaultUnit;
         }
       }
     }

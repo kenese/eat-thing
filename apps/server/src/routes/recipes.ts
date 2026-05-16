@@ -7,8 +7,19 @@ import { syncRecipe } from '@eat/openbrain';
 import { uploadPhoto } from '../lib/supabase-storage.js';
 import { db } from '../db/index.js';
 import { recipes, recipeIngredients, canonicalFoods } from '../db/schema/index.js';
+import { normalizeRecipeAmount } from '../lib/recipe-quantities.js';
 
 const router: ExpressRouter = Router();
+
+function resolveMetric(qty: string, unit: string, userProvided?: string | null): string | null {
+  const computed = normalizeRecipeAmount(qty, unit);
+  if (computed) {
+    const rounded = Math.round(computed.qty * 10) / 10;
+    const qtyStr = rounded % 1 === 0 ? String(Math.round(rounded)) : rounded.toFixed(1);
+    return `${qtyStr} ${computed.unit}`;
+  }
+  return userProvided ?? null;
+}
 
 const ingredientSchema = z.object({
   canonicalFoodId: z.string().uuid(),
@@ -176,7 +187,7 @@ router.post('/', withHousehold, async (req, res) => {
           qty: ing.qty,
           unit: ing.unit,
           section: ing.section ?? null,
-          metricValue: ing.metricValue ?? null,
+          metricValue: resolveMetric(ing.qty, ing.unit, ing.metricValue),
           optional: ing.optional ?? false,
           sortOrder: idx,
         })),
@@ -252,7 +263,7 @@ router.put('/:id', withHousehold, async (req, res) => {
             qty: ing.qty,
             unit: ing.unit,
             section: ing.section ?? null,
-            metricValue: ing.metricValue ?? null,
+            metricValue: resolveMetric(ing.qty, ing.unit, ing.metricValue),
             optional: ing.optional ?? false,
             sortOrder: idx,
           })),

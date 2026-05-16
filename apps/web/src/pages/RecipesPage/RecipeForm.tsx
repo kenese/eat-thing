@@ -2,10 +2,56 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useFoodSearch, useCreateFood } from '../../hooks/useFoodSearch';
 import { useRecipe, useAddRecipe, useUpdateRecipe } from '../../hooks/useRecipes';
 import type { CanonicalFood, RecipeIngredientInput, ImportedRecipe } from '@eat/shared';
+import { toCanonical, isMassUnit, isVolumeUnit } from '@eat/taxonomy';
+import type { DisplayUnit } from '@eat/taxonomy';
 import '../InventoryPage/ItemForm.css';
 import './RecipesPage.css';
 import './RecipeForm.css';
 import { RecipeImagePicker } from './RecipeImagePicker';
+
+function parseRecipeQty(value: string): number | null {
+  const cleaned = value.trim();
+  if (!cleaned) return null;
+  const mixed = cleaned.match(/^(\d+)\s+(\d+)\/(\d+)$/);
+  if (mixed) {
+    const w = Number(mixed[1]), n = Number(mixed[2]), d = Number(mixed[3]);
+    if (d > 0) return w + n / d;
+  }
+  const frac = cleaned.match(/^(\d+)\/(\d+)$/);
+  if (frac) {
+    const n = Number(frac[1]), d = Number(frac[2]);
+    if (d > 0) return n / d;
+  }
+  const p = Number.parseFloat(cleaned);
+  return Number.isFinite(p) && p > 0 ? p : null;
+}
+
+function normalizeUnit(unit: string): DisplayUnit | null {
+  const u = unit.trim().toLowerCase();
+  if (!u) return 'count';
+  if (u === 'gram' || u === 'grams' || u === 'gr') return 'g';
+  if (u === 'kilogram' || u === 'kilograms') return 'kg';
+  if (u === 'milliliter' || u === 'milliliters' || u === 'millilitre' || u === 'millilitres') return 'ml';
+  if (u === 'liter' || u === 'liters' || u === 'litre' || u === 'litres') return 'l';
+  if (u === 'teaspoon' || u === 'teaspoons') return 'tsp';
+  if (u === 'tablespoon' || u === 'tablespoons') return 'tbsp';
+  if (u === 'cups') return 'cup';
+  if (u === 'ounce' || u === 'ounces') return 'oz';
+  if (u === 'pound' || u === 'pounds') return 'lb';
+  if (u === 'each' || u === 'item' || u === 'items' || u === 'count') return 'count';
+  if (isMassUnit(u) || isVolumeUnit(u)) return u as DisplayUnit;
+  return null;
+}
+
+function computeMetric(qty: string, unit: string): string | null {
+  const q = parseRecipeQty(qty);
+  const u = normalizeUnit(unit);
+  if (q === null || u === null) return null;
+  const canonical = toCanonical(q, u);
+  const rounded = Math.round(canonical.qty * 10) / 10;
+  const qtyStr = rounded % 1 === 0 ? String(Math.round(rounded)) : rounded.toFixed(1);
+  return `${qtyStr} ${canonical.unit}`;
+}
 
 interface IngredientDraft {
   canonicalFoodId: string | null;
@@ -15,6 +61,45 @@ interface IngredientDraft {
   unit: string;
   optional: boolean;
   lowConfidence?: boolean;
+  metricQty?: string;
+  metricUnit?: 'g' | 'ml' | 'count';
+}
+
+interface MetricControlProps {
+  draft: IngredientDraft;
+  onChange: (next: IngredientDraft) => void;
+}
+
+function MetricControl({ draft, onChange }: MetricControlProps) {
+  const auto = computeMetric(draft.qty, draft.unit);
+  if (auto) {
+    return <span className="ingredient-metric">≈ {auto}</span>;
+  }
+  return (
+    <>
+      <input
+        className="form-input ingredient-metric-qty"
+        type="number"
+        step="any"
+        min="0"
+        placeholder="qty"
+        value={draft.metricQty ?? ''}
+        onChange={e => onChange({ ...draft, metricQty: e.target.value })}
+        aria-label="Metric quantity"
+      />
+      <select
+        className="form-select ingredient-metric-unit"
+        value={draft.metricUnit ?? ''}
+        onChange={e => onChange({ ...draft, metricUnit: e.target.value as 'g' | 'ml' | 'count' })}
+        aria-label="Metric unit"
+      >
+        <option value="">—</option>
+        <option value="g">g</option>
+        <option value="ml">ml</option>
+        <option value="count">count</option>
+      </select>
+    </>
+  );
 }
 
 interface IngredientRowProps {
@@ -24,11 +109,15 @@ interface IngredientRowProps {
 }
 
 function UnresolvedIngredientRow({ draft, onChange, onRemove }: IngredientRowProps) {
-  const [searchInput, setSearchInput] = useState('');
+  const [searchInput, setSearchInput] = useState(draft.rawText);
   const [open, setOpen] = useState(false);
+  const [pendingCanonical, setPendingCanonical] = useState<{ id: string; name: string; defaultUnit: string } | null>(null);
   const { data: results = [] } = useFoodSearch(searchInput);
   const createFood = useCreateFood();
   const comboRef = useRef<HTMLDivElement>(null);
+
+  const exactMatch = results.find(f => f.name.toLowerCase() === searchInput.trim().toLowerCase());
+  const isSelect = pendingCanonical !== null || exactMatch !== undefined;
 
   useEffect(() => {
     function handler(e: MouseEvent) {
@@ -38,29 +127,34 @@ function UnresolvedIngredientRow({ draft, onChange, onRemove }: IngredientRowPro
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  async function handleConfirm() {
+    if (pendingCanonical) {
+      onChange({ ...draft, canonicalFoodId: pendingCanonical.id, foodName: pendingCanonical.name, unit: draft.unit || pendingCanonical.defaultUnit, lowConfidence: false });
+    } else if (exactMatch) {
+      onChange({ ...draft, canonicalFoodId: exactMatch.id, foodName: exactMatch.name, unit: draft.unit || exactMatch.defaultUnit, lowConfidence: false });
+    } else {
+      const food = await createFood.mutateAsync({
+        name: searchInput.trim(),
+        defaultUnit: (['g', 'ml', 'count'] as const).includes(draft.unit as 'g' | 'ml' | 'count') ? draft.unit as 'g' | 'ml' | 'count' : 'g',
+        category: 'other',
+      });
+      onChange({ ...draft, canonicalFoodId: food.id, foodName: food.name, unit: draft.unit || food.defaultUnit, lowConfidence: false });
+    }
+  }
+
   return (
     <li className="ingredient-row ingredient-row--unresolved">
       <div className="ingredient-resolution">
-        <span className="ingredient-raw-text">{draft.rawText}</span>
+        <span className="ingredient-raw-text">Original: {draft.rawText}</span>
         <div className="ingredient-resolution-actions" ref={comboRef}>
-          {draft.canonicalFoodId && draft.foodName && (
-            <button
-              type="button"
-              className="btn-resolve-accept"
-              title={`Accept suggested match: ${draft.foodName}`}
-              onClick={() => onChange({ ...draft, lowConfidence: false })}
-            >
-              Use &ldquo;{draft.foodName}&rdquo;
-            </button>
-          )}
           <div className="resolution-combobox">
             <input
               className="form-input resolution-search"
               type="text"
-              placeholder={draft.foodName ? `or search to change…` : `Search canonical foods…`}
+              placeholder="Search canonical foods…"
               value={searchInput}
               autoComplete="off"
-              onChange={e => { setSearchInput(e.target.value); setOpen(true); }}
+              onChange={e => { setSearchInput(e.target.value); setPendingCanonical(null); setOpen(true); }}
               onFocus={() => { if (searchInput.trim()) setOpen(true); }}
             />
             {open && results.length > 0 && (
@@ -71,8 +165,8 @@ function UnresolvedIngredientRow({ draft, onChange, onRemove }: IngredientRowPro
                     role="option"
                     className="food-option"
                     onMouseDown={() => {
-                      onChange({ ...draft, canonicalFoodId: food.id, foodName: food.name, lowConfidence: false });
-                      setSearchInput('');
+                      setSearchInput(food.name);
+                      setPendingCanonical({ id: food.id, name: food.name, defaultUnit: food.defaultUnit });
                       setOpen(false);
                     }}
                   >
@@ -86,17 +180,10 @@ function UnresolvedIngredientRow({ draft, onChange, onRemove }: IngredientRowPro
           <button
             type="button"
             className="btn-resolve-new"
-            disabled={createFood.isPending}
-            onClick={async () => {
-              const food = await createFood.mutateAsync({
-                name: draft.rawText,
-                defaultUnit: (['g', 'ml', 'count'] as const).includes(draft.unit as 'g' | 'ml' | 'count') ? draft.unit as 'g' | 'ml' | 'count' : 'g',
-                category: 'other',
-              });
-              onChange({ ...draft, canonicalFoodId: food.id, foodName: food.name, lowConfidence: false });
-            }}
+            disabled={createFood.isPending || !searchInput.trim()}
+            onClick={handleConfirm}
           >
-            {createFood.isPending ? '…' : 'New food'}
+            {createFood.isPending ? '…' : isSelect ? 'select' : 'add'}
           </button>
         </div>
       </div>
@@ -115,6 +202,7 @@ function UnresolvedIngredientRow({ draft, onChange, onRemove }: IngredientRowPro
           onChange={e => onChange({ ...draft, unit: e.target.value })}
           aria-label="Unit"
         />
+        <MetricControl draft={draft} onChange={onChange} />
         <button type="button" className="ingredient-remove" onClick={onRemove} aria-label="Remove ingredient">✕</button>
       </div>
     </li>
@@ -145,6 +233,7 @@ function IngredientRow({ draft, onChange, onRemove }: IngredientRowProps) {
           onChange={e => onChange({ ...draft, unit: e.target.value })}
           aria-label="Unit"
         />
+        <MetricControl draft={draft} onChange={onChange} />
         <button type="button" className="ingredient-remove" onClick={onRemove} aria-label="Remove ingredient">✕</button>
       </div>
     </li>
@@ -221,7 +310,7 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose 
           foodName: i.foodName,
           rawText: i.rawText,
           qty: i.qty,
-          unit: i.unit,
+          unit: i.unit || (i.canonicalDefaultUnit ?? ''),
           optional: i.optional,
           lowConfidence: i.confidence === 'low' || !i.canonicalFoodId,
         }))
@@ -288,12 +377,21 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose 
     if (ingredients.some(i => !i.canonicalFoodId)) { setError('Please resolve all unmatched ingredients (shown in amber) before saving.'); return; }
     if (ingredients.some(i => !i.qty.trim())) { setError('Every ingredient needs a quantity.'); return; }
 
+    const needsManualMetric = ingredients.filter(i => !computeMetric(i.qty, i.unit));
+    if (needsManualMetric.some(i => !i.metricQty || !i.metricUnit)) {
+      setError('Some ingredients need a metric amount (g / ml / count) — fill in the fields shown in the ingredient row.');
+      return;
+    }
+
     const payload = {
       name: name.trim(),
       servings: servingsNum,
       sourceUrl: sourceUrl.trim() || null,
       instructions: instructions.trim() || null,
-      ingredients: ingredients.map(({ foodName: _fn, lowConfidence: _lc, rawText: _rt, ...rest }) => rest as RecipeIngredientInput),
+      ingredients: ingredients.map(({ foodName: _fn, lowConfidence: _lc, rawText: _rt, metricQty, metricUnit, ...rest }) => ({
+        ...rest,
+        metricValue: computeMetric(rest.qty, rest.unit) ?? (metricQty && metricUnit ? `${metricQty} ${metricUnit}` : null),
+      } as RecipeIngredientInput)),
       ...(initialData !== undefined && { sourceImage: initialData.sourceImage ?? null }),
       ...(photoBase64 && photoMimeType && { photoBase64, photoMimeType }),
     };
