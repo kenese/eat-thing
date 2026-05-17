@@ -1,6 +1,7 @@
 import { Router, type Router as ExpressRouter, type Request, type Response, type NextFunction } from 'express';
 import { and, eq, desc, sql } from 'drizzle-orm';
 import crypto from 'node:crypto';
+import type { ProductCandidate } from '@eat/shared';
 import { db } from '../db/index.js';
 import {
   supermarketCredentials, supermarketProducts,
@@ -184,12 +185,8 @@ router.post('/jobs/:id/result', withWorkerAuth, async (req, res) => {
 
 interface ComparePricesItem {
   shoppingListItemId: string;
-  sku: string | null;
-  name: string | null;
-  brand: string | null;
-  price: number | null;
-  inStock: boolean;
-  matched: boolean;
+  candidates: ProductCandidate[];
+  chosenSku: string | null;
 }
 
 async function applyComparePricesResult(store: string, data: Record<string, unknown>): Promise<void> {
@@ -198,26 +195,34 @@ async function applyComparePricesResult(store: string, data: Record<string, unkn
 
   await db.transaction(async tx => {
     for (const item of items) {
+      const chosen = item.chosenSku
+        ? item.candidates.find(c => c.sku === item.chosenSku) ?? null
+        : null;
+      const mirror = chosen ?? item.candidates[0] ?? null;
       await tx
         .insert(shoppingListPrices)
         .values({
           shoppingListItemId: item.shoppingListItemId,
           store: store as 'new_world' | 'paknsave' | 'woolworths',
-          sku: item.sku,
-          name: item.name,
-          price: item.price !== null ? String(item.price) : null,
-          inStock: item.inStock,
-          matched: item.matched,
+          sku: mirror?.sku ?? null,
+          name: mirror?.name ?? null,
+          price: mirror?.price !== undefined && mirror.price !== null ? String(mirror.price) : null,
+          inStock: mirror?.inStock ?? true,
+          matched: !!mirror,
+          candidates: item.candidates,
+          chosenSku: item.chosenSku,
           checkedAt: new Date(),
         })
         .onConflictDoUpdate({
           target: [shoppingListPrices.shoppingListItemId, shoppingListPrices.store],
           set: {
-            sku: item.sku,
-            name: item.name,
-            price: item.price !== null ? String(item.price) : null,
-            inStock: item.inStock,
-            matched: item.matched,
+            sku: mirror?.sku ?? null,
+            name: mirror?.name ?? null,
+            price: mirror?.price !== undefined && mirror.price !== null ? String(mirror.price) : null,
+            inStock: mirror?.inStock ?? true,
+            matched: !!mirror,
+            candidates: item.candidates,
+            chosenSku: item.chosenSku,
             checkedAt: new Date(),
           },
         });

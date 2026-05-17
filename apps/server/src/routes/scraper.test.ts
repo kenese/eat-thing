@@ -5,6 +5,7 @@ import crypto from 'node:crypto';
 
 const mocks = vi.hoisted(() => ({
   insertReturning: vi.fn(),
+  insertValues: vi.fn(),
   selectLimit: vi.fn(),
   selectMany: vi.fn(),
   updateReturning: vi.fn(),
@@ -42,7 +43,12 @@ vi.mock('../db/index.js', () => ({
       }),
     }),
     transaction: async (fn: (tx: unknown) => Promise<unknown>) => fn({
-      insert: () => ({ values: () => ({ onConflictDoUpdate: () => Promise.resolve(), returning: () => Promise.resolve([]) }) }),
+      insert: () => ({
+        values: (vals: unknown) => {
+          mocks.insertValues(vals);
+          return { onConflictDoUpdate: () => Promise.resolve(), returning: () => Promise.resolve([]) };
+        },
+      }),
       select: () => ({ from: () => ({ where: () => ({ limit: () => Promise.resolve([]) }) }) }),
     }),
   },
@@ -168,6 +174,42 @@ describe('scraper router — jobs', () => {
       .set(sign('POST', '/api/scraper/jobs/job-1/result', body))
       .type('json').send(body);
     expect(res.status).toBe(200);
+  });
+
+  it('writes candidates + chosenSku for each item when compare_prices completes', async () => {
+    mocks.selectLimit.mockResolvedValueOnce([{ id: 'job-1', type: 'compare_prices', householdId: 'h', store: 'new_world' }]);
+
+    const body = {
+      ok: true,
+      data: {
+        items: [
+          {
+            shoppingListItemId: 'sli-1',
+            candidates: [
+              {
+                sku: 'NW001', name: 'Flour 1.5kg', brand: 'Pams',
+                packSize: { qty: 1500, unit: 'g' }, price: 3.99,
+                unitPrice: { value: 0.0027, per: 'g' },
+                inStock: true, onSpecial: false, cartQty: 1, resolution: 'sole',
+              },
+            ],
+            chosenSku: 'NW001',
+          },
+        ],
+      },
+    };
+    const bodyStr = JSON.stringify(body);
+    const res = await request(app)
+      .post('/api/scraper/jobs/job-1/result')
+      .set(sign('POST', '/api/scraper/jobs/job-1/result', bodyStr))
+      .type('json').send(bodyStr);
+    expect(res.status).toBe(200);
+    expect(mocks.insertValues).toHaveBeenCalledWith(expect.objectContaining({
+      shoppingListItemId: 'sli-1',
+      sku: 'NW001',
+      chosenSku: 'NW001',
+      candidates: body.data.items[0]!.candidates,
+    }));
   });
 
   it('POST /import-past-orders returns 401 unauthenticated', async () => {

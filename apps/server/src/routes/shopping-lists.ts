@@ -11,7 +11,7 @@ import {
   mealPlanEntries, recipes, recipeIngredients,
   inventoryItems, canonicalFoods,
   shoppingLists, shoppingListItems,
-  scraperJobs, shoppingListPrices,
+  scraperJobs, shoppingListPrices, supermarketProducts,
 } from '../db/schema/index.js';
 
 const router: ExpressRouter = Router();
@@ -455,13 +455,45 @@ router.post('/:id/refresh-prices', withHousehold, async (req, res) => {
   const listId = req.params['id'] as string;
   if (!z.string().uuid().safeParse(listId).success) { res.status(404).json({ error: 'Not found' }); return; }
   try {
+    const itemRows = await db
+      .select({
+        id: shoppingListItems.id,
+        name: shoppingListItems.name,
+        canonicalFoodId: shoppingListItems.canonicalFoodId,
+        qty: shoppingListItems.qty,
+        unit: shoppingListItems.unit,
+      })
+      .from(shoppingListItems)
+      .where(eq(shoppingListItems.shoppingListId, listId));
+
+    const preferredRows = await db
+      .select({ canonicalFoodId: supermarketProducts.canonicalFoodId, brand: supermarketProducts.brand })
+      .from(supermarketProducts)
+      .where(and(eq(supermarketProducts.householdId, req.householdId), eq(supermarketProducts.preferred, true)));
+
+    const preferredBrandsByCanonicalFood: Record<string, string[]> = {};
+    for (const r of preferredRows) {
+      if (!r.canonicalFoodId || !r.brand) continue;
+      (preferredBrandsByCanonicalFood[r.canonicalFoodId] ??= []).push(r.brand);
+    }
+
     const inserted = await db
       .insert(scraperJobs)
       .values({
         householdId: req.householdId,
         store: 'new_world',
         type: 'compare_prices',
-        payload: { shoppingListId: listId },
+        payload: {
+          shoppingListId: listId,
+          items: itemRows.map(r => ({
+            id: r.id,
+            name: r.name,
+            canonicalFoodId: r.canonicalFoodId,
+            requiredQty: r.qty,
+            requiredUnit: r.unit === 'ml' || r.unit === 'count' ? r.unit : 'g',
+          })),
+          preferredBrandsByCanonicalFood,
+        },
         status: 'pending',
       })
       .returning({ id: scraperJobs.id });
@@ -487,6 +519,8 @@ router.get('/:id/prices', withHousehold, async (req, res) => {
         price: shoppingListPrices.price,
         inStock: shoppingListPrices.inStock,
         matched: shoppingListPrices.matched,
+        candidates: shoppingListPrices.candidates,
+        chosenSku: shoppingListPrices.chosenSku,
         checkedAt: shoppingListPrices.checkedAt,
       })
       .from(shoppingListPrices)
@@ -509,6 +543,8 @@ router.get('/:id/prices', withHousehold, async (req, res) => {
       prices: priceRows.map(r => ({
         ...r,
         price: r.price !== null ? Number(r.price) : null,
+        candidates: r.candidates ?? [],
+        chosenSku: r.chosenSku ?? null,
         checkedAt: r.checkedAt instanceof Date ? r.checkedAt.toISOString() : r.checkedAt,
       })),
       job: job ? { id: job.id, status: job.status, error: job.error } : null,
