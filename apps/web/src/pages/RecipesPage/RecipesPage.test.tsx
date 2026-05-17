@@ -9,6 +9,9 @@ const recipe = {
   sourceUrl: null,
   sourceImage: null,
   ingredientCount: 5,
+  totalTimeMinutes: 20,
+  tags: ['pasta', 'quick'],
+  canonicalFoodIds: [],
   createdAt: '2026-01-01T00:00:00Z',
   updatedAt: '2026-01-01T00:00:00Z',
 };
@@ -47,8 +50,8 @@ describe('RecipeCard selection', () => {
 import { SelectionBar } from './RecipesPage';
 
 const selectionRecipes = [
-  { id: 'r1', name: 'Pasta', servings: 4, sourceUrl: null, sourceImage: null, ingredientCount: 5, createdAt: '', updatedAt: '' },
-  { id: 'r2', name: 'Pizza', servings: 2, sourceUrl: null, sourceImage: null, ingredientCount: 3, createdAt: '', updatedAt: '' },
+  { id: 'r1', name: 'Pasta', servings: 4, sourceUrl: null, sourceImage: null, ingredientCount: 5, totalTimeMinutes: null, tags: [], canonicalFoodIds: [], createdAt: '', updatedAt: '' },
+  { id: 'r2', name: 'Pizza', servings: 2, sourceUrl: null, sourceImage: null, ingredientCount: 3, totalTimeMinutes: null, tags: [], canonicalFoodIds: [], createdAt: '', updatedAt: '' },
 ];
 
 describe('SelectionBar', () => {

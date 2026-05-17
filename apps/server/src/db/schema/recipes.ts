@@ -10,6 +10,8 @@ export const recipes = pgTable('recipes', {
   sourceImage: text('source_image'), // full public URL (Supabase Storage or external)
   instructions: text('instructions'),
   servings: doublePrecision('servings').notNull().default(4),
+  totalTimeMinutes: integer('total_time_minutes'),
+  tags: text('tags').array().notNull().default([]),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });

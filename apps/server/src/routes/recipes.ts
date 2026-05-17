@@ -95,6 +95,9 @@ router.get('/', withHousehold, async (req, res) => {
         sourceUrl: recipes.sourceUrl,
         sourceImage: recipes.sourceImage,
         ingredientCount: sql<number>`(select count(*)::int from ${recipeIngredients} where ${recipeIngredients.recipeId} = ${recipes.id})`,
+        totalTimeMinutes: recipes.totalTimeMinutes,
+        tags: recipes.tags,
+        canonicalFoodIds: sql<string[]>`(select coalesce(array_agg(ri.canonical_food_id::text), array[]::text[]) from recipe_ingredients ri where ri.recipe_id = ${recipes.id})`,
         createdAt: recipes.createdAt,
         updatedAt: recipes.updatedAt,
       })

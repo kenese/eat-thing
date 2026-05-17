@@ -7,7 +7,7 @@ import { ImportModal } from './ImportModal';
 import { PageTitle } from '../../components/PageTitle';
 import { FilterStrip } from '../../components/FilterStrip';
 import { StatusChip } from '../../components/StatusChip';
-import { computeMissing, bucketRecipe } from '../../lib/recipeMatch';
+import { computeMissing, computeMissingFromIds, bucketRecipe } from '../../lib/recipeMatch';
 import type { Recipe, RecipeSummary } from '@eat/shared';
 import './RecipesPage.css';
 
@@ -54,7 +54,7 @@ export function RecipeCard({
             )}
           </div>
           <div className="rx-card-meta-overlay">
-            serves {recipe.servings}
+            {recipe.totalTimeMinutes ? `${recipe.totalTimeMinutes} min · ` : ''}serves {recipe.servings}
           </div>
         </div>
         <div className="rx-card-body">
@@ -67,6 +67,13 @@ export function RecipeCard({
           )}
           <div className="rx-card-footer">
             <span>{recipe.ingredientCount} ingr</span>
+            {recipe.tags.length > 0 && (
+              <span className="rx-card-tags">
+                {recipe.tags.slice(0, 2).map(t => (
+                  <span key={t} className="rx-card-tag">{t}</span>
+                ))}
+              </span>
+            )}
           </div>
         </div>
       </button>
@@ -322,24 +329,14 @@ export function RecipesPage() {
 
   // Hero / side features need full recipe objects (ingredients) — fetch them when picked.
   const sortedByMatch = useMemo(() => {
-    const enriched = recipes.map((r) => {
-      // Without server-side ingredient join in the summary, approximate by zero-missing assumption:
-      // we treat summary recipes as bucketed once their full record loads. As a coarse heuristic,
-      // we use ingredientCount === 0 ⇒ cookable; otherwise place in 'library' until a richer client
-      // join is wired up. For the lite hero we re-fetch the picked recipe via useRecipe (below).
-      const missing: string[] = [];
+    return recipes.map((r) => {
+      const missing = computeMissingFromIds(r.canonicalFoodIds, inventory);
       return {
         recipe: r as RecipeSummary,
         match: { bucket: bucketRecipe(missing), missing } as MatchInfo,
       };
     });
-    return enriched;
-  }, [recipes]);
-
-  // NOTE: A future task can replace the heuristic above with a proper match by fetching
-  // full ingredient lists for every visible recipe. For this restyle we ship the simpler
-  // version: the section grouping uses the heuristic; the hero gets a real full-record
-  // fetch via useRecipe(firstId).
+  }, [recipes, inventory]);
 
   const featureId = recipes[0]?.id ?? null;
   const sideId    = recipes[1]?.id ?? null;

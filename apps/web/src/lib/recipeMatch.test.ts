@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeMissing, bucketRecipe } from './recipeMatch';
+import { computeMissing, computeMissingFromIds, bucketRecipe } from './recipeMatch';
 import type { Recipe, InventoryRow } from '@eat/shared';
 
 function recipe(name: string, ingredients: { canonicalFoodId: string; foodName: string; qty: number; unit: 'g' | 'ml' | 'count' }[]): Recipe {
@@ -97,5 +97,39 @@ describe('bucketRecipe', () => {
   });
   it('buckets to "library" for 4+ missing', () => {
     expect(bucketRecipe(['a', 'b', 'c', 'd'])).toBe('library');
+  });
+});
+
+describe('computeMissingFromIds + bucketRecipe — bucketing integration', () => {
+  const stock = [
+    inv('cf-egg',    'eggs',   6, 'count'),
+    inv('cf-butter', 'butter', 1, 'count'),
+    inv('cf-flour',  'flour',  500, 'g'),
+  ];
+
+  it('lands in "cookable" when all IDs are in inventory (0 missing)', () => {
+    const missing = computeMissingFromIds(['cf-egg', 'cf-butter'], stock);
+    expect(bucketRecipe(missing)).toBe('cookable');
+    expect(missing).toHaveLength(0);
+  });
+
+  it('lands in "shoppable" when 1–3 IDs are absent', () => {
+    const missing = computeMissingFromIds(['cf-egg', 'cf-chicken', 'cf-thyme'], stock);
+    expect(bucketRecipe(missing)).toBe('shoppable');
+    expect(missing).toHaveLength(2);
+  });
+
+  it('lands in "library" when 4+ IDs are absent', () => {
+    const missing = computeMissingFromIds(
+      ['cf-egg', 'cf-mozzarella', 'cf-sausage', 'cf-dough', 'cf-honey'],
+      stock,
+    );
+    expect(bucketRecipe(missing)).toBe('library');
+    expect(missing).toHaveLength(4);
+  });
+
+  it('treats an empty canonicalFoodIds list as cookable', () => {
+    const missing = computeMissingFromIds([], stock);
+    expect(bucketRecipe(missing)).toBe('cookable');
   });
 });

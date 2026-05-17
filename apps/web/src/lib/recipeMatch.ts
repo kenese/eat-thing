@@ -46,3 +46,18 @@ export function bucketRecipe(missing: string[]): RecipeBucket {
   if (missing.length <= 3) return 'shoppable';
   return 'library';
 }
+
+/**
+ * Summary-level match: returns missing canonical food IDs (not names).
+ * Simpler than computeMissing — no quantity check, ID-only. Used for bucketing
+ * recipe summaries where the full ingredient list isn't available.
+ */
+export function computeMissingFromIds(
+  canonicalFoodIds: string[],
+  inventory: InventoryRow[],
+): string[] {
+  const inStock = new Set(
+    inventory.flatMap(r => r.canonicalFoodId ? [r.canonicalFoodId] : []),
+  );
+  return canonicalFoodIds.filter(id => !inStock.has(id));
+}

@@ -77,6 +77,9 @@ export interface RecipeSummary {
   sourceUrl: string | null;
   sourceImage: string | null;
   ingredientCount: number;
+  totalTimeMinutes: number | null;
+  tags: string[];
+  canonicalFoodIds: string[];
   createdAt: string;
   updatedAt: string;
 }

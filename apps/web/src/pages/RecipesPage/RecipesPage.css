@@ -282,6 +282,22 @@
   margin-top: auto;
 }
 
+.rx-card-tags {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+}
+
+.rx-card-tag {
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--cream);
+  color: var(--ink2);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
 @media (max-width: 1024px) {
   .rx-grid          { grid-template-columns: repeat(2, 1fr); }
   .rx-grid--dense   { grid-template-columns: repeat(3, 1fr); }
