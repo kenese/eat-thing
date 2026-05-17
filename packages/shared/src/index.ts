@@ -351,6 +351,8 @@ export interface ShoppingListPrice {
   inStock: boolean;
   matched: boolean;
   checkedAt: string;
+  candidates: ProductCandidate[];
+  chosenSku: string | null;
 }
 
 export interface PricesForListResponse {
@@ -385,4 +387,45 @@ export interface ImportPastOrdersResult {
     brand: string | null;
     canonicalFoodHint: string | null;
   }>;
+}
+
+// ─── Phase 4: build-to-cart ───────────────────────────────────────────────────
+
+export type ProductCandidateUnit = 'g' | 'ml' | 'count';
+
+export interface ProductCandidate {
+  sku: string;
+  name: string;
+  brand: string | null;
+  packSize: { qty: number; unit: ProductCandidateUnit } | null;
+  price: number;
+  unitPrice: { value: number; per: ProductCandidateUnit } | null;
+  inStock: boolean;
+  onSpecial: boolean;
+  cartQty: number;
+  resolution: 'sole' | 'preferred' | 'manual';
+}
+
+export interface CartActionResult {
+  shoppingListItemId: string;
+  sku: string;
+  requestedQty: number;
+  action: 'added' | 'already_in_cart' | 'qty_increased' | 'failed';
+  failureReason?: string;
+}
+
+export interface CartJobResult {
+  perItem: CartActionResult[];
+  cartTotalNzd: number;
+  trolleyUrl: string;
+}
+
+export interface SendToCartResponse {
+  jobId: string;
+  skipped: string[];
+}
+
+export interface CartResultResponse {
+  job: { id: string; status: ScraperJobStatus; error: string | null } | null;
+  result: CartJobResult | null;
 }
