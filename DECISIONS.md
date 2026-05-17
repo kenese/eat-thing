@@ -136,3 +136,14 @@ an external brain store. Removing dead code simplifies the codebase and eliminat
 worker that wasn't running.
 
 **What's kept:** Meal Planner import (MCP), URL import, photo import, MealDB search.
+
+## D23 — Phase 4 build-to-cart implementation: top-N candidates + per-item review + diff-style cart writes
+**Date:** 2026-05-18
+**Decision:**
+- Reshape `compare_prices` to return top-N (default 5) `ProductCandidate[]` per item, ranked by per-100g/ml unit price among packs that meet the recipe's required qty (multiplier ≥ 1 when no single pack is big enough). Three resolutions: `sole` (one viable candidate), `preferred` (preferred brand wins in top 3), `manual` (multiple plausible, no preferred). Specials are decoration, not ranking.
+- Persist candidates + chosenSku on `shopping_list_prices` (already per-item, per-store) — not on `shopping_list_items` — so multi-store cart builds later inherit the shape cleanly.
+- Two-job pipeline: `compare_prices` → user reviews and (for manual items) picks → `add_to_cart`. The one-button collapsed UX (Approach B in the spec) is deferred; it builds on the same primitives.
+- `add_to_cart` diffs against the live trolley before writing → idempotent under retry, safe to re-run.
+- Detailed result JSON on `scraper_jobs` (no new audit table). Reconcile view reads it back via a dedicated endpoint.
+
+**Rationale:** Two-job pipeline is the simplest debuggable shape; each job has its own row + result JSON, and the user can resume work between steps. Per-100g/ml ranking matches how the user actually buys (cheapest per unit volume / weight, given a pack big enough to cover the recipe). Diff-against-trolley turns retries into no-ops, the safest property for a write that crosses an external service.

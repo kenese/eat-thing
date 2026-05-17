@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, numeric, boolean, unique } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, numeric, boolean, unique, jsonb } from 'drizzle-orm/pg-core';
 import { shoppingListItems } from './shopping.js';
 import { storeEnum } from './enums.js';
 
@@ -11,5 +11,7 @@ export const shoppingListPrices = pgTable('shopping_list_prices', {
   price: numeric('price', { precision: 10, scale: 2 }),
   inStock: boolean('in_stock').notNull().default(true),
   matched: boolean('matched').notNull().default(true),
+  candidates: jsonb('candidates'),
+  chosenSku: text('chosen_sku'),
   checkedAt: timestamp('checked_at').notNull().defaultNow(),
 }, t => [unique().on(t.shoppingListItemId, t.store)]);

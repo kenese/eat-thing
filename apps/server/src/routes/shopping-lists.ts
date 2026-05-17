@@ -11,8 +11,9 @@ import {
   mealPlanEntries, recipes, recipeIngredients,
   inventoryItems, canonicalFoods,
   shoppingLists, shoppingListItems,
-  scraperJobs, shoppingListPrices,
+  scraperJobs, shoppingListPrices, supermarketProducts,
 } from '../db/schema/index.js';
+import type { ProductCandidate } from '@eat/shared';
 
 const router: ExpressRouter = Router();
 
@@ -455,18 +456,166 @@ router.post('/:id/refresh-prices', withHousehold, async (req, res) => {
   const listId = req.params['id'] as string;
   if (!z.string().uuid().safeParse(listId).success) { res.status(404).json({ error: 'Not found' }); return; }
   try {
+    const itemRows = await db
+      .select({
+        id: shoppingListItems.id,
+        name: shoppingListItems.name,
+        canonicalFoodId: shoppingListItems.canonicalFoodId,
+        qty: shoppingListItems.qty,
+        unit: shoppingListItems.unit,
+      })
+      .from(shoppingListItems)
+      .where(eq(shoppingListItems.shoppingListId, listId));
+
+    const preferredRows = await db
+      .select({ canonicalFoodId: supermarketProducts.canonicalFoodId, brand: supermarketProducts.brand })
+      .from(supermarketProducts)
+      .where(and(eq(supermarketProducts.householdId, req.householdId), eq(supermarketProducts.preferred, true)));
+
+    const preferredBrandsByCanonicalFood: Record<string, string[]> = {};
+    for (const r of preferredRows) {
+      if (!r.canonicalFoodId || !r.brand) continue;
+      (preferredBrandsByCanonicalFood[r.canonicalFoodId] ??= []).push(r.brand);
+    }
+
     const inserted = await db
       .insert(scraperJobs)
       .values({
         householdId: req.householdId,
         store: 'new_world',
         type: 'compare_prices',
-        payload: { shoppingListId: listId },
+        payload: {
+          shoppingListId: listId,
+          items: itemRows.map(r => ({
+            id: r.id,
+            name: r.name,
+            canonicalFoodId: r.canonicalFoodId,
+            requiredQty: r.qty,
+            requiredUnit: r.unit === 'ml' || r.unit === 'count' ? r.unit : 'g',
+          })),
+          preferredBrandsByCanonicalFood,
+        },
         status: 'pending',
       })
       .returning({ id: scraperJobs.id });
 
     res.json({ jobId: inserted[0]?.id });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// PATCH /api/shopping-lists/items/:itemId/chosen-sku
+router.patch('/items/:itemId/chosen-sku', withHousehold, async (req, res) => {
+  const itemId = req.params['itemId'] as string;
+  if (!z.string().uuid().safeParse(itemId).success) { res.status(404).json({ error: 'Not found' }); return; }
+  const { sku } = req.body as { sku?: string };
+  if (typeof sku !== 'string' || sku.length === 0) { res.status(400).json({ error: 'sku required' }); return; }
+
+  try {
+    const rows = await db
+      .select({ candidates: shoppingListPrices.candidates })
+      .from(shoppingListPrices)
+      .innerJoin(shoppingListItems, eq(shoppingListPrices.shoppingListItemId, shoppingListItems.id))
+      .where(and(
+        eq(shoppingListPrices.shoppingListItemId, itemId),
+        eq(shoppingListPrices.store, 'new_world'),
+        eq(shoppingListItems.householdId, req.householdId),
+      ));
+    const row = rows[0];
+    if (!row) { res.status(404).json({ error: 'No prices for this item yet' }); return; }
+    const candidates = (row.candidates ?? []) as ProductCandidate[];
+    const chosen = candidates.find(c => c.sku === sku);
+    if (!chosen) { res.status(400).json({ error: 'sku not in candidates' }); return; }
+
+    await db
+      .update(shoppingListPrices)
+      .set({
+        chosenSku: chosen.sku,
+        sku: chosen.sku,
+        name: chosen.name,
+        price: chosen.price !== null && chosen.price !== undefined ? String(chosen.price) : null,
+        inStock: chosen.inStock,
+        matched: true,
+        checkedAt: new Date(),
+      })
+      .where(and(
+        eq(shoppingListPrices.shoppingListItemId, itemId),
+        eq(shoppingListPrices.store, 'new_world'),
+      ));
+
+    res.json({ ok: true, chosenSku: chosen.sku });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.post('/:id/send-to-cart', withHousehold, async (req, res) => {
+  const listId = req.params['id'] as string;
+  if (!z.string().uuid().safeParse(listId).success) { res.status(404).json({ error: 'Not found' }); return; }
+  try {
+    const rows = await db
+      .select({
+        shoppingListItemId: shoppingListPrices.shoppingListItemId,
+        chosenSku: shoppingListPrices.chosenSku,
+        candidates: shoppingListPrices.candidates,
+      })
+      .from(shoppingListPrices)
+      .innerJoin(shoppingListItems, eq(shoppingListPrices.shoppingListItemId, shoppingListItems.id))
+      .where(and(
+        eq(shoppingListItems.shoppingListId, listId),
+        eq(shoppingListPrices.store, 'new_world'),
+      ));
+
+    const sendable: Array<{ shoppingListItemId: string; sku: string; qty: number }> = [];
+    const skipped: string[] = [];
+    for (const r of rows) {
+      if (!r.chosenSku) { skipped.push(r.shoppingListItemId); continue; }
+      const cands = (r.candidates ?? []) as ProductCandidate[];
+      const c = cands.find(x => x.sku === r.chosenSku);
+      if (!c) { skipped.push(r.shoppingListItemId); continue; }
+      sendable.push({ shoppingListItemId: r.shoppingListItemId, sku: c.sku, qty: c.cartQty });
+    }
+    if (sendable.length === 0) { res.status(400).json({ error: 'No items with a chosen sku' }); return; }
+
+    const inserted = await db
+      .insert(scraperJobs)
+      .values({
+        householdId: req.householdId,
+        store: 'new_world',
+        type: 'add_to_cart',
+        payload: { shoppingListId: listId, items: sendable },
+        status: 'pending',
+      })
+      .returning({ id: scraperJobs.id });
+
+    res.json({ jobId: inserted[0]?.id, skipped });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.get('/:id/cart-result', withHousehold, async (req, res) => {
+  const listId = req.params['id'] as string;
+  if (!z.string().uuid().safeParse(listId).success) { res.json({ result: null }); return; }
+  try {
+    const rows = await db
+      .select({ id: scraperJobs.id, status: scraperJobs.status, result: scraperJobs.result, error: scraperJobs.error, payload: scraperJobs.payload })
+      .from(scraperJobs)
+      .where(and(eq(scraperJobs.householdId, req.householdId), eq(scraperJobs.type, 'add_to_cart')))
+      .orderBy(desc(scraperJobs.createdAt))
+      .limit(5);
+    const job = rows.find(r => {
+      const p = r.payload as Record<string, unknown> | undefined;
+      return p && p['shoppingListId'] === listId;
+    }) ?? rows[0] ?? null;
+    res.json({
+      job: job ? { id: job.id, status: job.status, error: job.error } : null,
+      result: job?.result ?? null,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });
@@ -487,6 +636,8 @@ router.get('/:id/prices', withHousehold, async (req, res) => {
         price: shoppingListPrices.price,
         inStock: shoppingListPrices.inStock,
         matched: shoppingListPrices.matched,
+        candidates: shoppingListPrices.candidates,
+        chosenSku: shoppingListPrices.chosenSku,
         checkedAt: shoppingListPrices.checkedAt,
       })
       .from(shoppingListPrices)
@@ -509,6 +660,8 @@ router.get('/:id/prices', withHousehold, async (req, res) => {
       prices: priceRows.map(r => ({
         ...r,
         price: r.price !== null ? Number(r.price) : null,
+        candidates: r.candidates ?? [],
+        chosenSku: r.chosenSku ?? null,
         checkedAt: r.checkedAt instanceof Date ? r.checkedAt.toISOString() : r.checkedAt,
       })),
       job: job ? { id: job.id, status: job.status, error: job.error } : null,

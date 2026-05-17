@@ -5,6 +5,10 @@ import request from 'supertest';
 const mocks = vi.hoisted(() => ({
   getSession: vi.fn(),
   membershipLimit: vi.fn(),
+  selectFrom: vi.fn(),
+  selectLimit: vi.fn(),
+  updateSet: vi.fn(),
+  insertValues: vi.fn(),
 }));
 
 vi.mock('../auth.js', () => ({ auth: { api: { getSession: mocks.getSession } } }));
@@ -14,22 +18,93 @@ vi.mock('drizzle-orm', () => ({
   eq: () => null,
   asc: () => null,
   desc: () => null,
+  inArray: () => null,
   sql: Object.assign((...args: unknown[]) => args, { template: () => null }),
 }));
 vi.mock('uuid', () => ({ v4: () => 'fixed-uuid' }));
 vi.mock('../db/index.js', () => {
-  const chain = { from: () => ({ where: () => ({ limit: mocks.membershipLimit }) }) };
-  return { db: { select: () => chain } };
+  // membershipLimit handles the withHousehold middleware select (limit at end)
+  // selectFrom handles any additional select calls (prices, jobs, etc.)
+  // selectLimit handles select calls whose cols include a 'candidates' key (PATCH chosen-sku)
+  const makeSelectChain = (terminal: () => unknown) => ({
+    from: () => ({
+      innerJoin: () => ({ where: () => terminal() }),
+      leftJoin: () => ({ where: () => ({ orderBy: () => terminal(), limit: () => terminal() }) }),
+      where: () => ({
+        orderBy: () => ({ limit: () => terminal() }),
+        groupBy: () => terminal(),
+        limit: () => terminal(),
+      }),
+      orderBy: () => ({ limit: () => terminal() }),
+      limit: () => terminal(),
+    }),
+  });
+  const makeUpdateChain = () => ({
+    set: (vals: unknown) => {
+      mocks.updateSet(vals);
+      return { where: () => Promise.resolve() };
+    },
+  });
+  return {
+    db: {
+      select: (cols?: unknown) => {
+        // Membership select (withHousehold) — has 'householdId' key
+        const isMembershipSelect = cols && typeof cols === 'object' && 'householdId' in (cols as object);
+        if (isMembershipSelect) {
+          return makeSelectChain(mocks.membershipLimit);
+        }
+        // Candidates-only select — exactly one key 'candidates' (PATCH chosen-sku endpoint)
+        const isCandidatesSelect = cols && typeof cols === 'object' &&
+          Object.keys(cols as object).length === 1 && 'candidates' in (cols as object);
+        if (isCandidatesSelect) {
+          return makeSelectChain(mocks.selectLimit);
+        }
+        return makeSelectChain(mocks.selectFrom);
+      },
+      insert: () => ({
+        values: (vals: unknown) => {
+          const promise = mocks.insertValues(vals);
+          return { returning: () => promise ?? Promise.resolve([]) };
+        },
+      }),
+      update: () => makeUpdateChain(),
+    },
+  };
 });
 vi.mock('../db/schema/index.js', () => ({
   memberships: { householdId: 'householdId', userId: 'userId' },
   mealPlanEntries: {}, recipes: {}, recipeIngredients: {},
   inventoryItems: {}, canonicalFoods: {},
   shoppingLists: {}, shoppingListItems: {},
-  scraperJobs: { id: 'id' }, shoppingListPrices: {},
+  scraperJobs: { id: 'id', householdId: 'householdId', type: 'type', createdAt: 'createdAt' },
+  shoppingListPrices: { shoppingListItemId: 'shoppingListItemId', store: 'store' },
+  supermarketProducts: { householdId: 'householdId', preferred: 'preferred', canonicalFoodId: 'canonicalFoodId', brand: 'brand' },
 }));
 
 const { default: shoppingListsRouter } = await import('./shopping-lists');
+
+async function getPrices(listId: string) {
+  const app = express();
+  app.use(express.json());
+  app.use('/api/shopping-lists', shoppingListsRouter);
+  return request(app).get(`/api/shopping-lists/${listId}/prices`);
+}
+
+async function patchChosenSku(itemId: string, body: { sku?: string }) {
+  const app = express();
+  app.use(express.json());
+  app.use('/api/shopping-lists', shoppingListsRouter);
+  return request(app)
+    .patch(`/api/shopping-lists/items/${itemId}/chosen-sku`)
+    .send(body);
+}
+
+async function postSendToCart(listId: string) {
+  const app = express();
+  app.use(express.json());
+  app.use('/api/shopping-lists', shoppingListsRouter);
+  return request(app).post(`/api/shopping-lists/${listId}/send-to-cart`);
+}
 
 describe('shopping-lists router', () => {
   let app: express.Express;
@@ -140,5 +215,90 @@ describe('shopping-lists router', () => {
       .send({ entryIds: ['not-a-uuid'] });
 
     expect(res.status).toBe(400);
+  });
+
+  it('PATCH /items/:id/chosen-sku updates chosenSku when sku is in candidates', async () => {
+    mocks.getSession.mockResolvedValue({ user: { id: 'u1' } });
+    mocks.membershipLimit.mockResolvedValue([{ householdId: 'hh-1' }]);
+    mocks.selectLimit.mockResolvedValueOnce([{
+      candidates: [
+        { sku: 'NW001', name: 'Flour 1.5kg', brand: 'Pams', packSize: { qty: 1500, unit: 'g' }, price: 3.99, unitPrice: { value: 0.0027, per: 'g' }, inStock: true, onSpecial: false, cartQty: 1, resolution: 'manual' },
+        { sku: 'NW002', name: 'Flour 1kg', brand: 'Edmonds', packSize: { qty: 1000, unit: 'g' }, price: 4.50, unitPrice: { value: 0.0045, per: 'g' }, inStock: true, onSpecial: false, cartQty: 1, resolution: 'manual' },
+      ],
+    }]);
+    const res = await patchChosenSku('00000000-0000-0000-0000-000000000001', { sku: 'NW002' });
+    expect(res.status).toBe(200);
+    expect(mocks.updateSet).toHaveBeenCalledWith(expect.objectContaining({
+      chosenSku: 'NW002',
+      sku: 'NW002',
+      name: 'Flour 1kg',
+      price: '4.5',
+    }));
+  });
+
+  it('PATCH /items/:id/chosen-sku rejects sku not in candidates', async () => {
+    mocks.getSession.mockResolvedValue({ user: { id: 'u1' } });
+    mocks.membershipLimit.mockResolvedValue([{ householdId: 'hh-1' }]);
+    mocks.selectLimit.mockResolvedValueOnce([{
+      candidates: [{ sku: 'NW001', name: 'Flour 1.5kg', brand: 'Pams', packSize: null, price: 3.99, unitPrice: null, inStock: true, onSpecial: false, cartQty: 1, resolution: 'sole' }],
+    }]);
+    const res = await patchChosenSku('00000000-0000-0000-0000-000000000001', { sku: 'NW999' });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns candidates + chosenSku on the prices payload', async () => {
+    mocks.getSession.mockResolvedValue({ user: { id: 'user-1' } });
+    mocks.membershipLimit.mockResolvedValue([{ householdId: 'hh-1' }]);
+    mocks.selectFrom.mockResolvedValueOnce([
+      {
+        id: 'p-1',
+        shoppingListItemId: 'sli-1',
+        store: 'new_world',
+        sku: 'NW001',
+        name: 'Flour 1.5kg',
+        price: '3.99',
+        inStock: true,
+        matched: true,
+        candidates: [{ sku: 'NW001', name: 'Flour 1.5kg', brand: 'Pams', packSize: { qty: 1500, unit: 'g' }, price: 3.99, unitPrice: { value: 0.0027, per: 'g' }, inStock: true, onSpecial: false, cartQty: 1, resolution: 'sole' }],
+        chosenSku: 'NW001',
+        checkedAt: new Date('2026-05-18T00:00:00Z'),
+      },
+    ]);
+    mocks.selectFrom.mockResolvedValueOnce([]); // no jobs
+    const res = await getPrices('00000000-0000-0000-0000-000000000001');
+    expect(res.body.prices[0].candidates).toHaveLength(1);
+    expect(res.body.prices[0].chosenSku).toBe('NW001');
+  });
+
+  it('POST /:id/send-to-cart enqueues add_to_cart with items that have chosenSku', async () => {
+    mocks.getSession.mockResolvedValue({ user: { id: 'u1' } });
+    mocks.membershipLimit.mockResolvedValue([{ householdId: 'hh-1' }]);
+    mocks.selectFrom.mockResolvedValueOnce([
+      {
+        shoppingListItemId: '550e8400-e29b-41d4-a716-446655440011',
+        candidates: [{ sku: 'NW001', cartQty: 1, name: 'X', brand: null, packSize: null, price: 1.99, unitPrice: null, inStock: true, onSpecial: false, resolution: 'sole' }],
+        chosenSku: 'NW001',
+      },
+      {
+        shoppingListItemId: '550e8400-e29b-41d4-a716-446655440012',
+        candidates: [{ sku: 'NW002', cartQty: 2, name: 'Y', brand: null, packSize: null, price: 2.50, unitPrice: null, inStock: true, onSpecial: false, resolution: 'sole' }],
+        chosenSku: 'NW002',
+      },
+      { shoppingListItemId: '550e8400-e29b-41d4-a716-446655440013', candidates: [], chosenSku: null }, // skipped
+    ]);
+    mocks.insertValues.mockResolvedValueOnce([{ id: 'job-9' }]);
+    const res = await postSendToCart('550e8400-e29b-41d4-a716-446655440001');
+    expect(res.status).toBe(200);
+    expect(res.body.jobId).toBe('job-9');
+    expect(res.body.skipped).toEqual(['550e8400-e29b-41d4-a716-446655440013']);
+    expect(mocks.insertValues).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'add_to_cart',
+      payload: expect.objectContaining({
+        items: [
+          { shoppingListItemId: '550e8400-e29b-41d4-a716-446655440011', sku: 'NW001', qty: 1 },
+          { shoppingListItemId: '550e8400-e29b-41d4-a716-446655440012', sku: 'NW002', qty: 2 },
+        ],
+      }),
+    }));
   });
 });

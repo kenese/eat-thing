@@ -4,7 +4,7 @@ Living plan for eat-thing. Tasks update as we go. New work appends; completed wo
 
 **Status legend:** `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` deferred / dropped
 
-**Currently on:** Phase 3 — Read-only supermarket integration (Phase 2 complete 2026-05-10)
+**Currently on:** Phase 4 complete — back to backlog / slice-2 hardening
 
 For per-decision rationale see [DECISIONS.md](./DECISIONS.md). For architecture see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
@@ -97,10 +97,10 @@ Pak'nSave and Woolworths adapters exist in `apps/scraper` but are deferred post-
 
 Adds items to cart on the user's behalf. User always clicks "place order" — see [D3](./DECISIONS.md#d3--supermarket-integration-ceiling-build-to-cart).
 
-- [ ] New World "add to cart" Playwright flow
-- [ ] Reconcile: confirm cart contents match shopping list, surface mismatches
-- [ ] Cart-link handoff: deep link or QR back to phone for checkout
-- [ ] Audit log of every scraper action (what was added, when, in which session)
+- [x] New World "add to cart" Playwright flow — _2026-05-18_
+- [x] Reconcile: confirm cart contents match shopping list, surface mismatches — _2026-05-18_
+- [x] Cart-link handoff: deep link or QR back to phone for checkout — _2026-05-18_
+- [x] Audit log of every scraper action (what was added, when, in which session) — _2026-05-18_
 
 ## Frontend restyle (complete) — _2026-05-11_
 
@@ -133,6 +133,7 @@ Deferred (own specs): Shops nav destination, scan-receipt, print, delivery-windo
 
 ## Done
 
+- 2026-05-18 — Phase 4: build-to-cart (New World only) shipped. compare_prices now returns top-N candidates with sole/preferred/manual resolutions; shopping list UI shows state badges + per-row candidate picker; new add_to_cart job diffs the live trolley (idempotent), applies via product detail pages, returns a per-item action breakdown + cart total; reconcile modal surfaces the result with an "Open New World trolley" link. See D23 and docs/superpowers/specs/2026-05-17-phase4-build-to-cart-design.md.
 - 2026-05-17 — Plan refactor: replaced fixed Monday–Sunday weekly meal plan with a rolling 17-day window centred on today. Dropped `meal_plans` table and auto-generation of shopping lists (migration 0008). Plan page now renders a horizontally-scrollable rail of 17 day cards; today is always at index 2. Shopping list gets a "Add from planned recipes" modal that pre-ticks days whose entries are already in the list and calls `POST /api/shopping-lists/from-plan`. `source_recipe_id` added to `shopping_list_items` to support pre-tick matching. All unit tests (116 web, 59 server) and E2E tests (15) pass. Also fixed a pre-existing E2E crash where the Meal Planner parse mock used a numeric `qty` instead of a string, breaking `MetricControl`.
 - 2026-05-16 — Removed OpenBrain sync integration entirely: `packages/openbrain` deleted, `sync_dirty` table dropped (migration 0007), `/api/sync` routes removed, `openbrain-worker` deleted, `synced` column dropped from `inventory_items`, OpenBrain tab removed from ImportModal, all fire-and-forget sync calls removed from recipe/inventory/meal-plan/cook-event routes. See D22.
 - 2026-05-15 — Fixed large recipe photo imports: `/api/ingest/photo` now has a scoped 10 MB JSON parser limit, the web importer downsizes large photos before base64 upload, and multipart photo ingestion is captured in IDEAS.md as the longer-term replacement.

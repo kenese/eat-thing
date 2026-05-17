@@ -5,9 +5,11 @@ import {
   usePurchaseShoppingListItems, useBatchDeleteShoppingListItems,
 } from '../../hooks/useShoppingList';
 import { useFoodSearch } from '../../hooks/useFoodSearch';
-import { usePricesForList, useRefreshPrices } from '../../hooks/usePricesForList';
+import { usePricesForList, useRefreshPrices, useChooseSku, useSendToCart, useCartResult } from '../../hooks/usePricesForList';
+import { ReconcileModal } from './ReconcileModal';
 import { StaplesModal } from './StaplesModal';
 import { AddFromPlanModal } from './AddFromPlanModal';
+import { CandidatePicker } from './CandidatePicker';
 import { PageTitle } from '../../components/PageTitle';
 import { FilterStrip } from '../../components/FilterStrip';
 import { AgentStatusCard, type AgentState } from '../../components/AgentStatusCard';
@@ -64,22 +66,43 @@ function ConfirmDialog({ message, onConfirm, onCancel }: { message: string; onCo
   );
 }
 
+type BadgeLabel = 'Sole match' | 'Preferred' | 'Picked' | 'Pick one';
+
+function badgeFor(price: ShoppingListPrice | undefined): BadgeLabel | null {
+  const candidates = price?.candidates ?? [];
+  if (!price || candidates.length === 0) return null;
+  if (!price.chosenSku) return candidates.length > 1 ? 'Pick one' : null;
+  const chosen = candidates.find(c => c.sku === price.chosenSku);
+  if (!chosen) return null;
+  if (chosen.resolution === 'sole') return 'Sole match';
+  if (chosen.resolution === 'preferred') return 'Preferred';
+  return 'Picked';
+}
+
 function CategorySection({
   category,
   items,
   prices,
   refreshing,
   selectedIds,
+  expanded,
   onToggleSelect,
   onDelete,
+  onToggleExpand,
+  onPickSku,
+  pickSkuPending,
 }: {
   category: Category;
   items: ShoppingListItem[];
   prices: Map<string, ShoppingListPrice>;
   refreshing: boolean;
   selectedIds: Set<string>;
+  expanded: Record<string, boolean>;
   onToggleSelect: (id: string) => void;
   onDelete: (id: string) => void;
+  onToggleExpand: (id: string) => void;
+  onPickSku: (itemId: string, sku: string) => void;
+  pickSkuPending: boolean;
 }) {
   const subtotal = items.reduce((s, it) => {
     const p = prices.get(it.id);
@@ -95,6 +118,10 @@ function CategorySection({
       </div>
       {items.map((it) => {
         const selected = selectedIds.has(it.id);
+        const p = prices.get(it.id);
+        const badge = badgeFor(p);
+        const slug = badge ? badge.toLowerCase().replace(/\s+/g, '-') : null;
+        const isExpanded = expanded[it.id] ?? false;
         return (
           <div key={it.id} className={`sl-row${selected ? ' sl-row--selected' : ''}`}>
             <button
@@ -117,8 +144,30 @@ function CategorySection({
                 <span className="sl-row-qty">{Math.ceil(it.qty * 10) / 10} {it.unit}</span>
               </div>
               <ReasonChip source={it.source} sourceRecipeNames={it.sourceRecipeNames ?? null} />
+              {badge && (
+                <>
+                  <span className={`row-badge row-badge-${slug}`}>{badge}</span>
+                  {badge === 'Pick one' && (
+                    <button
+                      type="button"
+                      className="row-toggle"
+                      onClick={() => onToggleExpand(it.id)}
+                    >
+                      {isExpanded ? 'Hide options' : 'Show options'}
+                    </button>
+                  )}
+                  {badge === 'Pick one' && isExpanded && p && (
+                    <CandidatePicker
+                      candidates={p.candidates}
+                      chosenSku={p.chosenSku}
+                      disabled={pickSkuPending}
+                      onPick={sku => onPickSku(it.id, sku)}
+                    />
+                  )}
+                </>
+              )}
             </div>
-            <PriceCell price={prices.get(it.id)} refreshing={refreshing} />
+            <PriceCell price={p} refreshing={refreshing} />
             <button className="sl-row-menu" onClick={() => onDelete(it.id)} aria-label={`Remove ${it.name}`}>✕</button>
           </div>
         );
@@ -287,6 +336,10 @@ function ListView({ list }: { list: ShoppingList }) {
   const batchDelete = useBatchDeleteShoppingListItems(list.id);
   const { data: pricesData } = usePricesForList(list.id);
   const refresh = useRefreshPrices(list.id);
+  const chooseSku = useChooseSku(list.id);
+  const sendToCart = useSendToCart(list.id);
+  const cartResult = useCartResult(list.id);
+  const [reconcileOpen, setReconcileOpen] = useState(false);
 
   const prices = useMemo(() => {
     const m = new Map<string, ShoppingListPrice>();
@@ -294,8 +347,20 @@ function ListView({ list }: { list: ShoppingList }) {
     return m;
   }, [pricesData]);
 
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+
   const job = pricesData?.job;
   const refreshing = job?.status === 'pending' || job?.status === 'in_progress' || refresh.isPending;
+
+  const hasUnpicked = list.items.some(it => {
+    const p = prices.get(it.id);
+    return p ? ((p.candidates?.length ?? 0) > 1 && !p.chosenSku) : false;
+  });
+  const hasAnyPicked = list.items.some(it => !!prices.get(it.id)?.chosenSku);
+
+  useEffect(() => {
+    if (cartResult.data?.job?.status === 'done') setReconcileOpen(true);
+  }, [cartResult.data?.job?.status]);
 
   const [tab, setTab] = useState<SourceTab>('all');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -415,8 +480,12 @@ function ListView({ list }: { list: ShoppingList }) {
               prices={prices}
               refreshing={refreshing}
               selectedIds={selectedIds}
+              expanded={expanded}
               onToggleSelect={toggleSelect}
               onDelete={(id) => deleteItem.mutate(id)}
+              onToggleExpand={(id) => setExpanded(e => ({ ...e, [id]: !e[id] }))}
+              onPickSku={(itemId, sku) => chooseSku.mutate({ itemId, sku })}
+              pickSkuPending={chooseSku.isPending}
             />
           );
         })}
@@ -466,20 +535,26 @@ function ListView({ list }: { list: ShoppingList }) {
           </div>
         </div>
 
-        <button className="sl-send" disabled title="Coming soon · phase 4">
-          <span>send to {storeLabel?.name ?? 'store'}</span>
+        <button
+          type="button"
+          className="sl-send"
+          disabled={!hasAnyPicked || hasUnpicked || sendToCart.isPending}
+          onClick={() => sendToCart.mutate()}
+        >
+          <span>{sendToCart.isPending ? 'Sending…' : 'Send to cart'}</span>
           <span style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: 18 }}>→</span>
         </button>
+        {hasUnpicked && <span className="hint">Pick options for items marked "Pick one" first.</span>}
 
         <AgentStatusCard state={agentState} message={agentMessage} />
         <button
           className="btn-outline"
           onClick={() => refresh.mutate()}
           disabled={refreshing}
-          aria-label="Refresh prices"
+          aria-label="Find products"
           style={{ marginTop: -8 }}
         >
-          {refreshing ? 'Checking prices…' : 'Refresh prices'}
+          {refreshing ? 'Checking prices…' : 'Find products'}
         </button>
       </aside>
 
@@ -490,6 +565,13 @@ function ListView({ list }: { list: ShoppingList }) {
           onCancel={() => setConfirmRemove(false)}
         />
       )}
+
+      <ReconcileModal
+        open={reconcileOpen}
+        onClose={() => setReconcileOpen(false)}
+        result={cartResult.data?.result ?? null}
+        items={list.items.map(i => ({ id: i.id, name: i.name }))}
+      />
     </div>
   );
 }

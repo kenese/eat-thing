@@ -320,6 +320,25 @@ export interface CookEvent {
   promptsResolved: CookPromptResponse[];
 }
 
+// ─── Product candidates (scraper → shopping list prices) ─────────────────────
+
+export type ProductCandidateUnit = 'g' | 'ml' | 'count';
+
+export type ProductCandidateResolution = 'sole' | 'preferred' | 'manual';
+
+export interface ProductCandidate {
+  sku: string;
+  name: string;
+  brand: string | null;
+  packSize: { qty: number; unit: ProductCandidateUnit } | null;
+  price: number;
+  unitPrice: { value: number; per: ProductCandidateUnit } | null;
+  inStock: boolean;
+  onSpecial: boolean;
+  cartQty: number;
+  resolution: ProductCandidateResolution;
+}
+
 // ─── Supermarket / scraper ───────────────────────────────────────────────────
 
 export type Store = 'new_world' | 'paknsave' | 'woolworths';
@@ -389,28 +408,19 @@ export interface ImportPastOrdersResult {
   }>;
 }
 
-// ─── Phase 4: build-to-cart ───────────────────────────────────────────────────
+// ─── Add-to-cart job result ───────────────────────────────────────────────────
 
-export type ProductCandidateUnit = 'g' | 'ml' | 'count';
-
-export interface ProductCandidate {
-  sku: string;
-  name: string;
-  brand: string | null;
-  packSize: { qty: number; unit: ProductCandidateUnit } | null;
-  price: number;
-  unitPrice: { value: number; per: ProductCandidateUnit } | null;
-  inStock: boolean;
-  onSpecial: boolean;
-  cartQty: number;
-  resolution: 'sole' | 'preferred' | 'manual';
-}
+export type CartActionOutcome =
+  | 'added'
+  | 'qty_increased'
+  | 'already_in_cart'
+  | 'failed';
 
 export interface CartActionResult {
   shoppingListItemId: string;
   sku: string;
   requestedQty: number;
-  action: 'added' | 'already_in_cart' | 'qty_increased' | 'failed';
+  action: CartActionOutcome;
   failureReason?: string;
 }
 

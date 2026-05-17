@@ -3,7 +3,8 @@ import type { Browser } from 'playwright';
 import type { JobResult, ScraperJob } from '../worker-sdk/types.js';
 import type { StoreAdapter } from './base.js';
 import { loadStorageState } from '../session.js';
-import { pickMatch } from './match.js';
+import { rankCandidates } from './match.js';
+import type { ProductCandidate } from '@eat/shared';
 
 export interface ParsedSearchResult {
   sku: string;
@@ -67,7 +68,13 @@ const ORDERS_URL = 'https://www.paknsave.co.nz/shop/account/orders';
 
 interface ComparePayload {
   shoppingListId: string;
-  items: Array<{ id: string; name: string; canonicalFoodId: string | null }>;
+  items: Array<{
+    id: string;
+    name: string;
+    canonicalFoodId: string | null;
+    requiredQty: number;
+    requiredUnit: 'g' | 'ml' | 'count';
+  }>;
   preferredBrandsByCanonicalFood: Record<string, string[]>;
 }
 
@@ -92,23 +99,42 @@ export const paknsaveAdapter: StoreAdapter = {
           preferredMap[foodId] = new Set(brands);
         }
 
-        const items = [];
+        const items: Array<{
+          shoppingListItemId: string;
+          candidates: ProductCandidate[];
+          chosenSku: string | null;
+        }> = [];
         for (const item of payload.items) {
           await page.goto(SEARCH_URL(item.name), { waitUntil: 'domcontentloaded' });
           const html = await page.content();
           if (isLoggedOutPage(html)) {
             return { ok: false, error: 'session_expired' };
           }
-          const candidates = parseSearchResults(html);
-          const match = pickMatch({ item, candidates, preferredBrandsByCanonicalFood: preferredMap });
+          const parsed = parseSearchResults(html);
+          // Adapt local ParsedSearchResult (no packSize/unitPrice/onSpecial) to newworld shape
+          const adapted = parsed.map(c => ({
+            ...c,
+            packSize: null,
+            unitPrice: null,
+            onSpecial: false as const,
+          }));
+          const ranked = rankCandidates({
+            item: {
+              id: item.id,
+              name: item.name,
+              canonicalFoodId: item.canonicalFoodId,
+              requiredQty: item.requiredQty,
+              requiredUnit: item.requiredUnit,
+            },
+            candidates: adapted,
+            preferredBrandsByCanonicalFood: preferredMap,
+            topN: 5,
+          });
+          const auto = ranked.find(c => c.resolution === 'sole' || c.resolution === 'preferred');
           items.push({
             shoppingListItemId: item.id,
-            sku: match?.sku ?? null,
-            name: match?.name ?? null,
-            brand: match?.brand ?? null,
-            price: match?.price ?? null,
-            inStock: match?.inStock ?? false,
-            matched: !!match,
+            candidates: ranked,
+            chosenSku: auto?.sku ?? null,
           });
         }
         return { ok: true, data: { items } };
