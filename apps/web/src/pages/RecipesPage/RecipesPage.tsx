@@ -445,7 +445,7 @@ export function RecipesPage() {
         }
         actions={
           <>
-            <button className="btn-outline" onClick={() => setModal({ mode: 'import' })}>↓ import url</button>
+            <button className="btn-outline" onClick={() => setModal({ mode: 'import' })}>↓ Import</button>
             <button className="btn-primary" onClick={() => setModal({ mode: 'add' })}>
               <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> new recipe
             </button>
