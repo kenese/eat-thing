@@ -164,7 +164,7 @@ router.post('/', withHousehold, async (req, res) => {
         resolvedImage = await uploadPhoto(base64, mimeType);
       } else {
         const body = await imgRes.json().catch((e) => {
-          console.log('client error josn fail', e);
+          console.log('image upload error json fail', body);
         });
         const err = Object.assign(new Error(body?.error ?? `HTTP ${imgRes.status}`), {
           status: imgRes.status,
