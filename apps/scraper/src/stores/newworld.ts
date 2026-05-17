@@ -260,6 +260,12 @@ async function handleAddToCart(job: ScraperJob, browser: Browser): Promise<JobRe
 
 export const newWorldAdapter: StoreAdapter = {
   async handle(job: ScraperJob, browser: Browser): Promise<JobResult> {
+    // add_to_cart opens its own context inside handleAddToCart — dispatch before
+    // the outer context is created so there is no double-close.
+    if (job.type === 'add_to_cart') {
+      return handleAddToCart(job, browser);
+    }
+
     const storageState = await loadStorageState(job.householdId, 'new_world');
     if (!storageState) {
       return { ok: false, error: 'no_session' };
@@ -327,11 +333,6 @@ export const newWorldAdapter: StoreAdapter = {
           canonicalFoodHint: null,
         }));
         return { ok: true, data: { products } };
-      }
-
-      if (job.type === 'add_to_cart') {
-        await context.close();
-        return handleAddToCart(job, browser);
       }
 
       return { ok: false, error: `unknown_type:${job.type}` };

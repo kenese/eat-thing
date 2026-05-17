@@ -517,11 +517,12 @@ router.patch('/items/:itemId/chosen-sku', withHousehold, async (req, res) => {
     const rows = await db
       .select({ candidates: shoppingListPrices.candidates })
       .from(shoppingListPrices)
+      .innerJoin(shoppingListItems, eq(shoppingListPrices.shoppingListItemId, shoppingListItems.id))
       .where(and(
         eq(shoppingListPrices.shoppingListItemId, itemId),
         eq(shoppingListPrices.store, 'new_world'),
-      ))
-      .limit(1);
+        eq(shoppingListItems.householdId, req.householdId),
+      ));
     const row = rows[0];
     if (!row) { res.status(404).json({ error: 'No prices for this item yet' }); return; }
     const candidates = (row.candidates ?? []) as ProductCandidate[];
@@ -602,13 +603,13 @@ router.get('/:id/cart-result', withHousehold, async (req, res) => {
   if (!z.string().uuid().safeParse(listId).success) { res.json({ result: null }); return; }
   try {
     const rows = await db
-      .select({ id: scraperJobs.id, status: scraperJobs.status, result: scraperJobs.result, error: scraperJobs.error })
+      .select({ id: scraperJobs.id, status: scraperJobs.status, result: scraperJobs.result, error: scraperJobs.error, payload: scraperJobs.payload })
       .from(scraperJobs)
       .where(and(eq(scraperJobs.householdId, req.householdId), eq(scraperJobs.type, 'add_to_cart')))
       .orderBy(desc(scraperJobs.createdAt))
       .limit(5);
     const job = rows.find(r => {
-      const p = (r as Record<string, unknown>)['payload'] as Record<string, unknown> | undefined;
+      const p = r.payload as Record<string, unknown> | undefined;
       return p && p['shoppingListId'] === listId;
     }) ?? rows[0] ?? null;
     res.json({

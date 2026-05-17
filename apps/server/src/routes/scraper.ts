@@ -224,7 +224,7 @@ async function applyComparePricesResult(store: string, data: Record<string, unkn
             inStock: mirror?.inStock ?? true,
             matched: !!mirror,
             candidates: item.candidates,
-            chosenSku: item.chosenSku,
+            chosenSku: item.chosenSku ?? sql`${shoppingListPrices.chosenSku}`,
             checkedAt: new Date(),
           },
         });
