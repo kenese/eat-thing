@@ -32,7 +32,9 @@ export function CandidatePicker({ candidates, chosenSku, onPick, disabled }: Pro
               <span className="candidate-price">${c.price.toFixed(2)}</span>
               {c.unitPrice && (
                 <span className="candidate-unit-price">
-                  ${(c.unitPrice.value * 100).toFixed(2)}/100{c.unitPrice.per === 'count' ? 'ea' : c.unitPrice.per}
+                  {c.unitPrice.per === 'count'
+                    ? `$${c.unitPrice.value.toFixed(2)}/ea`
+                    : `$${(c.unitPrice.value * 100).toFixed(2)}/100${c.unitPrice.per}`}
                 </span>
               )}
               {c.onSpecial && <span className="candidate-special">SPECIAL</span>}

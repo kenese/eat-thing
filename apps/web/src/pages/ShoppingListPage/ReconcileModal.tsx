@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import type { CartJobResult, CartActionResult } from '@eat/shared';
 
 interface Props {
@@ -15,6 +16,12 @@ const ACTION_LABEL: Record<CartActionResult['action'], string> = {
 };
 
 export function ReconcileModal({ open, onClose, result, items }: Props) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
   if (!open) return null;
   const nameById = new Map(items.map(i => [i.id, i.name]));
   return (
