@@ -407,3 +407,25 @@ export interface ImportPastOrdersResult {
     canonicalFoodHint: string | null;
   }>;
 }
+
+// ─── Add-to-cart job result ───────────────────────────────────────────────────
+
+export type CartActionOutcome =
+  | 'added'
+  | 'qty_increased'
+  | 'already_in_cart'
+  | 'failed';
+
+export interface CartActionResult {
+  shoppingListItemId: string;
+  sku: string;
+  requestedQty: number;
+  action: CartActionOutcome;
+  failureReason?: string;
+}
+
+export interface CartJobResult {
+  perItem: CartActionResult[];
+  cartTotalNzd: number;
+  trolleyUrl: string;
+}

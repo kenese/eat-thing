@@ -4,7 +4,7 @@ import type { JobResult, ScraperJob } from '../worker-sdk/types.js';
 import type { StoreAdapter } from './base.js';
 import { loadStorageState } from '../session.js';
 import { rankCandidates } from './match.js';
-import type { ProductCandidate } from '@eat/shared';
+import type { CartActionResult, CartJobResult, ProductCandidate } from '@eat/shared';
 
 export type PackUnit = 'g' | 'ml' | 'count';
 
@@ -154,6 +154,110 @@ export function diffTrolley(
   });
 }
 
+export function buildCartResultFromActions(
+  actions: TrolleyDiffAction[],
+  attempts: Map<string, { ok: boolean; reason?: string }>,
+  skuToShoppingListItemId: Map<string, string>,
+): CartActionResult[] {
+  return actions.map(a => {
+    const itemId = skuToShoppingListItemId.get(a.sku) ?? a.sku;
+    if (a.action === 'skip') {
+      return { shoppingListItemId: itemId, sku: a.sku, requestedQty: a.qty, action: 'already_in_cart' as const };
+    }
+    const att = attempts.get(a.sku);
+    if (att?.ok) {
+      return {
+        shoppingListItemId: itemId,
+        sku: a.sku,
+        requestedQty: a.qty,
+        action: (a.action === 'add' ? 'added' : 'qty_increased') as CartActionResult['action'],
+      };
+    }
+    return {
+      shoppingListItemId: itemId,
+      sku: a.sku,
+      requestedQty: a.qty,
+      action: 'failed' as const,
+      failureReason: att?.reason ?? 'unknown',
+    };
+  });
+}
+
+const TROLLEY_URL = 'https://www.newworld.co.nz/shop/trolley';
+const PRODUCT_URL = (sku: string) => `https://www.newworld.co.nz/shop/product/${sku}`;
+
+interface AddToCartPayload {
+  shoppingListId: string;
+  items: Array<{ shoppingListItemId: string; sku: string; qty: number }>;
+}
+
+async function handleAddToCart(job: ScraperJob, browser: Browser): Promise<JobResult> {
+  const storageState = await loadStorageState(job.householdId, 'new_world');
+  if (!storageState) return { ok: false, error: 'no_session' };
+
+  const payload = job.payload as AddToCartPayload | null;
+  if (!payload || !Array.isArray(payload.items) || payload.items.length === 0) {
+    return { ok: false, error: 'invalid_payload' };
+  }
+
+  const context = await browser.newContext({ storageState });
+  const page = await context.newPage();
+
+  try {
+    // 1) Read trolley
+    await page.goto(TROLLEY_URL, { waitUntil: 'domcontentloaded' });
+    let html = await page.content();
+    if (isLoggedOutPage(html)) return { ok: false, error: 'session_expired' };
+    const trolley = parseTrolley(html);
+
+    // 2) Diff
+    const requested = payload.items.map(i => ({ sku: i.sku, qty: i.qty }));
+    const actions = diffTrolley(trolley, requested);
+
+    // 3) Apply add / bump actions
+    const attempts = new Map<string, { ok: boolean; reason?: string }>();
+    for (const a of actions) {
+      if (a.action === 'skip') continue;
+      try {
+        await page.goto(PRODUCT_URL(a.sku), { waitUntil: 'domcontentloaded' });
+        const qtyInput = page.locator('input[data-testid="qty-input"]');
+        await qtyInput.waitFor({ timeout: 5000 });
+        await qtyInput.fill(String(a.qty));
+        const addBtn = page.locator('button[data-testid="add-to-trolley"]');
+        await addBtn.click();
+        await page.locator('[data-testid="trolley-count-badge"]').waitFor({ timeout: 3000 });
+        attempts.set(a.sku, { ok: true });
+      } catch (err) {
+        const reason =
+          err instanceof Error && /selector|timeout/i.test(err.message)
+            ? 'product_unavailable'
+            : err instanceof Error
+              ? err.message
+              : 'unknown';
+        attempts.set(a.sku, { ok: false, reason });
+      }
+      await page.waitForTimeout(700); // throttle
+    }
+
+    // 4) Read trolley back for total
+    await page.goto(TROLLEY_URL, { waitUntil: 'domcontentloaded' });
+    html = await page.content();
+    const $ = cheerio.load(html);
+    const totalText = $('[data-testid="trolley-total"]').first().text().trim();
+    const cartTotalNzd = parseFloat(totalText.replace(/[^0-9.]/g, '')) || 0;
+
+    const skuToItem = new Map(payload.items.map(i => [i.sku, i.shoppingListItemId] as const));
+    const result: CartJobResult = {
+      perItem: buildCartResultFromActions(actions, attempts, skuToItem),
+      cartTotalNzd,
+      trolleyUrl: TROLLEY_URL,
+    };
+    return { ok: true, data: result as unknown as Record<string, unknown> };
+  } finally {
+    await context.close();
+  }
+}
+
 export const newWorldAdapter: StoreAdapter = {
   async handle(job: ScraperJob, browser: Browser): Promise<JobResult> {
     const storageState = await loadStorageState(job.householdId, 'new_world');
@@ -223,6 +327,11 @@ export const newWorldAdapter: StoreAdapter = {
           canonicalFoodHint: null,
         }));
         return { ok: true, data: { products } };
+      }
+
+      if (job.type === 'add_to_cart') {
+        await context.close();
+        return handleAddToCart(job, browser);
       }
 
       return { ok: false, error: `unknown_type:${job.type}` };

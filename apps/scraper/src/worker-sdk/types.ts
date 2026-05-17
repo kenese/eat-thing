@@ -1,5 +1,5 @@
 export type Store = 'new_world' | 'paknsave' | 'woolworths';
-export type JobType = 'import_past_orders' | 'compare_prices';
+export type JobType = 'import_past_orders' | 'compare_prices' | 'add_to_cart';
 export type JobStatus = 'pending' | 'in_progress' | 'done' | 'failed';
 
 export interface ScraperJob {

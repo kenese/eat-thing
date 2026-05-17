@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseSearchResults, parsePastOrders, isLoggedOutPage, parseTrolley, diffTrolley } from './newworld.js';
+import { parseSearchResults, parsePastOrders, isLoggedOutPage, parseTrolley, diffTrolley, buildCartResultFromActions } from './newworld.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const fixturesDir = join(here, '..', '..', 'test', 'fixtures', 'newworld');
@@ -118,5 +118,31 @@ describe('diffTrolley', () => {
   it('returns skip when present qty already covers requested', () => {
     expect(diffTrolley(trolley, [{ sku: 'B', qty: 2 }])).toEqual([{ sku: 'B', qty: 2, action: 'skip' }]);
     expect(diffTrolley(trolley, [{ sku: 'B', qty: 1 }])).toEqual([{ sku: 'B', qty: 1, action: 'skip' }]);
+  });
+});
+
+describe('buildCartResultFromActions', () => {
+  it('maps diff actions + per-attempt outcomes to CartActionResult[]', () => {
+    const actions = [
+      { sku: 'A', qty: 1, action: 'add' as const },
+      { sku: 'B', qty: 2, action: 'bump' as const },
+      { sku: 'C', qty: 1, action: 'skip' as const },
+      { sku: 'D', qty: 1, action: 'add' as const },
+    ];
+    const attempts = new Map([
+      ['A', { ok: true }],
+      ['B', { ok: true }],
+      ['D', { ok: false, reason: 'out_of_stock' }],
+    ]);
+    const skuToItem = new Map([
+      ['A', 'sli-a'], ['B', 'sli-b'], ['C', 'sli-c'], ['D', 'sli-d'],
+    ]);
+    const out = buildCartResultFromActions(actions, attempts, skuToItem);
+    expect(out).toEqual([
+      { shoppingListItemId: 'sli-a', sku: 'A', requestedQty: 1, action: 'added' },
+      { shoppingListItemId: 'sli-b', sku: 'B', requestedQty: 2, action: 'qty_increased' },
+      { shoppingListItemId: 'sli-c', sku: 'C', requestedQty: 1, action: 'already_in_cart' },
+      { shoppingListItemId: 'sli-d', sku: 'D', requestedQty: 1, action: 'failed', failureReason: 'out_of_stock' },
+    ]);
   });
 });
