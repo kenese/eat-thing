@@ -286,7 +286,7 @@ export async function extractFromUrl(url: string): Promise<ExtractedRecipe> {
     const raw = schemaRaw ?? await extractWithGemini(cleanHtmlWithReadability(html));
     if (!raw) {
         console.error('Could not extract recipe from this URL', raw, html);
-        throw new Error('Could not extract recipe from this URL');
+        throw new Error('Could not extract recipe from this URL' + JSON.stringify(raw) + JSON.stringify(html));
     }
 
     if (schemaRaw) {
