@@ -284,7 +284,10 @@ export async function extractFromUrl(url: string): Promise<ExtractedRecipe> {
 
     const schemaRaw = parseSchemaOrg(html);
     const raw = schemaRaw ?? await extractWithGemini(cleanHtmlWithReadability(html));
-    if (!raw) throw new Error('Could not extract recipe from this URL');
+    if (!raw) {
+        console.error('Could not extract recipe from this URL', raw, html);
+        throw new Error('Could not extract recipe from this URL');
+    }
 
     if (schemaRaw) {
         console.log('recipe from url - via scema', schemaRaw);
