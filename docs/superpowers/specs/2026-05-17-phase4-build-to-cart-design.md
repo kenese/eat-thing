@@ -1,6 +1,6 @@
 # Phase 4 — Build-to-cart (New World) — Design
 
-**Status:** Approved, ready for implementation plan.
+**Status:** Approved, ready for implementation plan. Revised 2026-05-18: candidate / chosen-sku columns moved to `shopping_list_prices` (already per-(item, store)); migration renumbered to 0011.
 **Phase:** 4 (per [PLAN.md](../../../PLAN.md)).
 **Scope:** New World only. Pak'nSave and Woolworths adapters stay on today's single-best matcher (deferred per D21).
 **Constraint:** [D3](../../../DECISIONS.md#d3--supermarket-integration-ceiling-build-to-cart) — the app adds items to cart; the user always clicks "place order".
@@ -43,14 +43,22 @@ Two scraper jobs in sequence, separated by a user review step. No new tables; tw
 
 ## Data model
 
-### `shopping_list_items` — migration `0009`
+### `shopping_list_prices` — migration `0011`
+
+Today's `shopping_list_prices` table is already per-(item, store) with `sku`, `name`, `price`, `inStock`, `matched`. Two columns added:
 
 ```ts
 candidates: jsonb('candidates')           // ProductCandidate[] | null
-chosenSku: text('chosen_sku')             // user's pick (or auto-resolved); null until matched
+chosenSku: text('chosen_sku')             // user's pick (or auto-resolved); null until manual pick made
 ```
 
-Today's existing price/match columns on `shopping_list_items` continue to mirror the **chosen** candidate's data so the existing price-and-availability column keeps working without UI changes elsewhere.
+When `compare_prices` completes:
+
+- `candidates` is populated with the top-N `ProductCandidate[]` from `rankCandidates`.
+- `chosenSku` is set to the auto-resolved candidate for `sole` / `preferred` items; left null for `manual` items.
+- The legacy `sku` / `name` / `price` / `inStock` columns continue to mirror the **chosen** candidate (or the top-1 if no chosen_sku) so today's price column keeps rendering without churn.
+
+When the user picks a manual candidate, `chosenSku` is updated and the mirror columns are re-synced.
 
 ### `ProductCandidate` — shared type in `packages/shared`
 
@@ -182,9 +190,10 @@ New method on the New World adapter — first time the scraper mutates state on 
 
 `apps/server/src/routes/shopping-lists.ts`:
 
-- `POST /api/shopping-lists/:id/find-products` — existing `compare_prices` enqueue route; response now includes per-item candidates as it polls/completes. On job completion the handler writes `candidates` + auto-resolved `chosen_sku` onto each `shopping_list_items` row.
-- `PATCH /api/shopping-lists/items/:id/chosen-sku` — new. Sets `chosen_sku` to a value from the item's `candidates`. Server validates the value is one of the stored candidates (no arbitrary SKUs).
-- `POST /api/shopping-lists/:id/send-to-cart` — new. Enqueues `add_to_cart`. Body is empty; server reads each item's `chosen_sku` and looks up the matching candidate's `cartQty` from the stored `candidates` array to build the job payload. Items with null `chosen_sku` are skipped with a note in the response.
+- Existing `POST /api/shopping-lists/:id/refresh-prices` keeps its current shape (enqueue `compare_prices`); behaviour changes so the job result is the new top-N candidate output and the completion handler writes `candidates` + auto-resolved `chosenSku` onto each `shopping_list_prices` row.
+- Existing `GET /api/shopping-lists/:id/prices` response is extended to include `candidates` + `chosenSku` per row.
+- `PATCH /api/shopping-lists/items/:id/chosen-sku` — new. Sets `chosenSku` on the relevant `shopping_list_prices` row. Server validates the value is one of the stored `candidates` (no arbitrary SKUs) and re-syncs the legacy mirror columns.
+- `POST /api/shopping-lists/:id/send-to-cart` — new. Enqueues `add_to_cart`. Body is empty; server reads each `shopping_list_prices` row's `chosenSku` and looks up the matching candidate's `cartQty` from `candidates` to build the job payload. Items with null `chosenSku` are skipped with a note in the response.
 - `GET /api/shopping-lists/:id/cart-result` — new. Returns the most recent completed `add_to_cart` job's result JSON for this list, for the reconcile view.
 
 `apps/server/src/routes/scraper.ts` (generic job lifecycle) — adds `'add_to_cart'` to the allow-list. The completion handler mirrors `result.perItem` into a `cart_action` column on `shopping_list_items` (so the list can show small badges later if we want; not required for v1).
@@ -235,7 +244,7 @@ Required before declaring done, per CLAUDE.md. From repo root: `pnpm test` and `
 
 Single-household app — no flag. Ship once tests are green. Implementation order:
 
-1. Schema migration 0009 + shared `ProductCandidate` type
+1. Schema migration 0011 + shared `ProductCandidate` type
 2. Parser additions (packSize, unitPrice, onSpecial) + their unit tests
 3. `rankCandidates` rewrite + tests
 4. Wire `compare_prices` completion to write `candidates` + `chosen_sku` to DB
