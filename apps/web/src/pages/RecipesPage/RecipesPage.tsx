@@ -87,11 +87,15 @@ export function RecipeCard({
 function EditorialHero({
   feature,
   side,
+  sideMatch,
   onOpen,
+  onAddFeatureToNextDay,
 }: {
   feature: Recipe;
   side?: Recipe;
+  sideMatch?: MatchInfo;
   onOpen: (id: string) => void;
+  onAddFeatureToNextDay: () => void;
 }) {
   return (
     <div className="rx-hero">
@@ -114,6 +118,10 @@ function EditorialHero({
             <button className="btn-primary" onClick={() => onOpen(feature.id)}>
               open recipe <span style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: 17 }}>→</span>
             </button>
+            {/* HANDOFF: day picker — replace label + handler when day-picker exists */}
+            <button className="btn-outline--on-dark" onClick={onAddFeatureToNextDay}>
+              add to next open day
+            </button>
             <span style={{ fontSize: 11, color: 'rgba(243,245,242,0.5)', letterSpacing: '0.04em' }}>
               serves {feature.servings} · {feature.ingredients.length} ingredients
             </span>
@@ -131,11 +139,20 @@ function EditorialHero({
             {side.sourceImage
               ? <img src={side.sourceImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               : <span className="rx-card-image-fallback">{side.name}</span>}
+            <span className="rx-hero-side-badge">editor&apos;s pick</span>
           </div>
           <div className="rx-hero-side-body">
             <div className="rx-hero-side-title">{side.name}<span className="dot">.</span></div>
             <div style={{ fontSize: 13, color: 'var(--ink2)', lineHeight: 1.45 }}>
               Another cook-now pick from what's in the kitchen.
+            </div>
+            <div className="rx-hero-side-footer">
+              {sideMatch && (
+                sideMatch.bucket === 'cookable'
+                  ? <StatusChip kind="cook" />
+                  : <StatusChip kind="shop" missingCount={sideMatch.missing.length} />
+              )}
+              <span className="rx-hero-side-meta">serves {side.servings}</span>
             </div>
           </div>
         </button>
@@ -329,8 +346,12 @@ export function RecipesPage() {
   const { data: feature } = useRecipe(featureId ?? '');
   const { data: side }    = useRecipe(sideId ?? '');
 
-  // If we have feature + inventory, derive its real bucket for accuracy in the hero copy.
+  // Derive real match info for hero recipes (full ingredient lists available via useRecipe).
   const featureMissing = feature ? computeMissing(feature, inventory) : null;
+  const sideMissingList = side ? computeMissing(side, inventory) : null;
+  const sideMatch = sideMissingList !== null
+    ? { bucket: bucketRecipe(sideMissingList), missing: sideMissingList } as MatchInfo
+    : undefined;
 
   const cookable  = sortedByMatch.filter((x) => x.match.bucket === 'cookable');
   const shoppable = sortedByMatch.filter((x) => x.match.bucket === 'shoppable');
@@ -348,8 +369,13 @@ export function RecipesPage() {
     ? sortedByMatch
     : buckets[tab];
 
-  // featureMissing used to drive hero copy accuracy (consumed in the template below)
+  // featureMissing drives hero copy in Commit 3 — computed here so inventory is in scope.
   void featureMissing;
+
+  function handleAddFeatureToNextDay() {
+    if (!feature) return;
+    addToNextEmptyDays.mutate([{ recipeId: feature.id, servings: feature.servings }]);
+  }
 
   return (
     <div className="recipes-page">
@@ -395,7 +421,9 @@ export function RecipesPage() {
         <EditorialHero
           feature={feature}
           side={side ?? undefined}
+          sideMatch={sideMatch}
           onOpen={(id) => setModal({ mode: 'edit', id })}
+          onAddFeatureToNextDay={handleAddFeatureToNextDay}
         />
       )}
 
