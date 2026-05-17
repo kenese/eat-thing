@@ -125,6 +125,35 @@ interface ComparePayload {
   preferredBrandsByCanonicalFood: Record<string, string[]>;
 }
 
+export interface TrolleyLine { sku: string; qty: number; }
+export interface TrolleyDiffAction { sku: string; qty: number; action: 'add' | 'bump' | 'skip'; }
+
+export function parseTrolley(html: string): TrolleyLine[] {
+  const $ = cheerio.load(html);
+  const out: TrolleyLine[] = [];
+  $('section[data-testid="trolley"] li[data-product-id]').each((_i, el) => {
+    const $el = $(el);
+    const sku = $el.attr('data-product-id') ?? '';
+    const qtyText = $el.find('[data-testid="trolley-qty"]').first().text().trim();
+    const qty = parseInt(qtyText, 10);
+    if (sku && !Number.isNaN(qty)) out.push({ sku, qty });
+  });
+  return out;
+}
+
+export function diffTrolley(
+  trolley: TrolleyLine[],
+  requested: TrolleyLine[],
+): TrolleyDiffAction[] {
+  const byKey = new Map(trolley.map(t => [t.sku, t.qty] as const));
+  return requested.map(r => {
+    const have = byKey.get(r.sku);
+    if (have === undefined) return { sku: r.sku, qty: r.qty, action: 'add' as const };
+    if (have < r.qty) return { sku: r.sku, qty: r.qty, action: 'bump' as const };
+    return { sku: r.sku, qty: r.qty, action: 'skip' as const };
+  });
+}
+
 export const newWorldAdapter: StoreAdapter = {
   async handle(job: ScraperJob, browser: Browser): Promise<JobResult> {
     const storageState = await loadStorageState(job.householdId, 'new_world');

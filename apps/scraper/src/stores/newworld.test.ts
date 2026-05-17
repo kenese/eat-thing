@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseSearchResults, parsePastOrders, isLoggedOutPage } from './newworld.js';
+import { parseSearchResults, parsePastOrders, isLoggedOutPage, parseTrolley, diffTrolley } from './newworld.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const fixturesDir = join(here, '..', '..', 'test', 'fixtures', 'newworld');
@@ -86,5 +86,37 @@ describe('parseSearchResults — phase 4 fields', () => {
     expect(out[0]?.packSize).toBeNull();
     expect(out[0]?.unitPrice).toBeNull();
     expect(out[0]?.onSpecial).toBe(false);
+  });
+});
+
+describe('parseTrolley', () => {
+  it('parses sku + qty pairs from trolley HTML', () => {
+    const html = readFileSync(join(here, 'newworld-trolley.fixture.html'), 'utf8');
+    const out = parseTrolley(html);
+    expect(out).toEqual([
+      { sku: 'NW001', qty: 1 },
+      { sku: 'NW002', qty: 2 },
+    ]);
+  });
+
+  it('returns [] for an empty trolley', () => {
+    expect(parseTrolley('<section data-testid="trolley"><ul></ul></section>')).toEqual([]);
+  });
+});
+
+describe('diffTrolley', () => {
+  const trolley = [{ sku: 'A', qty: 1 }, { sku: 'B', qty: 2 }];
+
+  it('returns add for missing skus', () => {
+    expect(diffTrolley(trolley, [{ sku: 'C', qty: 1 }])).toEqual([{ sku: 'C', qty: 1, action: 'add' }]);
+  });
+
+  it('returns bump when requested qty exceeds present qty', () => {
+    expect(diffTrolley(trolley, [{ sku: 'A', qty: 3 }])).toEqual([{ sku: 'A', qty: 3, action: 'bump' }]);
+  });
+
+  it('returns skip when present qty already covers requested', () => {
+    expect(diffTrolley(trolley, [{ sku: 'B', qty: 2 }])).toEqual([{ sku: 'B', qty: 2, action: 'skip' }]);
+    expect(diffTrolley(trolley, [{ sku: 'B', qty: 1 }])).toEqual([{ sku: 'B', qty: 1, action: 'skip' }]);
   });
 });
