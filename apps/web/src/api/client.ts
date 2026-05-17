@@ -18,10 +18,13 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   });
 
   if (!res.ok) {
-    const body = await res.json().catch(() => null);
+    const body = await res.json().catch((e) => {
+      console.log('client error josn fail', e);
+    });
     const err = Object.assign(new Error(body?.error ?? `HTTP ${res.status}`), {
       status: res.status,
     }) as ApiError;
+    console.log('client error', body);
     throw err;
   }
 

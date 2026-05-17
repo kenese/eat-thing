@@ -162,6 +162,14 @@ router.post('/', withHousehold, async (req, res) => {
         const buffer = await imgRes.arrayBuffer();
         const base64 = Buffer.from(buffer).toString('base64');
         resolvedImage = await uploadPhoto(base64, mimeType);
+      } else {
+        const body = await imgRes.json().catch((e) => {
+          console.log('client error josn fail', e);
+        });
+        const err = Object.assign(new Error(body?.error ?? `HTTP ${imgRes.status}`), {
+          status: imgRes.status,
+        });
+        console.error('[recipes] hero image download/upload failed', err);
       }
     } catch (err) {
       console.error('[recipes] hero image download/upload failed', err);

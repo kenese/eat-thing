@@ -366,7 +366,7 @@ function Recipes() {
             border: `1px solid ${RX.rule}`, borderRadius: 8,
             padding: '10px 14px', fontFamily: RX_FONT.sans,
             fontSize: 13, fontWeight: 500, cursor: 'pointer',
-          }}>↓ import url</button>
+          }}>↓ Import</button>
           <button style={{
             background: RX.persimmon, color: RX.paper, border: 'none',
             borderRadius: 8, padding: '10px 16px',

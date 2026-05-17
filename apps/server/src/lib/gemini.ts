@@ -60,7 +60,13 @@ export async function generateGeminiJson<T>(prompt: string, options: GeminiOptio
   );
 
   if (!res.ok) {
-    const body = await res.text().catch(() => '');
+    const body = await res.json().catch((e) => {
+      console.log('Gemini request failed json read', e);
+    });
+    const err = Object.assign(new Error(body?.error ?? `HTTP ${res.status}`), {
+      status: res.status,
+    });
+    console.log(`Gemini request failed: ${res.status}${body ? ` ${body}` : err }`);
     throw new Error(`Gemini request failed: ${res.status}${body ? ` ${body}` : ''}`);
   }
 

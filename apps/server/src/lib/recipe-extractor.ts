@@ -271,7 +271,13 @@ export async function extractFromUrl(url: string): Promise<ExtractedRecipe> {
     // });
     const html = await response.text();
     if (!response.ok) {
-        const body = response.body;
+        const body = await response.json().catch((e) => {
+            console.log(`Fetch failed: ${response.status}`, body, err);
+        });
+        const err = Object.assign(new Error(body?.error ?? `HTTP ${response.status}`), {
+            status: response.status,
+        });
+        console.log(`Fetch failed: ${response.status}`, body, err);
 
         throw new Error(`Fetch failed: ${response.status}`);
     }
