@@ -6,6 +6,8 @@ const mocks = vi.hoisted(() => ({
   getSession: vi.fn(),
   membershipLimit: vi.fn(),
   selectFrom: vi.fn(),
+  selectLimit: vi.fn(),
+  updateSet: vi.fn(),
 }));
 
 vi.mock('../auth.js', () => ({ auth: { api: { getSession: mocks.getSession } } }));
@@ -22,6 +24,7 @@ vi.mock('uuid', () => ({ v4: () => 'fixed-uuid' }));
 vi.mock('../db/index.js', () => {
   // membershipLimit handles the withHousehold middleware select (limit at end)
   // selectFrom handles any additional select calls (prices, jobs, etc.)
+  // selectLimit handles select calls whose cols include a 'candidates' key (PATCH chosen-sku)
   const makeSelectChain = (terminal: () => unknown) => ({
     from: () => ({
       innerJoin: () => ({ where: () => terminal() }),
@@ -35,19 +38,29 @@ vi.mock('../db/index.js', () => {
       limit: () => terminal(),
     }),
   });
+  const makeUpdateChain = () => ({
+    set: (vals: unknown) => {
+      mocks.updateSet(vals);
+      return { where: () => Promise.resolve() };
+    },
+  });
   return {
     db: {
       select: (cols?: unknown) => {
-        // Membership select (withHousehold) can be distinguished by the presence of 'householdId' key in cols
-        // But since cols are mocked schema objects, use membershipLimit for the chain that ends in limit(1)
-        // We use a single makeSelectChain but route the terminal differently based on call sequence.
-        // Simplest: always use selectFrom as the terminal; set membershipLimit as a specific mock for this chain.
+        // Membership select (withHousehold) — has 'householdId' key
         const isMembershipSelect = cols && typeof cols === 'object' && 'householdId' in (cols as object);
         if (isMembershipSelect) {
           return makeSelectChain(mocks.membershipLimit);
         }
+        // Candidates-only select — exactly one key 'candidates' (PATCH chosen-sku endpoint)
+        const isCandidatesSelect = cols && typeof cols === 'object' &&
+          Object.keys(cols as object).length === 1 && 'candidates' in (cols as object);
+        if (isCandidatesSelect) {
+          return makeSelectChain(mocks.selectLimit);
+        }
         return makeSelectChain(mocks.selectFrom);
       },
+      update: () => makeUpdateChain(),
     },
   };
 });
@@ -68,6 +81,15 @@ async function getPrices(listId: string) {
   app.use(express.json());
   app.use('/api/shopping-lists', shoppingListsRouter);
   return request(app).get(`/api/shopping-lists/${listId}/prices`);
+}
+
+async function patchChosenSku(itemId: string, body: { sku?: string }) {
+  const app = express();
+  app.use(express.json());
+  app.use('/api/shopping-lists', shoppingListsRouter);
+  return request(app)
+    .patch(`/api/shopping-lists/items/${itemId}/chosen-sku`)
+    .send(body);
 }
 
 describe('shopping-lists router', () => {
@@ -178,6 +200,35 @@ describe('shopping-lists router', () => {
       .post('/api/shopping-lists/from-plan')
       .send({ entryIds: ['not-a-uuid'] });
 
+    expect(res.status).toBe(400);
+  });
+
+  it('PATCH /items/:id/chosen-sku updates chosenSku when sku is in candidates', async () => {
+    mocks.getSession.mockResolvedValue({ user: { id: 'u1' } });
+    mocks.membershipLimit.mockResolvedValue([{ householdId: 'hh-1' }]);
+    mocks.selectLimit.mockResolvedValueOnce([{
+      candidates: [
+        { sku: 'NW001', name: 'Flour 1.5kg', brand: 'Pams', packSize: { qty: 1500, unit: 'g' }, price: 3.99, unitPrice: { value: 0.0027, per: 'g' }, inStock: true, onSpecial: false, cartQty: 1, resolution: 'manual' },
+        { sku: 'NW002', name: 'Flour 1kg', brand: 'Edmonds', packSize: { qty: 1000, unit: 'g' }, price: 4.50, unitPrice: { value: 0.0045, per: 'g' }, inStock: true, onSpecial: false, cartQty: 1, resolution: 'manual' },
+      ],
+    }]);
+    const res = await patchChosenSku('00000000-0000-0000-0000-000000000001', { sku: 'NW002' });
+    expect(res.status).toBe(200);
+    expect(mocks.updateSet).toHaveBeenCalledWith(expect.objectContaining({
+      chosenSku: 'NW002',
+      sku: 'NW002',
+      name: 'Flour 1kg',
+      price: '4.5',
+    }));
+  });
+
+  it('PATCH /items/:id/chosen-sku rejects sku not in candidates', async () => {
+    mocks.getSession.mockResolvedValue({ user: { id: 'u1' } });
+    mocks.membershipLimit.mockResolvedValue([{ householdId: 'hh-1' }]);
+    mocks.selectLimit.mockResolvedValueOnce([{
+      candidates: [{ sku: 'NW001', name: 'Flour 1.5kg', brand: 'Pams', packSize: null, price: 3.99, unitPrice: null, inStock: true, onSpecial: false, cartQty: 1, resolution: 'sole' }],
+    }]);
+    const res = await patchChosenSku('00000000-0000-0000-0000-000000000001', { sku: 'NW999' });
     expect(res.status).toBe(400);
   });
 

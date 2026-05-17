@@ -13,6 +13,7 @@ import {
   shoppingLists, shoppingListItems,
   scraperJobs, shoppingListPrices, supermarketProducts,
 } from '../db/schema/index.js';
+import type { ProductCandidate } from '@eat/shared';
 
 const router: ExpressRouter = Router();
 
@@ -499,6 +500,51 @@ router.post('/:id/refresh-prices', withHousehold, async (req, res) => {
       .returning({ id: scraperJobs.id });
 
     res.json({ jobId: inserted[0]?.id });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// PATCH /api/shopping-lists/items/:itemId/chosen-sku
+router.patch('/items/:itemId/chosen-sku', withHousehold, async (req, res) => {
+  const itemId = req.params['itemId'] as string;
+  if (!z.string().uuid().safeParse(itemId).success) { res.status(404).json({ error: 'Not found' }); return; }
+  const { sku } = req.body as { sku?: string };
+  if (typeof sku !== 'string' || sku.length === 0) { res.status(400).json({ error: 'sku required' }); return; }
+
+  try {
+    const rows = await db
+      .select({ candidates: shoppingListPrices.candidates })
+      .from(shoppingListPrices)
+      .where(and(
+        eq(shoppingListPrices.shoppingListItemId, itemId),
+        eq(shoppingListPrices.store, 'new_world'),
+      ))
+      .limit(1);
+    const row = rows[0];
+    if (!row) { res.status(404).json({ error: 'No prices for this item yet' }); return; }
+    const candidates = (row.candidates ?? []) as ProductCandidate[];
+    const chosen = candidates.find(c => c.sku === sku);
+    if (!chosen) { res.status(400).json({ error: 'sku not in candidates' }); return; }
+
+    await db
+      .update(shoppingListPrices)
+      .set({
+        chosenSku: chosen.sku,
+        sku: chosen.sku,
+        name: chosen.name,
+        price: chosen.price !== null && chosen.price !== undefined ? String(chosen.price) : null,
+        inStock: chosen.inStock,
+        matched: true,
+        checkedAt: new Date(),
+      })
+      .where(and(
+        eq(shoppingListPrices.shoppingListItemId, itemId),
+        eq(shoppingListPrices.store, 'new_world'),
+      ));
+
+    res.json({ ok: true, chosenSku: chosen.sku });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });
