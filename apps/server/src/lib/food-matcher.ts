@@ -34,30 +34,9 @@ function findContains(name: string, foods: FoodRow[]): FoodRow | null {
   ) ?? null;
 }
 
-async function llmMatch(unmatched: string[], foods: FoodRow[]): Promise<Map<string, FoodRow | null>> {
-  const result = new Map<string, FoodRow | null>(unmatched.map(u => [u, null]));
-  if (unmatched.length === 0) return result;
-
-  const foodList = foods.map(f => f.name).join('\n');
-  const prompt = `Given this list of canonical food names:\n${foodList}\n\nFor each ingredient string below, return the single best matching canonical food name, or "none" if nothing fits.\nReturn ONLY a JSON object: {"ingredient text": "matched canonical name or none"}\n\nIngredients:\n${unmatched.map(u => `- ${u}`).join('\n')}`;
-
-  try {
-    const parsed = await generateGeminiJson<Record<string, string>>(prompt, { maxOutputTokens: 512 });
-    for (const [raw, matched] of Object.entries(parsed)) {
-      if (matched === 'none') continue;
-      const food = foods.find(f => f.name.toLowerCase() === matched.toLowerCase());
-      if (food) result.set(raw, food);
-    }
-  } catch {
-    // best-effort
-  }
-  return result;
-}
-
 export async function matchIngredients(names: string[]): Promise<MatchedIngredient[]> {
   const foods = await getAllFoods();
   const results: MatchedIngredient[] = [];
-  const needsLlm: string[] = [];
 
   for (const raw of names) {
     const exact = findExact(raw, foods);
@@ -71,21 +50,6 @@ export async function matchIngredients(names: string[]): Promise<MatchedIngredie
       continue;
     }
     results.push({ rawText: raw, canonicalFoodId: null, foodName: null, canonicalDefaultUnit: null, confidence: 'low' });
-    needsLlm.push(raw);
-  }
-
-  if (needsLlm.length > 0) {
-    const llmResults = await llmMatch(needsLlm, foods);
-    for (const item of results) {
-      if (item.confidence === 'low') {
-        const match = llmResults.get(item.rawText);
-        if (match) {
-          item.canonicalFoodId = match.id;
-          item.foodName = match.name;
-          item.canonicalDefaultUnit = match.defaultUnit;
-        }
-      }
-    }
   }
 
   return results;

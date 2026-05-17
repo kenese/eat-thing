@@ -1,7 +1,7 @@
 import { isMassUnit, isVolumeUnit, toCanonical, type DisplayUnit } from '@eat/taxonomy';
 
 export function parseRecipeQuantity(value: string): number | null {
-  const cleaned = value.trim();
+  const cleaned = value?.trim();
   if (!cleaned) return null;
 
   const mixed = cleaned.match(/^(\d+)\s+(\d+)\/(\d+)$/);
