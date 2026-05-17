@@ -1,21 +1,5 @@
 import type { ParsedSearchResult } from './newworld.js';
-
-export type ProductCandidateUnit = 'g' | 'ml' | 'count';
-
-export type ProductCandidateResolution = 'sole' | 'preferred' | 'manual';
-
-export interface ProductCandidate {
-  sku: string;
-  name: string;
-  brand: string | null;
-  packSize: { qty: number; unit: ProductCandidateUnit } | null;
-  price: number;
-  unitPrice: { value: number; per: ProductCandidateUnit } | null;
-  inStock: boolean;
-  onSpecial: boolean;
-  cartQty: number;
-  resolution: ProductCandidateResolution;
-}
+import type { ProductCandidate, ProductCandidateUnit } from '@eat/shared';
 
 export interface ListItemForMatch {
   id: string;

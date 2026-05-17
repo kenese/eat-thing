@@ -4,7 +4,7 @@ import type { JobResult, ScraperJob } from '../worker-sdk/types.js';
 import type { StoreAdapter } from './base.js';
 import { loadStorageState } from '../session.js';
 import { rankCandidates } from './match.js';
-import type { ProductCandidate } from './match.js';
+import type { ProductCandidate } from '@eat/shared';
 
 export type PackUnit = 'g' | 'ml' | 'count';
 
