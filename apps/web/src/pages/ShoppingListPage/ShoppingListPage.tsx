@@ -5,7 +5,8 @@ import {
   usePurchaseShoppingListItems, useBatchDeleteShoppingListItems,
 } from '../../hooks/useShoppingList';
 import { useFoodSearch } from '../../hooks/useFoodSearch';
-import { usePricesForList, useRefreshPrices, useChooseSku } from '../../hooks/usePricesForList';
+import { usePricesForList, useRefreshPrices, useChooseSku, useSendToCart, useCartResult } from '../../hooks/usePricesForList';
+import { ReconcileModal } from './ReconcileModal';
 import { StaplesModal } from './StaplesModal';
 import { AddFromPlanModal } from './AddFromPlanModal';
 import { CandidatePicker } from './CandidatePicker';
@@ -336,6 +337,9 @@ function ListView({ list }: { list: ShoppingList }) {
   const { data: pricesData } = usePricesForList(list.id);
   const refresh = useRefreshPrices(list.id);
   const chooseSku = useChooseSku(list.id);
+  const sendToCart = useSendToCart(list.id);
+  const cartResult = useCartResult(list.id);
+  const [reconcileOpen, setReconcileOpen] = useState(false);
 
   const prices = useMemo(() => {
     const m = new Map<string, ShoppingListPrice>();
@@ -347,6 +351,16 @@ function ListView({ list }: { list: ShoppingList }) {
 
   const job = pricesData?.job;
   const refreshing = job?.status === 'pending' || job?.status === 'in_progress' || refresh.isPending;
+
+  const hasUnpicked = list.items.some(it => {
+    const p = prices.get(it.id);
+    return p ? ((p.candidates?.length ?? 0) > 1 && !p.chosenSku) : false;
+  });
+  const hasAnyPicked = list.items.some(it => !!prices.get(it.id)?.chosenSku);
+
+  useEffect(() => {
+    if (cartResult.data?.job?.status === 'done') setReconcileOpen(true);
+  }, [cartResult.data?.job?.status]);
 
   const [tab, setTab] = useState<SourceTab>('all');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -521,10 +535,16 @@ function ListView({ list }: { list: ShoppingList }) {
           </div>
         </div>
 
-        <button className="sl-send" disabled title="Coming soon · phase 4">
-          <span>send to {storeLabel?.name ?? 'store'}</span>
+        <button
+          type="button"
+          className="sl-send"
+          disabled={!hasAnyPicked || hasUnpicked || sendToCart.isPending}
+          onClick={() => sendToCart.mutate()}
+        >
+          <span>{sendToCart.isPending ? 'Sending…' : 'Send to cart'}</span>
           <span style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: 18 }}>→</span>
         </button>
+        {hasUnpicked && <span className="hint">Pick options for items marked "Pick one" first.</span>}
 
         <AgentStatusCard state={agentState} message={agentMessage} />
         <button
@@ -545,6 +565,13 @@ function ListView({ list }: { list: ShoppingList }) {
           onCancel={() => setConfirmRemove(false)}
         />
       )}
+
+      <ReconcileModal
+        open={reconcileOpen}
+        onClose={() => setReconcileOpen(false)}
+        result={cartResult.data?.result ?? null}
+        items={list.items.map(i => ({ id: i.id, name: i.name }))}
+      />
     </div>
   );
 }

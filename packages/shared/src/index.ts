@@ -429,3 +429,13 @@ export interface CartJobResult {
   cartTotalNzd: number;
   trolleyUrl: string;
 }
+
+export interface SendToCartResponse {
+  jobId: string;
+  skipped: string[];
+}
+
+export interface CartResultResponse {
+  job: { id: string; status: ScraperJobStatus; error: string | null } | null;
+  result: CartJobResult | null;
+}

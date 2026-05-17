@@ -13,6 +13,8 @@ const hooks = vi.hoisted(() => ({
   usePricesForList: vi.fn(),
   useRefreshPrices: vi.fn(),
   useChooseSku: vi.fn(),
+  useSendToCart: vi.fn(),
+  useCartResult: vi.fn(),
   useFoodSearch: vi.fn(),
 }));
 
@@ -36,6 +38,8 @@ vi.mock('../../hooks/usePricesForList', () => ({
   usePricesForList: hooks.usePricesForList,
   useRefreshPrices: hooks.useRefreshPrices,
   useChooseSku: hooks.useChooseSku,
+  useSendToCart: hooks.useSendToCart,
+  useCartResult: hooks.useCartResult,
 }));
 vi.mock('../../hooks/useFoodSearch', () => ({
   useFoodSearch: hooks.useFoodSearch,
@@ -65,6 +69,8 @@ describe('ShoppingListPage prices', () => {
     hooks.usePurchaseShoppingListItems.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
     hooks.useBatchDeleteShoppingListItems.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
     hooks.useChooseSku.mockReturnValue({ mutate: vi.fn(), isPending: false });
+    hooks.useSendToCart.mockReturnValue({ mutate: vi.fn(), isPending: false });
+    hooks.useCartResult.mockReturnValue({ data: undefined });
     hooks.useFoodSearch.mockReturnValue({ data: [] });
   });
 
@@ -177,6 +183,8 @@ describe('ShoppingListPage multi-select', () => {
     hooks.usePricesForList.mockReturnValue({ data: { prices: [], job: null } });
     hooks.useRefreshPrices.mockReturnValue({ mutate: vi.fn(), isPending: false });
     hooks.useChooseSku.mockReturnValue({ mutate: vi.fn(), isPending: false });
+    hooks.useSendToCart.mockReturnValue({ mutate: vi.fn(), isPending: false });
+    hooks.useCartResult.mockReturnValue({ data: undefined });
     hooks.useFoodSearch.mockReturnValue({ data: [] });
   });
 
@@ -287,6 +295,8 @@ describe('ShoppingListPage — phase 4 candidate review', () => {
     hooks.useBatchDeleteShoppingListItems.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
     hooks.useRefreshPrices.mockReturnValue({ mutate: vi.fn(), isPending: false });
     hooks.useChooseSku.mockReturnValue({ mutate: vi.fn(), isPending: false });
+    hooks.useSendToCart.mockReturnValue({ mutate: vi.fn(), isPending: false });
+    hooks.useCartResult.mockReturnValue({ data: undefined });
     hooks.useFoodSearch.mockReturnValue({ data: [] });
   });
 
@@ -377,5 +387,150 @@ describe('ShoppingListPage — phase 4 candidate review', () => {
     await waitFor(() =>
       expect(mutate).toHaveBeenCalledWith({ itemId: 'i2', sku: 'NW-BREAD-001' }),
     );
+  });
+});
+
+describe('ShoppingListPage — send to cart', () => {
+  const pickedCandidate = {
+    sku: 'NW-EGGS-001',
+    name: 'Free Range Eggs 6pk',
+    brand: 'Tegel',
+    packSize: { qty: 6, unit: 'count' as const },
+    price: 5.99,
+    unitPrice: { value: 0.998, per: 'count' as const },
+    inStock: true,
+    onSpecial: false,
+    cartQty: 1,
+    resolution: 'sole' as const,
+  };
+
+  const unpickedCandidateA = {
+    sku: 'NW-BREAD-001',
+    name: 'Tip Top White Bread',
+    brand: 'Tip Top',
+    packSize: { qty: 700, unit: 'g' as const },
+    price: 3.49,
+    unitPrice: { value: 0.499, per: 'g' as const },
+    inStock: true,
+    onSpecial: false,
+    cartQty: 1,
+    resolution: 'manual' as const,
+  };
+
+  const unpickedCandidateB = {
+    sku: 'NW-BREAD-002',
+    name: 'Vogels Mixed Grain',
+    brand: 'Vogels',
+    packSize: { qty: 750, unit: 'g' as const },
+    price: 5.99,
+    unitPrice: { value: 0.799, per: 'g' as const },
+    inStock: true,
+    onSpecial: false,
+    cartQty: 1,
+    resolution: 'manual' as const,
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    hooks.useCurrentShoppingList.mockReturnValue({ data: baseList, isLoading: false });
+    hooks.useUpdateShoppingListItem.mockReturnValue({ mutate: vi.fn() });
+    hooks.useAddShoppingListItem.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
+    hooks.useDeleteShoppingListItem.mockReturnValue({ mutate: vi.fn() });
+    hooks.usePurchaseShoppingListItems.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
+    hooks.useBatchDeleteShoppingListItems.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
+    hooks.useRefreshPrices.mockReturnValue({ mutate: vi.fn(), isPending: false });
+    hooks.useChooseSku.mockReturnValue({ mutate: vi.fn(), isPending: false });
+    hooks.useFoodSearch.mockReturnValue({ data: [] });
+  });
+
+  it('Send to cart button is disabled while a manual pick is outstanding', async () => {
+    hooks.usePricesForList.mockReturnValue({
+      data: {
+        prices: [
+          {
+            id: 'p1',
+            shoppingListItemId: 'i1',
+            store: 'new_world',
+            sku: pickedCandidate.sku,
+            name: pickedCandidate.name,
+            price: pickedCandidate.price,
+            inStock: true,
+            matched: true,
+            checkedAt: '2026-05-10T01:00:00Z',
+            candidates: [pickedCandidate],
+            chosenSku: pickedCandidate.sku,
+          },
+          {
+            id: 'p2',
+            shoppingListItemId: 'i2',
+            store: 'new_world',
+            sku: null,
+            name: null,
+            price: null,
+            inStock: false,
+            matched: false,
+            checkedAt: '2026-05-10T01:00:00Z',
+            candidates: [unpickedCandidateA, unpickedCandidateB],
+            chosenSku: null,
+          },
+        ],
+        job: null,
+      },
+    });
+    hooks.useSendToCart.mockReturnValue({ mutate: vi.fn(), isPending: false });
+    hooks.useCartResult.mockReturnValue({ data: undefined });
+    renderPage();
+    const sendBtn = screen.getByRole('button', { name: /send to cart/i });
+    expect(sendBtn).toBeDisabled();
+  });
+
+  it('clicking Send to cart enqueues the job and opens the reconcile modal on completion', async () => {
+    const sendMutate = vi.fn();
+    hooks.usePricesForList.mockReturnValue({
+      data: {
+        prices: [
+          {
+            id: 'p1',
+            shoppingListItemId: 'i1',
+            store: 'new_world',
+            sku: pickedCandidate.sku,
+            name: pickedCandidate.name,
+            price: pickedCandidate.price,
+            inStock: true,
+            matched: true,
+            checkedAt: '2026-05-10T01:00:00Z',
+            candidates: [pickedCandidate],
+            chosenSku: pickedCandidate.sku,
+          },
+        ],
+        job: null,
+      },
+    });
+    hooks.useSendToCart.mockReturnValue({ mutate: sendMutate, isPending: false });
+    hooks.useCartResult.mockReturnValue({
+      data: {
+        job: { id: 'j1', status: 'done', error: null },
+        result: {
+          perItem: [
+            {
+              shoppingListItemId: 'i1',
+              sku: pickedCandidate.sku,
+              requestedQty: 1,
+              action: 'added',
+            },
+          ],
+          cartTotalNzd: 5.99,
+          trolleyUrl: 'https://www.newworld.co.nz/trolley',
+        },
+      },
+    });
+    renderPage();
+    const sendBtn = screen.getByRole('button', { name: /send to cart/i });
+    fireEvent.click(sendBtn);
+    await waitFor(() => expect(sendMutate).toHaveBeenCalled());
+    // Modal should open because job status is 'done'
+    expect(screen.getByRole('dialog', { name: /cart updated/i })).toBeInTheDocument();
+    expect(screen.getByText('Added')).toBeInTheDocument();
+    expect(screen.getByText(/Open New World trolley/i)).toBeInTheDocument();
   });
 });
