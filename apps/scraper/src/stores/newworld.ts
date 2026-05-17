@@ -5,12 +5,46 @@ import type { StoreAdapter } from './base.js';
 import { loadStorageState } from '../session.js';
 import { pickMatch } from './match.js';
 
+export type PackUnit = 'g' | 'ml' | 'count';
+
+const PACK_SIZE_RE = /(\d+(?:\.\d+)?)\s*(kg|g|ml|l|pk|pack|ea|each)\b/i;
+const UNIT_PRICE_RE = /\$\s*(\d+(?:\.\d+)?)\s*(?:(?:\/|per)\s*(\d+)?\s*)?(kg|g|ml|l|each|ea|count)/i;
+
+export function parsePackSize(title: string): { qty: number; unit: PackUnit } | null {
+  const m = title.match(PACK_SIZE_RE);
+  if (!m || !m[1] || !m[2]) return null;
+  const n = parseFloat(m[1]);
+  const u = m[2].toLowerCase();
+  if (u === 'kg') return { qty: n * 1000, unit: 'g' };
+  if (u === 'g') return { qty: n, unit: 'g' };
+  if (u === 'l') return { qty: n * 1000, unit: 'ml' };
+  if (u === 'ml') return { qty: n, unit: 'ml' };
+  return { qty: n, unit: 'count' };
+}
+
+export function parseUnitPrice(text: string): { value: number; per: PackUnit } | null {
+  if (!text) return null;
+  const m = text.match(UNIT_PRICE_RE);
+  if (!m || !m[1] || !m[3]) return null;
+  const dollars = parseFloat(m[1]);
+  const denom = m[2] ? parseFloat(m[2]) : 1;
+  const u = m[3].toLowerCase();
+  if (u === 'kg') return { value: dollars / 1000 / denom, per: 'g' };
+  if (u === 'g')  return { value: dollars / denom, per: 'g' };
+  if (u === 'l')  return { value: dollars / 1000 / denom, per: 'ml' };
+  if (u === 'ml') return { value: dollars / denom, per: 'ml' };
+  return { value: dollars / denom, per: 'count' };
+}
+
 export interface ParsedSearchResult {
   sku: string;
   name: string;
   brand: string | null;
   price: number;
   inStock: boolean;
+  packSize: { qty: number; unit: PackUnit } | null;
+  unitPrice: { value: number; per: PackUnit } | null;
+  onSpecial: boolean;
 }
 
 export interface ParsedPastOrderProduct {
@@ -33,8 +67,19 @@ export function parseSearchResults(html: string): ParsedSearchResult[] {
     const cents = $el.find('p[data-testid="price-cents"]').first().text().trim();
     const price = parseFloat(`${dollars}.${cents.padStart(2, '0')}`);
     const inStock = $el.find('button[data-testid="add-to-cart"]').length > 0;
+    const unitPriceText = $el.find('p[data-testid="unit-price"]').first().text().trim();
+    const onSpecial = $el.find('[data-testid="special-badge"]').length > 0;
     if (sku && name && !Number.isNaN(price)) {
-      out.push({ sku, name, brand: null, price, inStock });
+      out.push({
+        sku,
+        name,
+        brand: null,
+        price,
+        inStock,
+        packSize: parsePackSize(name),
+        unitPrice: parseUnitPrice(unitPriceText),
+        onSpecial,
+      });
     }
   });
   return out;
