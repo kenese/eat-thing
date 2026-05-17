@@ -5,9 +5,10 @@ import {
   usePurchaseShoppingListItems, useBatchDeleteShoppingListItems,
 } from '../../hooks/useShoppingList';
 import { useFoodSearch } from '../../hooks/useFoodSearch';
-import { usePricesForList, useRefreshPrices } from '../../hooks/usePricesForList';
+import { usePricesForList, useRefreshPrices, useChooseSku } from '../../hooks/usePricesForList';
 import { StaplesModal } from './StaplesModal';
 import { AddFromPlanModal } from './AddFromPlanModal';
+import { CandidatePicker } from './CandidatePicker';
 import { PageTitle } from '../../components/PageTitle';
 import { FilterStrip } from '../../components/FilterStrip';
 import { AgentStatusCard, type AgentState } from '../../components/AgentStatusCard';
@@ -64,22 +65,43 @@ function ConfirmDialog({ message, onConfirm, onCancel }: { message: string; onCo
   );
 }
 
+type BadgeLabel = 'Sole match' | 'Preferred' | 'Picked' | 'Pick one';
+
+function badgeFor(price: ShoppingListPrice | undefined): BadgeLabel | null {
+  const candidates = price?.candidates ?? [];
+  if (!price || candidates.length === 0) return null;
+  if (!price.chosenSku) return candidates.length > 1 ? 'Pick one' : null;
+  const chosen = candidates.find(c => c.sku === price.chosenSku);
+  if (!chosen) return null;
+  if (chosen.resolution === 'sole') return 'Sole match';
+  if (chosen.resolution === 'preferred') return 'Preferred';
+  return 'Picked';
+}
+
 function CategorySection({
   category,
   items,
   prices,
   refreshing,
   selectedIds,
+  expanded,
   onToggleSelect,
   onDelete,
+  onToggleExpand,
+  onPickSku,
+  pickSkuPending,
 }: {
   category: Category;
   items: ShoppingListItem[];
   prices: Map<string, ShoppingListPrice>;
   refreshing: boolean;
   selectedIds: Set<string>;
+  expanded: Record<string, boolean>;
   onToggleSelect: (id: string) => void;
   onDelete: (id: string) => void;
+  onToggleExpand: (id: string) => void;
+  onPickSku: (itemId: string, sku: string) => void;
+  pickSkuPending: boolean;
 }) {
   const subtotal = items.reduce((s, it) => {
     const p = prices.get(it.id);
@@ -95,6 +117,10 @@ function CategorySection({
       </div>
       {items.map((it) => {
         const selected = selectedIds.has(it.id);
+        const p = prices.get(it.id);
+        const badge = badgeFor(p);
+        const slug = badge ? badge.toLowerCase().replace(/\s+/g, '-') : null;
+        const isExpanded = expanded[it.id] ?? false;
         return (
           <div key={it.id} className={`sl-row${selected ? ' sl-row--selected' : ''}`}>
             <button
@@ -117,8 +143,30 @@ function CategorySection({
                 <span className="sl-row-qty">{Math.ceil(it.qty * 10) / 10} {it.unit}</span>
               </div>
               <ReasonChip source={it.source} sourceRecipeNames={it.sourceRecipeNames ?? null} />
+              {badge && (
+                <>
+                  <span className={`row-badge row-badge-${slug}`}>{badge}</span>
+                  {badge === 'Pick one' && (
+                    <button
+                      type="button"
+                      className="row-toggle"
+                      onClick={() => onToggleExpand(it.id)}
+                    >
+                      {isExpanded ? 'Hide options' : 'Show options'}
+                    </button>
+                  )}
+                  {badge === 'Pick one' && isExpanded && p && (
+                    <CandidatePicker
+                      candidates={p.candidates}
+                      chosenSku={p.chosenSku}
+                      disabled={pickSkuPending}
+                      onPick={sku => onPickSku(it.id, sku)}
+                    />
+                  )}
+                </>
+              )}
             </div>
-            <PriceCell price={prices.get(it.id)} refreshing={refreshing} />
+            <PriceCell price={p} refreshing={refreshing} />
             <button className="sl-row-menu" onClick={() => onDelete(it.id)} aria-label={`Remove ${it.name}`}>✕</button>
           </div>
         );
@@ -287,12 +335,15 @@ function ListView({ list }: { list: ShoppingList }) {
   const batchDelete = useBatchDeleteShoppingListItems(list.id);
   const { data: pricesData } = usePricesForList(list.id);
   const refresh = useRefreshPrices(list.id);
+  const chooseSku = useChooseSku(list.id);
 
   const prices = useMemo(() => {
     const m = new Map<string, ShoppingListPrice>();
     for (const p of pricesData?.prices ?? []) m.set(p.shoppingListItemId, p);
     return m;
   }, [pricesData]);
+
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   const job = pricesData?.job;
   const refreshing = job?.status === 'pending' || job?.status === 'in_progress' || refresh.isPending;
@@ -415,8 +466,12 @@ function ListView({ list }: { list: ShoppingList }) {
               prices={prices}
               refreshing={refreshing}
               selectedIds={selectedIds}
+              expanded={expanded}
               onToggleSelect={toggleSelect}
               onDelete={(id) => deleteItem.mutate(id)}
+              onToggleExpand={(id) => setExpanded(e => ({ ...e, [id]: !e[id] }))}
+              onPickSku={(itemId, sku) => chooseSku.mutate({ itemId, sku })}
+              pickSkuPending={chooseSku.isPending}
             />
           );
         })}
@@ -476,10 +531,10 @@ function ListView({ list }: { list: ShoppingList }) {
           className="btn-outline"
           onClick={() => refresh.mutate()}
           disabled={refreshing}
-          aria-label="Refresh prices"
+          aria-label="Find products"
           style={{ marginTop: -8 }}
         >
-          {refreshing ? 'Checking prices…' : 'Refresh prices'}
+          {refreshing ? 'Checking prices…' : 'Find products'}
         </button>
       </aside>
 

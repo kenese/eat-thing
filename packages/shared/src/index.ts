@@ -370,6 +370,8 @@ export interface ShoppingListPrice {
   inStock: boolean;
   matched: boolean;
   checkedAt: string;
+  candidates: ProductCandidate[];
+  chosenSku: string | null;
 }
 
 export interface PricesForListResponse {

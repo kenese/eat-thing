@@ -23,3 +23,14 @@ export function useRefreshPrices(listId: string | null | undefined) {
     },
   });
 }
+
+export function useChooseSku(listId: string | null | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ itemId, sku }: { itemId: string; sku: string }) =>
+      api.patch<{ ok: true; chosenSku: string }>(`/api/shopping-lists/items/${itemId}/chosen-sku`, { sku }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['shopping-list-prices', listId] });
+    },
+  });
+}
