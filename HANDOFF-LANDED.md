@@ -1,5 +1,39 @@
 # HANDOFF-LANDED.md
 
+---
+
+## Recipes design review — 2026-05-17
+
+Source: `TODO.md` (12-item review against live `/recipes` page). Three commits on `main`.
+
+### Commit 1 — Visual gaps (`4c55e7d`)
+
+- **`RecipesPage.tsx`** — `EditorialHero`: added outline `add to next open day` CTA button wired to `useAddToNextEmptyDays`; `// HANDOFF: day picker` comment left. Added `editor's pick` eyebrow badge on side card image (white pill, `--persim-deep` text). Added `<StatusChip>` + `serves N` footer row in side card body.
+- **`RecipesPage.css`** — `.rx-card:hover`: replaced `border-color: var(--persim-deep)` with `translateY(-2px)` lift + shadow + darker rule. Added `.rx-hero-side-badge`, `.rx-hero-side-footer`, `.rx-hero-side-meta`.
+
+### Commit 2 — Data-layer (`3a10cee`)
+
+- **`apps/server/src/db/schema/recipes.ts`** — added `totalTimeMinutes` (int, nullable) and `tags` (text[], default `{}`) columns.
+- **`apps/server/drizzle/0009_recipe_time_tags.sql`** — migration (apply with `pnpm --filter @eat/server db:migrate`).
+- **`packages/shared/src/index.ts`** — `RecipeSummary` gains `totalTimeMinutes`, `tags`, `canonicalFoodIds`.
+- **`apps/server/src/routes/recipes.ts`** — GET `/api/recipes` summary query returns the three new fields; `canonicalFoodIds` comes from a subquery on `recipe_ingredients`.
+- **`apps/web/src/lib/recipeMatch.ts`** — added `computeMissingFromIds(canonicalFoodIds, inventory)` for summary-level bucketing.
+- **`apps/web/src/pages/RecipesPage/RecipesPage.tsx`** — `sortedByMatch` memo now uses `computeMissingFromIds` instead of hardcoded `[]`. Card meta overlay renders `{N} min · serves {S}`. Tag pills in card footer.
+- ⚠ **Rollout note:** fixing the bucketing heuristic reshuffles `/recipes` based on actual inventory. This is spec-correct but a visible change. Feature-flag the rollout if preferred.
+
+### Commit 3 — Copy & cosmetic (`131d047`)
+
+- **`RecipesPage.tsx`** — Hero eyebrow now dynamic (`cook tonight · uses N expiring`). Hero body renders up to 3 expiring inventory items as Lora-italic `<em>` spans; falls back to generic when nothing is expiring. Section title leading circles removed; period spans carry the section accent via inline style. Quick shop hint restored to full text. PageTitle eyebrow `.toUpperCase()` removed. FilterStrip trailing slot is now a real `<select>` with `cookable first / recently added / name a–z` options.
+- **`RecipesPage.css`** — Removed `.rx-section-dot`. Added `.rx-sort-label`, `.rx-sort-select`.
+
+### Stubs / open questions remaining
+
+1. **`// HANDOFF: day picker`** in `EditorialHero` — outline button labels `add to next open day`; replace handler + label when day-picker is designed.
+2. **`ShoppingList.scheduledDate`** — quick shop hint uses generic fallback `auto-added to your next list`; add a scheduled-date field to the data model to make it dynamic.
+3. **`total_time_minutes` migration** — run `pnpm --filter @eat/server db:migrate` to apply `0009_recipe_time_tags.sql` against production DB.
+
+---
+
 Design refresh landed 2026-05-17. Source: `design_handoff_eat_thing/`.
 
 ---
