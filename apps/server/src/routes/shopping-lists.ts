@@ -551,6 +551,76 @@ router.patch('/items/:itemId/chosen-sku', withHousehold, async (req, res) => {
   }
 });
 
+router.post('/:id/send-to-cart', withHousehold, async (req, res) => {
+  const listId = req.params['id'] as string;
+  if (!z.string().uuid().safeParse(listId).success) { res.status(404).json({ error: 'Not found' }); return; }
+  try {
+    const rows = await db
+      .select({
+        shoppingListItemId: shoppingListPrices.shoppingListItemId,
+        chosenSku: shoppingListPrices.chosenSku,
+        candidates: shoppingListPrices.candidates,
+      })
+      .from(shoppingListPrices)
+      .innerJoin(shoppingListItems, eq(shoppingListPrices.shoppingListItemId, shoppingListItems.id))
+      .where(and(
+        eq(shoppingListItems.shoppingListId, listId),
+        eq(shoppingListPrices.store, 'new_world'),
+      ));
+
+    const sendable: Array<{ shoppingListItemId: string; sku: string; qty: number }> = [];
+    const skipped: string[] = [];
+    for (const r of rows) {
+      if (!r.chosenSku) { skipped.push(r.shoppingListItemId); continue; }
+      const cands = (r.candidates ?? []) as ProductCandidate[];
+      const c = cands.find(x => x.sku === r.chosenSku);
+      if (!c) { skipped.push(r.shoppingListItemId); continue; }
+      sendable.push({ shoppingListItemId: r.shoppingListItemId, sku: c.sku, qty: c.cartQty });
+    }
+    if (sendable.length === 0) { res.status(400).json({ error: 'No items with a chosen sku' }); return; }
+
+    const inserted = await db
+      .insert(scraperJobs)
+      .values({
+        householdId: req.householdId,
+        store: 'new_world',
+        type: 'add_to_cart',
+        payload: { shoppingListId: listId, items: sendable },
+        status: 'pending',
+      })
+      .returning({ id: scraperJobs.id });
+
+    res.json({ jobId: inserted[0]?.id, skipped });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.get('/:id/cart-result', withHousehold, async (req, res) => {
+  const listId = req.params['id'] as string;
+  if (!z.string().uuid().safeParse(listId).success) { res.json({ result: null }); return; }
+  try {
+    const rows = await db
+      .select({ id: scraperJobs.id, status: scraperJobs.status, result: scraperJobs.result, error: scraperJobs.error })
+      .from(scraperJobs)
+      .where(and(eq(scraperJobs.householdId, req.householdId), eq(scraperJobs.type, 'add_to_cart')))
+      .orderBy(desc(scraperJobs.createdAt))
+      .limit(5);
+    const job = rows.find(r => {
+      const p = (r as Record<string, unknown>)['payload'] as Record<string, unknown> | undefined;
+      return p && p['shoppingListId'] === listId;
+    }) ?? rows[0] ?? null;
+    res.json({
+      job: job ? { id: job.id, status: job.status, error: job.error } : null,
+      result: job?.result ?? null,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 router.get('/:id/prices', withHousehold, async (req, res) => {
   const listId = req.params['id'] as string;
   if (!z.string().uuid().safeParse(listId).success) { res.json({ prices: [], job: null }); return; }

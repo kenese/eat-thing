@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   selectFrom: vi.fn(),
   selectLimit: vi.fn(),
   updateSet: vi.fn(),
+  insertValues: vi.fn(),
 }));
 
 vi.mock('../auth.js', () => ({ auth: { api: { getSession: mocks.getSession } } }));
@@ -60,6 +61,12 @@ vi.mock('../db/index.js', () => {
         }
         return makeSelectChain(mocks.selectFrom);
       },
+      insert: () => ({
+        values: (vals: unknown) => {
+          const promise = mocks.insertValues(vals);
+          return { returning: () => promise ?? Promise.resolve([]) };
+        },
+      }),
       update: () => makeUpdateChain(),
     },
   };
@@ -90,6 +97,13 @@ async function patchChosenSku(itemId: string, body: { sku?: string }) {
   return request(app)
     .patch(`/api/shopping-lists/items/${itemId}/chosen-sku`)
     .send(body);
+}
+
+async function postSendToCart(listId: string) {
+  const app = express();
+  app.use(express.json());
+  app.use('/api/shopping-lists', shoppingListsRouter);
+  return request(app).post(`/api/shopping-lists/${listId}/send-to-cart`);
 }
 
 describe('shopping-lists router', () => {
@@ -254,5 +268,37 @@ describe('shopping-lists router', () => {
     const res = await getPrices('00000000-0000-0000-0000-000000000001');
     expect(res.body.prices[0].candidates).toHaveLength(1);
     expect(res.body.prices[0].chosenSku).toBe('NW001');
+  });
+
+  it('POST /:id/send-to-cart enqueues add_to_cart with items that have chosenSku', async () => {
+    mocks.getSession.mockResolvedValue({ user: { id: 'u1' } });
+    mocks.membershipLimit.mockResolvedValue([{ householdId: 'hh-1' }]);
+    mocks.selectFrom.mockResolvedValueOnce([
+      {
+        shoppingListItemId: '550e8400-e29b-41d4-a716-446655440011',
+        candidates: [{ sku: 'NW001', cartQty: 1, name: 'X', brand: null, packSize: null, price: 1.99, unitPrice: null, inStock: true, onSpecial: false, resolution: 'sole' }],
+        chosenSku: 'NW001',
+      },
+      {
+        shoppingListItemId: '550e8400-e29b-41d4-a716-446655440012',
+        candidates: [{ sku: 'NW002', cartQty: 2, name: 'Y', brand: null, packSize: null, price: 2.50, unitPrice: null, inStock: true, onSpecial: false, resolution: 'sole' }],
+        chosenSku: 'NW002',
+      },
+      { shoppingListItemId: '550e8400-e29b-41d4-a716-446655440013', candidates: [], chosenSku: null }, // skipped
+    ]);
+    mocks.insertValues.mockResolvedValueOnce([{ id: 'job-9' }]);
+    const res = await postSendToCart('550e8400-e29b-41d4-a716-446655440001');
+    expect(res.status).toBe(200);
+    expect(res.body.jobId).toBe('job-9');
+    expect(res.body.skipped).toEqual(['550e8400-e29b-41d4-a716-446655440013']);
+    expect(mocks.insertValues).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'add_to_cart',
+      payload: expect.objectContaining({
+        items: [
+          { shoppingListItemId: '550e8400-e29b-41d4-a716-446655440011', sku: 'NW001', qty: 1 },
+          { shoppingListItemId: '550e8400-e29b-41d4-a716-446655440012', sku: 'NW002', qty: 2 },
+        ],
+      }),
+    }));
   });
 });

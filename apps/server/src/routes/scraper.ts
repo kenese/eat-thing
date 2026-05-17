@@ -163,6 +163,8 @@ router.post('/jobs/:id/result', withWorkerAuth, async (req, res) => {
         await applyComparePricesResult(job.store, data);
       } else if (job.type === 'import_past_orders') {
         await applyImportPastOrdersResult(job.householdId, job.store, data);
+      } else if (job.type === 'add_to_cart') {
+        // No DB writes beyond the job row itself — result captured in job.result
       }
     }
 
