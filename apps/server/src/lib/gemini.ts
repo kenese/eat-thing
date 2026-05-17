@@ -14,10 +14,13 @@ type GeminiResponse = {
       parts?: Array<{ text?: string }>;
     };
   }>;
+  usageMetadata: {
+    totalTokenCount?: number;
+  }
 };
 
 const DEFAULT_MODEL = 'gemini-flash-latest';
-// const DEFAULT_MODEL = 'gemini-2.0-flash';
+const LOW_THINKING = 'low';
 
 function extractJsonText(text: string): string {
   const trimmed = text.trim();
@@ -54,6 +57,9 @@ export async function generateGeminiJson<T>(prompt: string, options: GeminiOptio
         generationConfig: {
           response_mime_type: 'application/json',
           max_output_tokens: options.maxOutputTokens ?? 8192,
+          thinkingConfig: {
+            thinkingLevel: LOW_THINKING
+          }
         },
       }),
     },
@@ -69,8 +75,12 @@ export async function generateGeminiJson<T>(prompt: string, options: GeminiOptio
   }
 
   const json = await res.json() as GeminiResponse;
+  if (json?.usageMetadata?.totalTokenCount && json.usageMetadata.totalTokenCount >= 8192) {
+    console.log('LIKELY JSON NOT COMPLETE', json?.usageMetadata)
+  }
   const text = json.candidates?.[0]?.content?.parts?.find(part => part.text)?.text;
   if (!text) throw new Error('Gemini returned no text');
 
-  return JSON.parse(extractJsonText(text)) as T;
+  let parsed = JSON.parse(extractJsonText(text));
+  return parsed instanceof Array ? parsed[0] : parsed
 }

@@ -179,7 +179,7 @@ test.describe('authenticated routes load', () => {
     await page.keyboard.press('Escape');
   });
 
-  test('recipes page imports a Meal Planner recipe into the confirmation form', async ({ page }) => {
+  test('recipes page imports duplicate sectioned ingredients into the confirmation form', async ({ page }) => {
     await page.route('**/api/ingest/meal-planner', (route) =>
       route.fulfill({
         status: 200,
@@ -187,10 +187,10 @@ test.describe('authenticated routes load', () => {
         body: JSON.stringify([
           {
             id: 'meal-planner-1',
-            title: 'Kimchi Fried Rice',
+            title: 'Lemon Pasta',
             source: 'Meal Planner',
             servings: 3,
-            ingredientCount: 4,
+            ingredientCount: 2,
             alreadyImported: false,
           },
         ]),
@@ -201,18 +201,32 @@ test.describe('authenticated routes load', () => {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          name: 'Kimchi Fried Rice',
+          name: 'Lemon Pasta',
           servings: 3,
           sourceUrl: null,
           sourceImage: null,
-          instructions: 'Fry rice with kimchi.',
+          heroImageUrl: null,
+          instructions: 'Toss pasta with lemon.',
           ingredients: [
             {
-              rawText: 'cooked rice',
-              canonicalFoodId: 'food-rice',
-              foodName: 'rice',
-              qty: '300',
-              unit: 'g',
+              rawText: '1 lemon',
+              canonicalFoodId: '00000000-0000-0000-0000-000000000001',
+              foodName: 'lemon',
+              canonicalDefaultUnit: 'count',
+              qty: '1',
+              unit: 'count',
+              section: 'Pasta',
+              optional: false,
+              confidence: 'high',
+            },
+            {
+              rawText: '1 lemon',
+              canonicalFoodId: '00000000-0000-0000-0000-000000000001',
+              foodName: 'lemon',
+              canonicalDefaultUnit: 'count',
+              qty: '1',
+              unit: 'count',
+              section: 'Sauce',
               optional: false,
               confidence: 'high',
             },
@@ -220,17 +234,47 @@ test.describe('authenticated routes load', () => {
         }),
       }),
     );
+    await page.route('**/api/recipes', async (route) => {
+      if (route.request().method() !== 'POST') return route.fallback();
+      return route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'recipe-lemon',
+          householdId: 'h-1',
+          name: 'Lemon Pasta',
+          servings: 3,
+          sourceUrl: null,
+          sourceImage: null,
+          instructions: 'Toss pasta with lemon.',
+          ingredients: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }),
+      });
+    });
 
     await page.goto('/recipes');
     await page.getByRole('button', { name: /import/i }).click();
     await page.getByRole('button', { name: 'Meal Planner', exact: true }).click();
-    await expect(page.getByText('Kimchi Fried Rice')).toBeVisible();
+    await expect(page.getByText('Lemon Pasta')).toBeVisible();
 
     await page.getByRole('button', { name: 'Import', exact: true }).click();
 
     await expect(page.getByRole('heading', { name: /review imported recipe/i })).toBeVisible();
-    await expect(page.locator('#name')).toHaveValue('Kimchi Fried Rice');
+    await expect(page.locator('#name')).toHaveValue('Lemon Pasta');
     await expect(page.locator('#servings')).toHaveValue('3');
+    await expect(page.locator('.ingredients-grid .ingredient-name', { hasText: 'lemon' })).toHaveCount(2);
+
+    const recipeCreate = page.waitForRequest((request) =>
+      request.url().endsWith('/api/recipes') && request.method() === 'POST',
+    );
+    await page.getByRole('button', { name: /save imported recipe/i }).click();
+    const payload = (await recipeCreate).postDataJSON();
+    expect(payload.ingredients).toMatchObject([
+      { canonicalFoodId: '00000000-0000-0000-0000-000000000001', section: 'Pasta' },
+      { canonicalFoodId: '00000000-0000-0000-0000-000000000001', section: 'Sauce' },
+    ]);
   });
 
   test('top nav links navigate between routes', async ({ page }) => {

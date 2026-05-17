@@ -13,9 +13,6 @@ apps/**/.env.local
 # Claude Code local settings (personal permission overrides)
 .claude/settings.local.json
 
-# Local design files
-design-directions.html
-
 *storybook.log
 storybook-static
 

@@ -261,14 +261,7 @@ export async function extractFromUrl(url: string): Promise<ExtractedRecipe> {
     const response = await fetch(url, {
         headers: {'User-Agent': 'Mozilla/5.0 (compatible; eat-thing-bot/1.0)'},
         signal: AbortSignal.timeout(20_000),
-    })
-    // .then(r => {
-    // if (!r.ok) {
-    //   const text = await r.text();
-    //   throw new Error(`Fetch failed: ${r.status}`);
-    // }
-    // return r.text();
-    // });
+    });
     const html = await response.text();
     if (!response.ok) {
         const body = await response.json().catch((e) => {

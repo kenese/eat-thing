@@ -12,7 +12,7 @@ import { prepareRecipePhotoUpload } from '../../lib/recipePhotoUpload';
 import './ImportModal.css';
 
 type Tab = 'url' | 'photo' | 'search' | 'mealPlanner';
-
+const API_ERROR = 'Recipe could not be loaded, try again.';
 interface ImportModalProps {
   onClose: () => void;
 }
@@ -30,7 +30,8 @@ export function ImportModal({ onClose }: ImportModalProps) {
 
   // ─── URL tab ──────────────────────────────────────────────────────────────
 
-  const [urlInput, setUrlInput] = useState('');
+  // todo: remove default
+  const [urlInput, setUrlInput] = useState('https://www.strandsofmylife.com/moroccan-lamb-chops-herby-couscous-stuffed-peppers/');
 
   async function handleUrlExtract(e: React.FormEvent) {
     e.preventDefault();
@@ -134,7 +135,7 @@ export function ImportModal({ onClose }: ImportModalProps) {
               onChange={e => setUrlInput(e.target.value)}
               required
             />
-            {error && <p className="form-error">{error}</p>}
+            {error && <p className="form-error">{API_ERROR}</p>}
             <button className="btn-primary" type="submit" disabled={isLoading || !urlInput.trim()}>
               {isLoading ? 'Extracting…' : 'Extract recipe'}
             </button>
@@ -164,7 +165,7 @@ export function ImportModal({ onClose }: ImportModalProps) {
               )}
             </div>
             <input ref={fileRef} type="file" accept="image/*" onChange={handleFilePick} hidden />
-            {error && <p className="form-error">{error}</p>}
+            {error && <p className="form-error">{API_ERROR}</p>}
             <button className="btn-primary" type="submit" disabled={isLoading || !photoFile}>
               {isLoading ? 'Extracting…' : 'Extract recipe'}
             </button>
@@ -178,7 +179,7 @@ export function ImportModal({ onClose }: ImportModalProps) {
             {mealPlannerList.isError && (
               <p className="form-error">{(mealPlannerList.error as Error).message}</p>
             )}
-            {error && <p className="form-error">{error}</p>}
+            {error && <p className="form-error">{API_ERROR}</p>}
             {mealPlannerList.data && mealPlannerList.data.length === 0 && (
               <p className="recipes-status empty">No Meal Planner recipes found.</p>
             )}
@@ -223,7 +224,7 @@ export function ImportModal({ onClose }: ImportModalProps) {
                 {isLoading ? 'Searching…' : 'Search'}
               </button>
             </form>
-            {error && <p className="form-error">{error}</p>}
+            {error && <p className="form-error">{API_ERROR}</p>}
             {searchResults.length > 0 && (
               <ul className="search-results">
                 {searchResults.map(r => (

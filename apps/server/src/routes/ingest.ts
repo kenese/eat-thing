@@ -32,9 +32,12 @@ router.post('/url', withHousehold, async (req, res) => {
     } catch (err: unknown) {
         console.error('[ingest/url]', err);
 
-        res.status(err instanceof Error && 'status' in err ? err.status as number : 500).json({
-            message: err instanceof Error ? err.message : 'Internal Server Error: Extraction failed',
-            error: process.env.NODE_ENV === 'development' ? err : {}
+        const status = err instanceof Error && 'status' in err ? err.status as number : 422;
+        const message = err instanceof Error ? err.message : 'Extraction failed';
+
+        res.status(status).json({
+            message,
+            error: message,
         });
     }
 });

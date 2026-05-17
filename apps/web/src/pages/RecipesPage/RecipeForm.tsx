@@ -54,15 +54,21 @@ function computeMetric(qty: string, unit: string): string | null {
 }
 
 interface IngredientDraft {
+  clientId: string;
   canonicalFoodId: string | null;
   foodName: string | null;
   rawText: string;
   qty: string;
   unit: string;
+  section: string | null;
   optional: boolean;
   lowConfidence?: boolean;
   metricQty?: string;
   metricUnit?: 'g' | 'ml' | 'count';
+}
+
+function createIngredientDraftId() {
+  return globalThis.crypto?.randomUUID?.() ?? `ingredient-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
 interface MetricControlProps {
@@ -307,11 +313,13 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose,
   const [ingredients, setIngredients] = useState<IngredientDraft[]>(
     initialData
       ? initialData.ingredients.map(i => ({
+          clientId: createIngredientDraftId(),
           canonicalFoodId: i.canonicalFoodId,
           foodName: i.foodName,
           rawText: i.rawText,
           qty: i.qty,
           unit: i.unit || (i.canonicalDefaultUnit ?? ''),
+          section: i.section,
           optional: i.optional,
           lowConfidence: i.confidence === 'low' || !i.canonicalFoodId,
         }))
@@ -332,11 +340,13 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose,
       setSourceUrl(existing.sourceUrl ?? '');
       setInstructions(existing.instructions ?? '');
       setIngredients(existing.ingredients.map(i => ({
+        clientId: i.id,
         canonicalFoodId: i.canonicalFoodId,
         foodName: i.foodName,
         rawText: i.foodName,
         qty: i.qty,
         unit: i.unit,
+        section: i.section,
         optional: i.optional,
       })));
       setHydrated(true);
@@ -348,13 +358,14 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose,
   const isPending = addMutation.isPending || updateMutation.isPending;
 
   function addIngredient(food: CanonicalFood) {
-    if (ingredients.some(i => i.canonicalFoodId === food.id)) return;
     setIngredients(prev => [...prev, {
+      clientId: createIngredientDraftId(),
       canonicalFoodId: food.id,
       foodName: food.name,
       rawText: food.name,
       qty: '',
       unit: food.defaultUnit,
+      section: null,
       optional: false,
     }]);
   }
@@ -391,7 +402,7 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose,
       servings: servingsNum,
       sourceUrl: sourceUrl.trim() || null,
       instructions: instructions.trim() || null,
-      ingredients: ingredients.map(({ foodName: _fn, lowConfidence: _lc, rawText: _rt, metricQty, metricUnit, ...rest }) => ({
+      ingredients: ingredients.map(({ clientId: _id, foodName: _fn, lowConfidence: _lc, rawText: _rt, metricQty, metricUnit, ...rest }) => ({
         ...rest,
         metricValue: computeMetric(rest.qty, rest.unit) ?? (metricQty && metricUnit ? `${metricQty} ${metricUnit}` : null),
       } as RecipeIngredientInput)),
@@ -454,7 +465,7 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose,
                   <span className="ingredients-section-title">Ingredients</span>
                   <ul className="recipe-view-ingredients">
                     {ingredients.map(ing => (
-                      <li key={ing.canonicalFoodId} className="recipe-view-ingredient">
+                      <li key={ing.clientId} className="recipe-view-ingredient">
                         {formatIngredient(ing)}
                         {ing.optional && <span className="recipe-view-optional"> (optional)</span>}
                       </li>
@@ -566,7 +577,7 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose,
                   <ul className="ingredients-grid">
                     {ingredients.map((ing, idx) => (
                       <IngredientRow
-                        key={ing.canonicalFoodId}
+                        key={ing.clientId}
                         draft={ing}
                         onChange={next => updateIngredient(idx, next)}
                         onRemove={() => removeIngredient(idx)}

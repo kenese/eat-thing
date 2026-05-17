@@ -23,11 +23,8 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
       console.log('client error json fail', e);
       return e;
     });
-    const err = Object.assign(new Error(body?.error ?? `HTTP ${res.status}`), {
-      status: res.status,
-    }) as ApiError;
-    console.log('client error', body);
-    throw err;
+    console.log('ApiFetch failed: ', body?.message);
+    throw new Error('ApiFetch failed with error: ' + body?.message);
   }
 
   if (res.status === 204) return undefined as T;
