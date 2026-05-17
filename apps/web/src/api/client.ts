@@ -6,6 +6,7 @@ interface ApiError extends Error {
 }
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  console.log('apiFetch', path, init);
   if (isDevSessionEnabled() && (!init?.method || init.method === 'GET')) {
     const mockResponse = getDevMockResponse(path);
     if (mockResponse !== null) return mockResponse as T;
