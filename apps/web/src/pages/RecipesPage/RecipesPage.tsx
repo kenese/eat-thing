@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRecipes, useRecipe, useDeleteRecipe } from '../../hooks/useRecipes';
 import { useInventory } from '../../hooks/useInventory';
 import { useAddToNextEmptyDays } from '../../hooks/useMealPlan';
@@ -12,6 +12,7 @@ import type { Recipe, RecipeSummary } from '@eat/shared';
 import './RecipesPage.css';
 
 type Tab = 'all' | 'cookable' | 'shoppable' | 'library';
+type SortOrder = 'cookable-first' | 'recently-added' | 'name-az';
 
 interface MatchInfo {
   bucket: 'cookable' | 'shoppable' | 'library';
@@ -91,19 +92,37 @@ export function RecipeCard({
   );
 }
 
+function renderExpiringCopy(names: string[]): React.ReactNode {
+  if (names.length === 0) return null;
+  const withEm = names.map((n, i) => (
+    <em key={i} style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic' }}>{n}</em>
+  ));
+  const joined = withEm.reduce<React.ReactNode[]>((acc, el, i) => {
+    if (i === 0) return [el];
+    if (i === names.length - 1) return [...acc, names.length > 2 ? ', and ' : ' and ', el];
+    return [...acc, ', ', el];
+  }, []);
+  return <>{joined}</>;
+}
+
 function EditorialHero({
   feature,
   side,
   sideMatch,
+  featureExpiring,
+  featureTime,
   onOpen,
   onAddFeatureToNextDay,
 }: {
   feature: Recipe;
   side?: Recipe;
   sideMatch?: MatchInfo;
+  featureExpiring: string[];
+  featureTime: number | null;
   onOpen: (id: string) => void;
   onAddFeatureToNextDay: () => void;
 }) {
+  const expiringCount = featureExpiring.length;
   return (
     <div className="rx-hero">
       <div className="rx-hero-main">
@@ -111,15 +130,25 @@ function EditorialHero({
           <div>
             <div className="rx-hero-eyebrow">
               <span className="rx-hero-eyebrow-dot" />
-              COOK TONIGHT · USES WHAT YOU HAVE
+              {expiringCount > 0
+                ? `cook tonight · uses ${expiringCount} expiring`
+                : 'cook tonight · uses what you have'}
             </div>
             <h2 className="rx-hero-title">
               {feature.name}
               <span className="dot">.</span>
             </h2>
-            <p className="rx-hero-body">
-              Ready in minutes from what's already on hand — no shopping needed.
-            </p>
+            {expiringCount > 0 ? (
+              <p className="rx-hero-body">
+                {featureTime ? `Ready in ${featureTime} minutes. ` : ''}
+                Uses up {renderExpiringCopy(featureExpiring)} from the fridge —{' '}
+                {expiringCount === 1 ? 'something' : 'things'} you&apos;d otherwise throw out.
+              </p>
+            ) : (
+              <p className="rx-hero-body">
+                Ready in minutes from what&apos;s already on hand — no shopping needed.
+              </p>
+            )}
           </div>
           <div className="rx-hero-cta">
             <button className="btn-primary" onClick={() => onOpen(feature.id)}>
@@ -285,6 +314,7 @@ export function RecipesPage() {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [tab, setTab] = useState<Tab>('all');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('cookable-first');
   const [modal, setModal] = useState<
     { mode: 'add' } | { mode: 'edit'; id: string } | { mode: 'import' } | null
   >(null);
@@ -343,18 +373,35 @@ export function RecipesPage() {
   const { data: feature } = useRecipe(featureId ?? '');
   const { data: side }    = useRecipe(sideId ?? '');
 
-  // Derive real match info for hero recipes (full ingredient lists available via useRecipe).
-  const featureMissing = feature ? computeMissing(feature, inventory) : null;
+  // Derive real match info for side card (full ingredient list via useRecipe).
   const sideMissingList = side ? computeMissing(side, inventory) : null;
   const sideMatch = sideMissingList !== null
     ? { bucket: bucketRecipe(sideMissingList), missing: sideMissingList } as MatchInfo
     : undefined;
 
+  // Derive expiring inventory items that the featured recipe uses (for hero copy).
+  const featureTime = recipes[0]?.totalTimeMinutes ?? null;
+  const featureExpiring = useMemo(() => {
+    if (!feature || inventory.length === 0) return [];
+    const inventoryById = new Map(
+      inventory.flatMap(r => r.canonicalFoodId ? [[r.canonicalFoodId, r] as const] : []),
+    );
+    return feature.ingredients
+      .filter(ing => !ing.optional && ing.canonicalFoodId && inventoryById.has(ing.canonicalFoodId))
+      .map(ing => ({
+        name: ing.foodName,
+        expiresAt: inventoryById.get(ing.canonicalFoodId!)?.expiresAt ?? null,
+      }))
+      .filter((x): x is { name: string; expiresAt: string } => x.expiresAt !== null)
+      .sort((a, b) => new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime())
+      .slice(0, 3)
+      .map(x => x.name);
+  }, [feature, inventory]);
+
   const cookable  = sortedByMatch.filter((x) => x.match.bucket === 'cookable');
   const shoppable = sortedByMatch.filter((x) => x.match.bucket === 'shoppable');
   const library   = sortedByMatch.filter((x) => x.match.bucket === 'library');
 
-  const buckets = { cookable, shoppable, library };
   const tabs = [
     { key: 'all',       label: 'All',         count: recipes.length },
     { key: 'cookable',  label: 'Cook now',    count: cookable.length,  dotColor: 'var(--fresh)' },
@@ -362,12 +409,18 @@ export function RecipesPage() {
     { key: 'library',   label: 'Library',     count: library.length },
   ];
 
-  const visible = tab === 'all'
-    ? sortedByMatch
-    : buckets[tab];
-
-  // featureMissing drives hero copy in Commit 3 — computed here so inventory is in scope.
-  void featureMissing;
+  const flatSorted = useMemo(() => {
+    const base = tab === 'all' ? sortedByMatch
+      : tab === 'cookable' ? cookable
+      : tab === 'shoppable' ? shoppable
+      : library;
+    if (sortOrder === 'cookable-first') return base;
+    return [...base].sort((a, b) =>
+      sortOrder === 'recently-added'
+        ? new Date(b.recipe.createdAt).getTime() - new Date(a.recipe.createdAt).getTime()
+        : a.recipe.name.localeCompare(b.recipe.name),
+    );
+  }, [tab, sortedByMatch, cookable, shoppable, library, sortOrder]);
 
   function handleAddFeatureToNextDay() {
     if (!feature) return;
@@ -377,7 +430,7 @@ export function RecipesPage() {
   return (
     <div className="recipes-page">
       <PageTitle
-        eyebrow={new Date().toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' }).toUpperCase()}
+        eyebrow={new Date().toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}
         title="Recipes"
         summary={
           <>
@@ -407,7 +460,21 @@ export function RecipesPage() {
         searchValue={search}
         onSearchChange={setSearch}
         searchPlaceholder="Search recipes, ingredients…"
-        trailing={<><span>sort</span><span style={{ fontWeight: 600 }}>cookable first</span></>}
+        trailing={
+          <label className="rx-sort-label">
+            sort
+            <select
+              className="rx-sort-select"
+              value={sortOrder}
+              onChange={e => setSortOrder(e.target.value as SortOrder)}
+              aria-label="Sort recipes"
+            >
+              <option value="cookable-first">cookable first</option>
+              <option value="recently-added">recently added</option>
+              <option value="name-az">name a–z</option>
+            </select>
+          </label>
+        }
       />
 
       {isLoading && <p className="recipes-status">Loading…</p>}
@@ -419,19 +486,20 @@ export function RecipesPage() {
           feature={feature}
           side={side ?? undefined}
           sideMatch={sideMatch}
+          featureExpiring={featureExpiring}
+          featureTime={featureTime}
           onOpen={(id) => setModal({ mode: 'edit', id })}
           onAddFeatureToNextDay={handleAddFeatureToNextDay}
         />
       )}
 
-      {!isLoading && tab === 'all' ? (
+      {!isLoading && tab === 'all' && sortOrder === 'cookable-first' ? (
         <>
           {cookable.length > 0 && (
             <section className="rx-section">
               <div className="rx-section-header">
                 <span className="rx-section-title">
-                  <span className="rx-section-dot" style={{ background: 'var(--fresh)' }} aria-hidden />
-                  Cook tonight<span className="dot">.</span>
+                  Cook tonight<span className="dot" style={{ color: 'var(--fresh)' }}>.</span>
                 </span>
                 <span className="rx-section-count">{cookable.length} {cookable.length === 1 ? 'recipe' : 'recipes'}</span>
                 <span className="rx-section-hint">uses what's on hand</span>
@@ -455,11 +523,10 @@ export function RecipesPage() {
             <section className="rx-section">
               <div className="rx-section-header">
                 <span className="rx-section-title">
-                  <span className="rx-section-dot" style={{ background: 'var(--persimmon)' }} aria-hidden />
-                  One quick shop<span className="dot">.</span>
+                  One quick shop<span className="dot" style={{ color: 'var(--persimmon)' }}>.</span>
                 </span>
                 <span className="rx-section-count">{shoppable.length} {shoppable.length === 1 ? 'recipe' : 'recipes'}</span>
-                <span className="rx-section-hint">1–3 items away</span>
+                <span className="rx-section-hint">1–3 items away · auto-added to your next list</span>
               </div>
               <div className="rx-grid">
                 {shoppable.map(({ recipe, match }) => (
@@ -480,8 +547,7 @@ export function RecipesPage() {
             <section className="rx-section">
               <div className="rx-section-header">
                 <span className="rx-section-title">
-                  <span className="rx-section-dot" style={{ background: 'var(--green)' }} aria-hidden />
-                  The library<span className="dot">.</span>
+                  The library<span className="dot" style={{ color: 'var(--green)' }}>.</span>
                 </span>
                 <span className="rx-section-count">{library.length} {library.length === 1 ? 'recipe' : 'recipes'}</span>
                 <span className="rx-section-hint">all recipes</span>
@@ -508,7 +574,7 @@ export function RecipesPage() {
         </>
       ) : (
         <div className="rx-grid">
-          {visible.map(({ recipe, match }) => (
+          {!isLoading && flatSorted.map(({ recipe, match }) => (
             <RecipeCard
               key={recipe.id}
               recipe={recipe}
