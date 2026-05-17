@@ -282,47 +282,52 @@ export async function extractFromUrl(url: string): Promise<ExtractedRecipe> {
         throw new Error(`Fetch failed: ${response.status}`);
     }
 
-    const schemaRaw = parseSchemaOrg(html);
-    const raw = schemaRaw ?? await extractWithGemini(cleanHtmlWithReadability(html));
-    if (!raw) {
-        console.error('Could not extract recipe from this URL', raw, html);
-        throw new Error('Could not extract recipe from this URL' + JSON.stringify(raw) + JSON.stringify(html));
-    }
+    try {
+        const schemaRaw = parseSchemaOrg(html);
+        const raw = schemaRaw ?? await extractWithGemini(cleanHtmlWithReadability(html));
+        if (!raw) {
+            console.error('Could not extract recipe from this URL', raw, html);
+            throw new Error('Could not extract recipe from this URL' + JSON.stringify(raw) + JSON.stringify(html));
+        }
 
-    if (schemaRaw) {
-        console.log('recipe from url - via scema', schemaRaw);
-    } else {
-        console.log('recipe from url - via llm', raw);
-    }
-    const annotated = annotateMetric(raw.ingredients);
-    const heroImageUrl = resolveHeroImage(html, url);
+        if (schemaRaw) {
+            console.log('recipe from url - via scema', schemaRaw);
+        } else {
+            console.log('recipe from url - via llm', raw);
+        }
+        const annotated = annotateMetric(raw.ingredients);
+        const heroImageUrl = resolveHeroImage(html, url);
 
-    const matched = await matchIngredients(annotated.map(i => i.name));
+        const matched = await matchIngredients(annotated.map(i => i.name));
 
-    const ingredients: ImportedIngredient[] = annotated.map((ing, idx) => {
-        const m = matched[idx];
+        const ingredients: ImportedIngredient[] = annotated.map((ing, idx) => {
+            const m = matched[idx];
+            return {
+                rawText: ing.name,
+                canonicalFoodId: m.canonicalFoodId,
+                foodName: m.foodName,
+                canonicalDefaultUnit: m.canonicalDefaultUnit,
+                qty: ing.qty,
+                unit: ing.unit,
+                section: ing.section ?? null,
+                metric: ing.metric,
+                optional: false,
+                confidence: m.confidence,
+            };
+        });
+
         return {
-            rawText: ing.name,
-            canonicalFoodId: m.canonicalFoodId,
-            foodName: m.foodName,
-            canonicalDefaultUnit: m.canonicalDefaultUnit,
-            qty: ing.qty,
-            unit: ing.unit,
-            section: ing.section ?? null,
-            metric: ing.metric,
-            optional: false,
-            confidence: m.confidence,
+            name: raw.name,
+            servings: raw.servings,
+            sourceUrl: url,
+            heroImageUrl,
+            instructions: raw.instructions,
+            ingredients,
         };
-    });
-
-    return {
-        name: raw.name,
-        servings: raw.servings,
-        sourceUrl: url,
-        heroImageUrl,
-        instructions: raw.instructions,
-        ingredients,
-    };
+    } catch (e) {
+        console.log('Extract from Url ingestion failed:', e);
+        throw e;
+    }
 }
 
 // Exported for testing only
