@@ -3,6 +3,7 @@ dist
 .turbo
 .pnpm-store/
 package-lock.json
+.DS_Store
 
 # Environment — never commit real keys
 .env
