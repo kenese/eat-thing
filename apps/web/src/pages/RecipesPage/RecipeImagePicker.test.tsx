@@ -63,8 +63,8 @@ describe('Enter URL — server-side image extraction', () => {
     const onChange = vi.fn();
     render(<RecipeImagePicker photoBase64={null} photoMimeType={null} onChange={onChange} />);
 
-    fireEvent.click(screen.getByText('Add photo').closest('.recipe-image-box')!);
-    fireEvent.click(screen.getByText('Enter URL'));
+    fireEvent.click(screen.getByText('add photo').closest('.recipe-image-box')!);
+    fireEvent.click(screen.getByText('enter URL'));
 
     const input = screen.getByPlaceholderText('recipe page URL or direct image URL');
     fireEvent.change(input, { target: { value: 'https://example.com/recipe' } });
@@ -91,8 +91,8 @@ describe('Enter URL — server-side image extraction', () => {
 
     render(<RecipeImagePicker photoBase64={null} photoMimeType={null} onChange={vi.fn()} />);
 
-    fireEvent.click(screen.getByText('Add photo').closest('.recipe-image-box')!);
-    fireEvent.click(screen.getByText('Enter URL'));
+    fireEvent.click(screen.getByText('add photo').closest('.recipe-image-box')!);
+    fireEvent.click(screen.getByText('enter URL'));
 
     const input = screen.getByPlaceholderText('recipe page URL or direct image URL');
     fireEvent.change(input, { target: { value: 'https://example.com/recipe' } });

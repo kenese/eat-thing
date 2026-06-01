@@ -82,7 +82,7 @@ describe('SelectionBar', () => {
     expect(screen.getByText('2 selected')).toBeInTheDocument();
   });
 
-  it('calls onClear when × Clear is clicked', () => {
+  it('calls onClear when × clear is clicked', () => {
     const onClear = vi.fn();
     render(
       <SelectionBar
@@ -93,7 +93,7 @@ describe('SelectionBar', () => {
         onDelete={vi.fn()}
       />
     );
-    fireEvent.click(screen.getByText('× Clear'));
+    fireEvent.click(screen.getByText('× clear'));
     expect(onClear).toHaveBeenCalledOnce();
   });
 

@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { RecipeForm } from './RecipeForm';
-import { useAddRecipe } from '../../hooks/useRecipes';
+import { useAddRecipe, useRecipe, useDeleteRecipe } from '../../hooks/useRecipes';
 
 vi.mock('../../hooks/useRecipes', () => ({
   useRecipe: vi.fn(() => ({
@@ -143,7 +143,7 @@ describe('RecipeForm delete', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('shows delete button in read-only mode', () => {
-    const mockUseRecipe = vi.mocked(require('../../hooks/useRecipes').useRecipe);
+    const mockUseRecipe = vi.mocked(useRecipe);
     (mockUseRecipe as any).mockReturnValue({
       data: {
         id: 'r1',
@@ -168,7 +168,7 @@ describe('RecipeForm delete', () => {
   });
 
   it('shows confirm prompt when delete is clicked', () => {
-    const mockUseRecipe = vi.mocked(require('../../hooks/useRecipes').useRecipe);
+    const mockUseRecipe = vi.mocked(useRecipe);
     (mockUseRecipe as any).mockReturnValue({
       data: {
         id: 'r1',
@@ -194,7 +194,7 @@ describe('RecipeForm delete', () => {
   });
 
   it('calls deleteRecipe and onClose on confirm', async () => {
-    const mockUseRecipe = vi.mocked(require('../../hooks/useRecipes').useRecipe);
+    const mockUseRecipe = vi.mocked(useRecipe);
     (mockUseRecipe as any).mockReturnValue({
       data: {
         id: 'r1',
@@ -210,7 +210,7 @@ describe('RecipeForm delete', () => {
       isLoading: false,
     });
     const deleteFn = vi.fn().mockResolvedValue({ id: 'r1' });
-    const mockUseDeleteRecipe = vi.mocked(require('../../hooks/useRecipes').useDeleteRecipe);
+    const mockUseDeleteRecipe = vi.mocked(useDeleteRecipe);
     (mockUseDeleteRecipe as any).mockReturnValue({
       mutateAsync: deleteFn, isPending: false,
     });
@@ -223,7 +223,7 @@ describe('RecipeForm delete', () => {
   });
 
   it('cancels the confirm prompt', () => {
-    const mockUseRecipe = vi.mocked(require('../../hooks/useRecipes').useRecipe);
+    const mockUseRecipe = vi.mocked(useRecipe);
     (mockUseRecipe as any).mockReturnValue({
       data: {
         id: 'r1',
@@ -249,7 +249,7 @@ describe('RecipeForm sections rendering', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('renders section header for sectioned ingredients', () => {
-    const mockUseRecipe = vi.mocked(require('../../hooks/useRecipes').useRecipe);
+    const mockUseRecipe = vi.mocked(useRecipe);
     (mockUseRecipe as any).mockReturnValue({
       data: {
         id: 'r1',
@@ -273,7 +273,7 @@ describe('RecipeForm sections rendering', () => {
   });
 
   it('renders ## headings in instructions as h3 elements', () => {
-    const mockUseRecipe = vi.mocked(require('../../hooks/useRecipes').useRecipe);
+    const mockUseRecipe = vi.mocked(useRecipe);
     (mockUseRecipe as any).mockReturnValue({
       data: {
         id: 'r1',
@@ -294,7 +294,7 @@ describe('RecipeForm sections rendering', () => {
   });
 
   it('renders non-heading instruction lines as paragraphs', () => {
-    const mockUseRecipe = vi.mocked(require('../../hooks/useRecipes').useRecipe);
+    const mockUseRecipe = vi.mocked(useRecipe);
     (mockUseRecipe as any).mockReturnValue({
       data: {
         id: 'r1',
