@@ -1,9 +1,8 @@
 /* ── Modal width override ────────────────────────────────── */
 
-@media (min-width: 600px) {
-  .modal-panel--recipe {
-    min-width: 960px;
-  }
+.modal-panel--recipe {
+  width: 100%;
+  max-width: 760px;
 }
 
 /* ── Form shell ──────────────────────────────────────────── */
@@ -349,6 +348,7 @@
   line-height: 1.6;
   resize: vertical;
   font-weight: 400;
+  font-style: normal;
 }
 
 .form-textarea:focus {
@@ -441,4 +441,5 @@
   line-height: 1.7;
   color: var(--ink);
   white-space: pre-wrap;
+  font-style: normal;
 }

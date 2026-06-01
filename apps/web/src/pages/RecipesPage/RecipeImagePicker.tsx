@@ -90,7 +90,7 @@ export function RecipeImagePicker({ photoBase64, photoMimeType, onChange }: Reci
       ) : (
         <div className="recipe-image-placeholder">
           <span className="recipe-image-placeholder-icon">+</span>
-          <span className="recipe-image-placeholder-label">Add photo</span>
+          <span className="recipe-image-placeholder-label">add photo</span>
         </div>
       )}
 
@@ -100,20 +100,20 @@ export function RecipeImagePicker({ photoBase64, photoMimeType, onChange }: Reci
             <>
               {hasPhoto && (
                 <button type="button" className="recipe-image-menu-btn" onClick={() => { onChange(null, null); closeMenu(); }}>
-                  Remove photo
+                  remove photo
                 </button>
               )}
               <button type="button" className="recipe-image-menu-btn" onClick={handlePaste}>
-                Paste from clipboard
+                paste from clipboard
               </button>
               <button type="button" className="recipe-image-menu-btn" onClick={() => fileInputRef.current?.click()}>
-                Choose file
+                choose file
               </button>
               <button type="button" className="recipe-image-menu-btn" onClick={() => setMenuState('url-input')}>
-                Enter URL
+                enter URL
               </button>
               <button type="button" className="recipe-image-menu-btn" onClick={closeMenu}>
-                Cancel
+                cancel
               </button>
               {errorMsg && <p className="recipe-image-error">{errorMsg}</p>}
             </>
@@ -130,10 +130,10 @@ export function RecipeImagePicker({ photoBase64, photoMimeType, onChange }: Reci
                 disabled={menuState === 'loading'}
               />
               <button type="submit" className="recipe-image-menu-btn" disabled={menuState === 'loading'}>
-                {menuState === 'loading' ? 'Loading…' : 'Load image'}
+                {menuState === 'loading' ? 'loading…' : 'load image'}
               </button>
               <button type="button" className="recipe-image-menu-btn" onClick={() => setMenuState('options')}>
-                Back
+                back
               </button>
               {errorMsg && <p className="recipe-image-error">{errorMsg}</p>}
             </form>

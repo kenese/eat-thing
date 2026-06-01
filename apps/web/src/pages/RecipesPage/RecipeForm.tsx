@@ -331,7 +331,7 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose,
   const [photoMimeType, setPhotoMimeType] = useState<string | null>(pendingPhoto?.mimeType ?? null);
   const [readOnly, setReadOnly] = useState(mode === 'edit');
   const [addToPlanStatus, setAddToPlanStatus] = useState<'idle' | 'pending' | 'success' | 'error'>('idle');
-  const [addToPlanLabel, setAddToPlanLabel] = useState('Add to plan');
+  const [addToPlanLabel, setAddToPlanLabel] = useState('add to plan');
 
   useEffect(() => {
     if (mode === 'edit' && existing && !hydrated) {
@@ -482,7 +482,7 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose,
               )}
 
               <div className="form-actions">
-                <button type="button" className="btn-secondary" onClick={onClose}>Close</button>
+                <button type="button" className="btn-secondary" onClick={onClose}>close</button>
                 {onAddToPlan && recipeId && (
                   <button
                     type="button"
@@ -493,21 +493,21 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose,
                       setAddToPlanStatus('pending');
                       try {
                         const { addedTo } = await onAddToPlan(recipeId, Number(servings));
-                        const label = addedTo[0] ? `Added to ${addedTo[0]}` : 'Added to plan';
+                        const label = addedTo[0] ? `added to ${addedTo[0]}` : 'added to plan';
                         setAddToPlanLabel(label);
                         setAddToPlanStatus('success');
-                        setTimeout(() => { setAddToPlanStatus('idle'); setAddToPlanLabel('Add to plan'); }, 2500);
+                        setTimeout(() => { setAddToPlanStatus('idle'); setAddToPlanLabel('add to plan'); }, 2500);
                       } catch {
-                        setAddToPlanLabel('Failed — try again');
+                        setAddToPlanLabel('failed — try again');
                         setAddToPlanStatus('error');
-                        setTimeout(() => { setAddToPlanStatus('idle'); setAddToPlanLabel('Add to plan'); }, 2500);
+                        setTimeout(() => { setAddToPlanStatus('idle'); setAddToPlanLabel('add to plan'); }, 2500);
                       }
                     }}
                   >
-                    {addToPlanStatus === 'pending' ? 'Adding…' : addToPlanLabel}
+                    {addToPlanStatus === 'pending' ? 'adding…' : addToPlanLabel}
                   </button>
                 )}
-                <button type="button" className="btn-primary" onClick={() => setReadOnly(false)}>Edit</button>
+                <button type="button" className="btn-primary" onClick={() => setReadOnly(false)}>edit</button>
               </div>
             </div>
           </div>
@@ -604,10 +604,10 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose,
 
             <div className="form-actions">
               <button type="button" className="btn-secondary" onClick={() => mode === 'edit' ? setReadOnly(true) : onClose()}>
-                Cancel
+                cancel
               </button>
               <button type="submit" className="btn-primary" disabled={isPending}>
-                {isPending ? 'Saving…' : initialData ? 'Save imported recipe' : mode === 'add' ? 'Add recipe' : 'Save changes'}
+                {isPending ? 'saving…' : initialData ? 'save imported recipe' : mode === 'add' ? 'add recipe' : 'save changes'}
               </button>
             </div>
           </form>
