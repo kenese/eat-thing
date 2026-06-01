@@ -22,6 +22,7 @@ vi.mock('../../hooks/useRecipes', () => ({
   })),
   useAddRecipe: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
   useUpdateRecipe: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
+  useDeleteRecipe: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
 }));
 
 vi.mock('../../hooks/useFoodSearch', () => ({
@@ -135,5 +136,173 @@ describe('RecipeForm ingredient line identity', () => {
         expect.objectContaining({ canonicalFoodId: 'f-lemon', section: 'Sauce' }),
       ],
     }));
+  });
+});
+
+describe('RecipeForm delete', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('shows delete button in read-only mode', () => {
+    vi.mocked(require('../../hooks/useRecipes').useRecipe).mockReturnValue({
+      data: {
+        id: 'r1',
+        name: 'Test Recipe',
+        servings: 4,
+        sourceUrl: null,
+        sourceImage: null,
+        instructions: 'Step 1\n\n## Sauce\nStep 2',
+        ingredients: [
+          { id: 'i1', recipeId: 'r1', canonicalFoodId: 'f1', foodName: 'Flour',
+            qty: '200', unit: 'g', section: null, metricValue: '200 g', optional: false, sortOrder: 0 },
+          { id: 'i2', recipeId: 'r1', canonicalFoodId: 'f2', foodName: 'Eggs',
+            qty: '2', unit: 'count', section: 'For the sauce', metricValue: '2 count', optional: false, sortOrder: 1 },
+        ],
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
+      },
+      isLoading: false,
+    } as unknown as ReturnType<typeof require('../../hooks/useRecipes').useRecipe>);
+    render(<RecipeForm mode="edit" recipeId="r1" onClose={vi.fn()} />, { wrapper });
+    expect(screen.getByRole('button', { name: /delete/i })).toBeInTheDocument();
+  });
+
+  it('shows confirm prompt when delete is clicked', () => {
+    vi.mocked(require('../../hooks/useRecipes').useRecipe).mockReturnValue({
+      data: {
+        id: 'r1',
+        name: 'Test Recipe',
+        servings: 4,
+        sourceUrl: null,
+        sourceImage: null,
+        instructions: 'Step 1\n\n## Sauce\nStep 2',
+        ingredients: [
+          { id: 'i1', recipeId: 'r1', canonicalFoodId: 'f1', foodName: 'Flour',
+            qty: '200', unit: 'g', section: null, metricValue: '200 g', optional: false, sortOrder: 0 },
+        ],
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
+      },
+      isLoading: false,
+    } as unknown as ReturnType<typeof require('../../hooks/useRecipes').useRecipe>);
+    render(<RecipeForm mode="edit" recipeId="r1" onClose={vi.fn()} />, { wrapper });
+    fireEvent.click(screen.getByRole('button', { name: /^delete$/i }));
+    expect(screen.getByText(/delete this recipe/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /yes, delete/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^cancel$/i })).toBeInTheDocument();
+  });
+
+  it('calls deleteRecipe and onClose on confirm', async () => {
+    vi.mocked(require('../../hooks/useRecipes').useRecipe).mockReturnValue({
+      data: {
+        id: 'r1',
+        name: 'Test Recipe',
+        servings: 4,
+        sourceUrl: null,
+        sourceImage: null,
+        instructions: 'Step 1',
+        ingredients: [],
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
+      },
+      isLoading: false,
+    } as unknown as ReturnType<typeof require('../../hooks/useRecipes').useRecipe>);
+    const deleteFn = vi.fn().mockResolvedValue({ id: 'r1' });
+    vi.mocked(require('../../hooks/useRecipes').useDeleteRecipe).mockReturnValue({
+      mutateAsync: deleteFn, isPending: false,
+    } as unknown as ReturnType<typeof require('../../hooks/useRecipes').useDeleteRecipe>);
+    const onClose = vi.fn();
+    render(<RecipeForm mode="edit" recipeId="r1" onClose={onClose} />, { wrapper });
+    fireEvent.click(screen.getByRole('button', { name: /^delete$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /yes, delete/i }));
+    await waitFor(() => expect(deleteFn).toHaveBeenCalledWith('r1'));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+  });
+
+  it('cancels the confirm prompt', () => {
+    vi.mocked(require('../../hooks/useRecipes').useRecipe).mockReturnValue({
+      data: {
+        id: 'r1',
+        name: 'Test Recipe',
+        servings: 4,
+        sourceUrl: null,
+        sourceImage: null,
+        instructions: 'Step 1',
+        ingredients: [],
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
+      },
+      isLoading: false,
+    } as unknown as ReturnType<typeof require('../../hooks/useRecipes').useRecipe>);
+    render(<RecipeForm mode="edit" recipeId="r1" onClose={vi.fn()} />, { wrapper });
+    fireEvent.click(screen.getByRole('button', { name: /^delete$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^cancel$/i }));
+    expect(screen.queryByText(/delete this recipe/i)).not.toBeInTheDocument();
+  });
+});
+
+describe('RecipeForm sections rendering', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('renders section header for sectioned ingredients', () => {
+    vi.mocked(require('../../hooks/useRecipes').useRecipe).mockReturnValue({
+      data: {
+        id: 'r1',
+        name: 'Test Recipe',
+        servings: 4,
+        sourceUrl: null,
+        sourceImage: null,
+        instructions: 'Step 1',
+        ingredients: [
+          { id: 'i2', recipeId: 'r1', canonicalFoodId: 'f2', foodName: 'Eggs',
+            qty: '2', unit: 'count', section: 'For the sauce', metricValue: '2 count', optional: false, sortOrder: 1 },
+        ],
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
+      },
+      isLoading: false,
+    } as unknown as ReturnType<typeof require('../../hooks/useRecipes').useRecipe>);
+    render(<RecipeForm mode="edit" recipeId="r1" onClose={vi.fn()} />, { wrapper });
+    // The mocked recipe has an ingredient with section: 'For the sauce'
+    expect(screen.getByText('for the sauce')).toBeInTheDocument();
+  });
+
+  it('renders ## headings in instructions as h3 elements', () => {
+    vi.mocked(require('../../hooks/useRecipes').useRecipe).mockReturnValue({
+      data: {
+        id: 'r1',
+        name: 'Test Recipe',
+        servings: 4,
+        sourceUrl: null,
+        sourceImage: null,
+        instructions: 'Step 1\n\n## Sauce\nStep 2',
+        ingredients: [],
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
+      },
+      isLoading: false,
+    } as unknown as ReturnType<typeof require('../../hooks/useRecipes').useRecipe>);
+    render(<RecipeForm mode="edit" recipeId="r1" onClose={vi.fn()} />, { wrapper });
+    // The mocked recipe instructions contain '## Sauce'
+    expect(screen.getByRole('heading', { name: 'Sauce', level: 3 })).toBeInTheDocument();
+  });
+
+  it('renders non-heading instruction lines as paragraphs', () => {
+    vi.mocked(require('../../hooks/useRecipes').useRecipe).mockReturnValue({
+      data: {
+        id: 'r1',
+        name: 'Test Recipe',
+        servings: 4,
+        sourceUrl: null,
+        sourceImage: null,
+        instructions: 'Step 1\n\n## Sauce\nStep 2',
+        ingredients: [],
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
+      },
+      isLoading: false,
+    } as unknown as ReturnType<typeof require('../../hooks/useRecipes').useRecipe>);
+    render(<RecipeForm mode="edit" recipeId="r1" onClose={vi.fn()} />, { wrapper });
+    expect(screen.getByText('Step 1')).toBeInTheDocument();
+    expect(screen.getByText('Step 2')).toBeInTheDocument();
   });
 });
