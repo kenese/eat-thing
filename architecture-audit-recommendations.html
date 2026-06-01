@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>eat-thing Architecture Audit Recommendations</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --paper: #f3f5f2;
+        --surface: #ffffff;
+        --ink: #0d1714;
+        --muted: #53615c;
+        --rule: #d5dcd8;
+        --accent: #d96e2e;
+        --green: #1f5d33;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: Arial, sans-serif;
+        line-height: 1.5;
+      }
+
+      main {
+        width: min(1440px, calc(100% - 32px));
+        margin: 32px auto;
+      }
+
+      h1,
+      h2 {
+        margin: 0 0 12px;
+      }
+
+      h1::after,
+      h2::after {
+        color: var(--accent);
+        content: ".";
+      }
+
+      p {
+        color: var(--muted);
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+        background: var(--surface);
+        border: 1px solid var(--rule);
+        border-radius: 12px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 900px;
+      }
+
+      th,
+      td {
+        padding: 14px;
+        border-bottom: 1px solid var(--rule);
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: var(--ink);
+        color: var(--surface);
+      }
+
+      tbody tr:last-child td {
+        border-bottom: 0;
+      }
+
+      td:nth-child(1) {
+        width: 30%;
+        font-weight: 700;
+      }
+
+      td:nth-child(2) {
+        width: 25%;
+        color: var(--green);
+        font-weight: 700;
+      }
+
+      section {
+        margin-top: 32px;
+      }
+
+      li {
+        margin-bottom: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>eat-thing Architecture Audit Recommendations</h1>
+      <p>Recommended direction for each difference between the current implementation and <code>ARCHITECTURE.md</code>.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Difference</th>
+              <th scope="col">Better approach</th>
+              <th scope="col">Reason</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Household scoping missing from some shopping-list price/cart routes</td>
+              <td>Docs are right. Fix code.</td>
+              <td>This is a security boundary. Every user-facing query and mutation must verify <code>household_id</code>. Add <code>household_id</code> to <code>shopping_list_prices</code> if strict row-level tenancy is the intended invariant.</td>
+            </tr>
+            <tr>
+              <td>Inventory described as event-derived, but CRUD edits rows directly</td>
+              <td>Code is more practical for now. Update docs.</td>
+              <td>Fully event-sourced inventory requires events for purchases, corrections, deletions, expiry, and reconciliation. Current <code>cook_events</code> alone cannot derive inventory. Document inventory as mutable balance rows with append-only cooking audit events. Consider a full inventory ledger later only if history becomes valuable.</td>
+            </tr>
+            <tr>
+              <td>Canonical foods described as curated, but manual actions silently insert them</td>
+              <td>Docs are right long-term. Fix code deliberately.</td>
+              <td>Silent global taxonomy growth will accumulate duplicates and inconsistent categories. A lightweight "confirm new canonical food" prompt is enough initially. Until implemented, docs should say review is planned rather than enforced.</td>
+            </tr>
+            <tr>
+              <td>Shopping-list generation claims staples below threshold are included, but <code>/from-plan</code> only derives recipe items</td>
+              <td>Docs describe the better product behavior. Fix code.</td>
+              <td>Low-stock staples are core shopping-list behavior and already part of the schema. Implement one shared low-stock derivation used by <code>/from-plan</code> and the inventory sidebar.</td>
+            </tr>
+            <tr>
+              <td>Scraper described as <code>launchd</code>-supervised, but scraper plist is backlog work</td>
+              <td>Target architecture is good, but docs should state current status accurately.</td>
+              <td>Keep <code>launchd</code> as the intended deployment model. Change docs to "planned" until Slice 2 lands. Delete the obsolete OpenBrain plist now.</td>
+            </tr>
+            <tr>
+              <td>Docs say photo rows store storage paths and signed URLs; code stores public recipe URLs and has no inventory photos</td>
+              <td>Choose based on privacy needs. Recommended: keep code for now and update docs.</td>
+              <td>Public recipe images are operationally simpler and low-risk for a two-user household. If imported recipe photos may contain personal content, switch the bucket to private and store paths. Inventory photos should be documented as future work or removed from the architecture claim.</td>
+            </tr>
+            <tr>
+              <td>Docs say all stored units are canonical; code preserves recipe text units and allows arbitrary inventory units</td>
+              <td>Use a hybrid model. Code needs tightening and docs need clarification.</td>
+              <td>Preserving original recipe units is correct for display. Inventory quantities should be restricted to canonical <code>g</code>, <code>ml</code>, or <code>count</code>. Recipe ingredients should store original text plus normalized metric metadata for calculations.</td>
+            </tr>
+            <tr>
+              <td>Docs imply active-household selection; middleware picks the first membership</td>
+              <td>Code is adequate only while one household exists. Docs should say that explicitly.</td>
+              <td>Do not build a household switcher yet. Add deterministic selection or an active-household mechanism before allowing a second household.</td>
+            </tr>
+            <tr>
+              <td>Topology places Meal Planner import on the Mac mini; deployed server can call HTTP MCP directly</td>
+              <td>Code is better. Update docs.</td>
+              <td>HTTP MCP from the API is simpler. Keep local stdio as a development fallback. Meal Planner import should appear beside <code>apps/server</code>, not inside the Mac-mini worker box.</td>
+            </tr>
+            <tr>
+              <td>Server reads <code>SCRAPER_HMAC_SECRET</code>; worker reads <code>WORKER_HMAC_KEY</code></td>
+              <td>Fix code and standardize on one name.</td>
+              <td>Use <code>SCRAPER_HMAC_SECRET</code> everywhere because it is specific and already used by the server tests. Update deployment templates and docs.</td>
+            </tr>
+            <tr>
+              <td>Docs say every domain table carries <code>household_id</code>; <code>canonical_foods</code> and <code>shopping_list_prices</code> do not</td>
+              <td>Split the cases.</td>
+              <td><code>canonical_foods</code> should remain global and curated. <code>shopping_list_prices</code> should gain <code>household_id</code> if strict tenancy is the rule. Docs should explicitly list global reference tables and Better-Auth-owned tables as exceptions.</td>
+            </tr>
+            <tr>
+              <td>Docs call the auth table <code>users</code>; Better-Auth owns <code>user</code>, <code>session</code>, <code>account</code>, and <code>verification</code></td>
+              <td>Code is authoritative. Update docs.</td>
+              <td>Document the actual Better-Auth schema.</td>
+            </tr>
+            <tr>
+              <td>Docs say a date holds at most four recipes; server permits more</td>
+              <td>Recommended: fix code.</td>
+              <td>If four is a product rule, enforce it server-side so alternate clients cannot violate it. If it is only a layout preference, change docs to say the UI caps visible additions at four.</td>
+            </tr>
+            <tr>
+              <td><code>recipes.total_time_minutes</code> and <code>tags</code> exist, but recipe write routes cannot populate them</td>
+              <td>Schema and UI direction are better. Fix code.</td>
+              <td>Accept and persist these fields in recipe create/update routes, especially for imported recipes.</td>
+            </tr>
+            <tr>
+              <td>Obsolete OpenBrain <code>launchd</code> plist remains after D22</td>
+              <td>Delete the file.</td>
+              <td>It references removed code and can mislead deployment work.</td>
+            </tr>
+            <tr>
+              <td>Shared scraper job type omits shipped <code>add_to_cart</code></td>
+              <td>Fix code.</td>
+              <td>Add <code>add_to_cart</code> to the shared union so the shared contract matches the implemented API.</td>
+            </tr>
+            <tr>
+              <td>Docs describe list finalization, but no finalize behavior exists</td>
+              <td>Update docs unless finalization is needed soon.</td>
+              <td><code>finalized_at</code> is currently unused. Describe the current list as editable and remove "before finalizing," or add finalization to the roadmap.</td>
+            </tr>
+            <tr>
+              <td>Docs describe prompted responses as refining future deductions</td>
+              <td>Update docs.</td>
+              <td>Responses are recorded but no learning mechanism consumes them yet. Say they are retained for audit and future refinement.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <section>
+        <h2>Suggested Priority</h2>
+        <ol>
+          <li>Fix tenancy checks and HMAC naming.</li>
+          <li>Implement low-stock staples.</li>
+          <li>Align shared types and recipe write fields.</li>
+          <li>Remove the stale plist.</li>
+          <li>Revise <code>ARCHITECTURE.md</code> to describe mutable inventory, unit handling, Meal Planner topology, current <code>launchd</code> status, photo storage, and planned taxonomy enforcement accurately.</li>
+          <li>Decide whether the four-recipe cap and taxonomy review should become server invariants immediately.</li>
+        </ol>
+      </section>
+    </main>
+  </body>
+</html>
