@@ -10,13 +10,15 @@ import { findOrCreateFood, type FoodCategory } from '../lib/find-or-create-food.
 const router: ExpressRouter = Router();
 
 const CATEGORIES = ['produce', 'meat', 'dairy', 'pantry', 'frozen', 'drinks', 'other'] as const;
+const CANONICAL_UNITS = ['g', 'ml', 'count'] as const;
+const canonicalUnitSchema = z.enum(CANONICAL_UNITS);
 
 const createSchema = z.object({
   canonicalFoodId: z.string().uuid().optional(),
   foodName: z.string().trim().min(1).max(200).optional(),
   category: z.enum(CATEGORIES).optional(),
   qty: z.number().positive(),
-  unit: z.string().trim().min(1).max(40),
+  unit: canonicalUnitSchema,
   brand: z.string().trim().max(100).nullable().optional(),
   purchasedAt: z.string().nullable().optional(),
   expiresAt: z.string().nullable().optional(),
@@ -26,7 +28,7 @@ const createSchema = z.object({
 
 const updateSchema = z.object({
   qty: z.number().positive().optional(),
-  unit: z.string().trim().min(1).max(40).optional(),
+  unit: canonicalUnitSchema.optional(),
   brand: z.string().trim().max(100).nullable().optional(),
   purchasedAt: z.string().nullable().optional(),
   expiresAt: z.string().nullable().optional(),

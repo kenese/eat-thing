@@ -138,6 +138,14 @@ test.describe('authenticated routes load', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Inventory' })).toBeVisible();
   });
 
+  test('inventory item form only offers canonical storage units', async ({ page }) => {
+    await page.goto('/inventory');
+    await page.getByRole('button', { name: /add item/i }).click();
+    const unitSelect = page.locator('#unit');
+    await expect(unitSelect).toBeVisible();
+    await expect(unitSelect.locator('option')).toHaveText(['g', 'ml', 'count']);
+  });
+
   test('recipes route loads', async ({ page }) => {
     await page.goto('/recipes');
     await expect(page.getByRole('heading', { level: 1, name: 'Recipes' })).toBeVisible();
@@ -163,6 +171,26 @@ test.describe('authenticated routes load', () => {
     await page.getByTitle('Mark cooked').first().click();
     await expect(page.getByRole('heading', { name: /mark.*cooked/i })).toBeVisible();
     await expect(page.getByText('Will deduct from inventory')).toBeVisible();
+  });
+
+  test('plan page labels full days with the 4-recipe cap', async ({ page }) => {
+    await page.route('**/api/meal-plans/entries*', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          entries: [
+            { id: 'entry-1', date: tomorrow, recipeId: 'recipe-1', recipeName: 'Pasta', servings: 4, status: 'planned' },
+            { id: 'entry-2', date: tomorrow, recipeId: 'recipe-1', recipeName: 'Pasta', servings: 4, status: 'planned' },
+            { id: 'entry-3', date: tomorrow, recipeId: 'recipe-1', recipeName: 'Pasta', servings: 4, status: 'planned' },
+            { id: 'entry-4', date: tomorrow, recipeId: 'recipe-1', recipeName: 'Pasta', servings: 4, status: 'planned' },
+          ],
+        }),
+      }),
+    );
+
+    await page.goto('/plan');
+    await expect(page.getByText('max 4 recipes')).toBeVisible();
   });
 
   test('recipes page shows Import button that opens import modal', async ({ page }) => {
