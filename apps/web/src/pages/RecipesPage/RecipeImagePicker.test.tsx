@@ -5,7 +5,7 @@ import { RecipeImagePicker, blobToBase64 } from './RecipeImagePicker';
 describe('RecipeImagePicker', () => {
   it('shows placeholder when no photo', () => {
     render(<RecipeImagePicker photoBase64={null} photoMimeType={null} onChange={vi.fn()} />);
-    expect(screen.getByText('Add photo')).toBeInTheDocument();
+    expect(screen.getByText('add photo')).toBeInTheDocument();
   });
 
   it('shows image when photo is provided', () => {
@@ -16,38 +16,38 @@ describe('RecipeImagePicker', () => {
 
   it('opens option menu on click when no photo', () => {
     render(<RecipeImagePicker photoBase64={null} photoMimeType={null} onChange={vi.fn()} />);
-    fireEvent.click(screen.getByText('Add photo').closest('.recipe-image-box')!);
-    expect(screen.getByText('Paste from clipboard')).toBeInTheDocument();
-    expect(screen.getByText('Choose file')).toBeInTheDocument();
-    expect(screen.getByText('Enter URL')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('add photo').closest('.recipe-image-box')!);
+    expect(screen.getByText('paste from clipboard')).toBeInTheDocument();
+    expect(screen.getByText('choose file')).toBeInTheDocument();
+    expect(screen.getByText('enter URL')).toBeInTheDocument();
   });
 
   it('shows Remove option when photo is present', () => {
     render(<RecipeImagePicker photoBase64="abc" photoMimeType="image/jpeg" onChange={vi.fn()} />);
     fireEvent.click(screen.getByAltText('Recipe').closest('.recipe-image-box')!);
-    expect(screen.getByText('Remove photo')).toBeInTheDocument();
+    expect(screen.getByText('remove photo')).toBeInTheDocument();
   });
 
   it('calls onChange(null, null) when Remove photo clicked', () => {
     const onChange = vi.fn();
     render(<RecipeImagePicker photoBase64="abc" photoMimeType="image/jpeg" onChange={onChange} />);
     fireEvent.click(screen.getByAltText('Recipe').closest('.recipe-image-box')!);
-    fireEvent.click(screen.getByText('Remove photo'));
+    fireEvent.click(screen.getByText('remove photo'));
     expect(onChange).toHaveBeenCalledWith(null, null);
   });
 
   it('reveals URL input after clicking Enter URL', () => {
     render(<RecipeImagePicker photoBase64={null} photoMimeType={null} onChange={vi.fn()} />);
-    fireEvent.click(screen.getByText('Add photo').closest('.recipe-image-box')!);
-    fireEvent.click(screen.getByText('Enter URL'));
+    fireEvent.click(screen.getByText('add photo').closest('.recipe-image-box')!);
+    fireEvent.click(screen.getByText('enter URL'));
     expect(screen.getByPlaceholderText('https://example.com/image.jpg')).toBeInTheDocument();
   });
 
   it('closes menu when Cancel is clicked', () => {
     render(<RecipeImagePicker photoBase64={null} photoMimeType={null} onChange={vi.fn()} />);
-    fireEvent.click(screen.getByText('Add photo').closest('.recipe-image-box')!);
-    fireEvent.click(screen.getByText('Cancel'));
-    expect(screen.queryByText('Paste from clipboard')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText('add photo').closest('.recipe-image-box')!);
+    fireEvent.click(screen.getByText('cancel'));
+    expect(screen.queryByText('paste from clipboard')).not.toBeInTheDocument();
   });
 });
 
