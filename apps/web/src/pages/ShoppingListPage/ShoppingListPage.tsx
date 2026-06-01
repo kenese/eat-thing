@@ -16,7 +16,7 @@ import { AgentStatusCard, type AgentState } from '../../components/AgentStatusCa
 import type {
   ShoppingList, ShoppingListItem, ShoppingListPrice, Category, ShoppingSource, CanonicalFood,
 } from '@eat/shared';
-import { CATEGORY_LABEL, CATEGORY_ORDER } from '@eat/taxonomy';
+import { AISLE_LABEL, CATEGORY_LABEL, CATEGORY_ORDER } from '@eat/taxonomy';
 import type { Category as TaxCategory } from '@eat/taxonomy';
 import './ShoppingListPage.css';
 
@@ -112,7 +112,7 @@ function CategorySection({
   return (
     <section className="sl-section">
       <div className="sl-section-header">
-        <span className="sl-section-title">{CATEGORY_LABEL[category]}<span className="dot">.</span></span>
+        <span className="sl-section-title">{AISLE_LABEL[category]}<span className="dot">.</span></span>
         <span className="sl-section-count">{items.length} {items.length === 1 ? 'item' : 'items'}</span>
         <span className="sl-section-subtotal">${subtotal.toFixed(2)}</span>
       </div>
@@ -590,7 +590,7 @@ export function ShoppingListPage() {
   }, [list]);
 
   const now = new Date();
-  const builtAt = `AUTO-BUILT · LAST UPDATED ${now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }).toLowerCase()}`;
+  const builtAt = `auto-built · last updated ${now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }).toLowerCase()}`;
 
   return (
     <div className="shopping-list-page">

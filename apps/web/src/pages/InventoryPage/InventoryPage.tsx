@@ -186,7 +186,7 @@ export function InventoryPage() {
   );
 
   const now = new Date();
-  const eyebrow = `THE KITCHEN · ${now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }).toLowerCase()}`;
+  const eyebrow = `the kitchen · ${now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }).toLowerCase()}`;
 
   const tabs = [
     { key: 'all', label: 'All', count: items.length },
