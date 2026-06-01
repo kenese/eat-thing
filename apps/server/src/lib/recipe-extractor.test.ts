@@ -144,6 +144,63 @@ describe('resolveHeroImage', () => {
   });
 });
 
+describe('Gemini fallback for missing instructions', () => {
+  it('calls Gemini when Schema.org recipe has no instructions', async () => {
+    const { generateGeminiJson } = await import('./gemini.js');
+    const geminiMock = generateGeminiJson as ReturnType<typeof vi.fn>;
+    geminiMock.mockResolvedValueOnce({
+      name: 'Warm Greek Lamb Salad',
+      servings: 4,
+      sections: [{
+        name: null,
+        ingredients: [],
+        instructions: 'Toss the lamb with the greens and serve warm.',
+      }],
+    });
+
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      text: async () => `<script type="application/ld+json">${JSON.stringify({
+        '@type': 'Recipe',
+        name: 'Warm Greek Lamb Salad',
+        recipeYield: '4',
+        recipeIngredient: ['500g lamb'],
+        // Note: NO recipeInstructions field
+      })}</script>`,
+      headers: new Headers({ 'content-type': 'text/html' }),
+    } as Response);
+
+    const result = await extractFromUrl('https://www.langbein.com/recipes/warm-greek-lamb-salad');
+    expect(result.instructions).toBe('Toss the lamb with the greens and serve warm.');
+    expect(geminiMock).toHaveBeenCalled();
+
+    fetchSpy.mockRestore();
+    geminiMock.mockReset();
+  });
+
+  it('does NOT call Gemini when Schema.org already has instructions', async () => {
+    const { generateGeminiJson } = await import('./gemini.js');
+    const geminiMock = generateGeminiJson as ReturnType<typeof vi.fn>;
+
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      text: async () => `<script type="application/ld+json">${JSON.stringify({
+        '@type': 'Recipe',
+        name: 'Simple Soup',
+        recipeYield: '4',
+        recipeIngredient: ['1 cup water'],
+        recipeInstructions: [{ '@type': 'HowToStep', text: 'Boil water.' }],
+      })}</script>`,
+      headers: new Headers({ 'content-type': 'text/html' }),
+    } as Response);
+
+    await extractFromUrl('https://example.com/soup');
+    expect(geminiMock).not.toHaveBeenCalled();
+
+    fetchSpy.mockRestore();
+  });
+});
+
 describe('extractFromUrl headers', () => {
   it('sends a Chrome-like User-Agent header', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({

@@ -276,7 +276,20 @@ async function extractFromUrl(url: string): Promise<ExtractedRecipe> {
 
     try {
         const schemaRaw = parseSchemaOrg(html);
-        const raw = schemaRaw ?? await extractWithGemini(cleanHtmlWithReadability(html));
+        let raw = schemaRaw;
+
+        // If Schema.org parsed but has no instructions, supplement with Gemini
+        if (!raw?.instructions) {
+            const cleanText = cleanHtmlWithReadability(html);
+            const gemini = await extractWithGemini(cleanText);
+            if (schemaRaw) {
+                // Preserve Schema.org name/servings/ingredients; use Gemini instructions
+                raw = { ...schemaRaw, instructions: gemini?.instructions ?? null };
+            } else {
+                raw = gemini;
+            }
+        }
+
         if (!raw) {
             console.error('Could not extract recipe from this URL', raw, html);
             throw new Error('Could not extract recipe from this URL' + JSON.stringify(raw) + JSON.stringify(html));
