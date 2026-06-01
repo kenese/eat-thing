@@ -54,6 +54,30 @@ describe('TopNav', () => {
     expect(screen.getByText('shops')).toBeInTheDocument();
   });
 
+  it('renders accessible icon hooks for the five available routes', () => {
+    renderAt('/');
+    const links = screen.getAllByRole('link');
+    expect(links.map((link) => link.getAttribute('aria-label'))).toEqual([
+      'home',
+      'inventory',
+      'recipes',
+      'plan',
+      'list',
+    ]);
+    expect(document.querySelectorAll('.topnav-icon')).toHaveLength(5);
+  });
+
+  it('marks the shops stub as hidden from the compact phone header', () => {
+    renderAt('/');
+    expect(screen.getByText('shops')).toHaveClass('topnav-phone-hidden');
+  });
+
+  it('renders a phone-only Eat brand alongside the full wordmark', () => {
+    renderAt('/');
+    expect(screen.getByText('Eat', { selector: '.topnav-phone-brand' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Eat thing')).toBeInTheDocument();
+  });
+
   it('does not include a shops link', () => {
     renderAt('/');
     expect(screen.queryByRole('link', { name: 'shops' })).not.toBeInTheDocument();
