@@ -53,9 +53,22 @@ function daysBetween(from: Date, to: Date): number {
   return Math.round(ms / 86_400_000);
 }
 
+const FRACTION_MAP: Record<string, string> = {
+  '0.5': '½', '0.25': '¼', '0.75': '¾',
+  '0.33': '⅓', '0.333': '⅓', '0.67': '⅔', '0.667': '⅔',
+};
+
+const UNIT_DISPLAY: Record<string, string> = {
+  bn: 'bunch', lf: 'loaf',
+};
+
 function formatQty(qty: number, unit: string): string {
+  const unitDisplay = UNIT_DISPLAY[unit] ?? unit;
+  const key = String(Math.round(qty * 1000) / 1000);
+  const frac = FRACTION_MAP[key];
+  if (frac) return `${frac} ${unitDisplay}`;
   const rounded = Number.isInteger(qty) ? qty : Math.round(qty * 10) / 10;
-  return `${rounded} ${unit}`;
+  return `${rounded} ${unitDisplay}`;
 }
 
 // ─── Meals ──────────────────────────────────────────────────────────────────
@@ -146,9 +159,10 @@ export { LONG_DAYS };
 
 // ─── Sub-copy ───────────────────────────────────────────────────────────────
 
-export function subcopyDay(today: Date): string {
+export function subcopyDay(expiring: ExpiringSummary, today: Date): string {
+  if (expiring.rows.length === 0) return LONG_DAYS[today.getDay()];
   const d = new Date(today);
-  d.setDate(d.getDate() + 3);
+  d.setDate(d.getDate() + expiring.rows[0].daysLeft);
   return LONG_DAYS[d.getDay()];
 }
 

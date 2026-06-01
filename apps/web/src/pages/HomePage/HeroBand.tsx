@@ -13,12 +13,17 @@ export function HeroBand({ hero, expiring, loading }: HeroBandProps) {
   return (
     <section className="hero-band">
       <div className="hero-band-left">
-        {!inventoryEmpty && hero.pill && (
+        {inventoryEmpty ? (
+          <div className="hero-pill">
+            <span className="hero-pill-dot" aria-hidden />
+            add a few things to start cooking from your kitchen
+          </div>
+        ) : hero.pill ? (
           <div className="hero-pill">
             <span className="hero-pill-dot" aria-hidden />
             {hero.pill}
           </div>
-        )}
+        ) : null}
 
         <h1 className="hero-headline">
           cook from{' '}

@@ -9,6 +9,8 @@ interface MealsStripProps {
 }
 
 export function MealsStrip({ meals, hasPlan }: MealsStripProps) {
+  const heroIdx = meals.findIndex((c) => c.kind !== 'open');
+
   return (
     <section className="meals-strip">
       <div className="meals-strip-head">
@@ -22,16 +24,19 @@ export function MealsStrip({ meals, hasPlan }: MealsStripProps) {
       </div>
 
       <div className="meals-strip-grid">
-        {meals.map((cell) => (
-          <MealsCard key={cell.dayLabel + (cell.isToday ? '-today' : '')} cell={cell} />
+        {meals.map((cell, i) => (
+          <MealsCard
+            key={cell.dayLabel + (cell.isToday ? '-today' : '')}
+            cell={cell}
+            isHero={i === heroIdx}
+          />
         ))}
       </div>
     </section>
   );
 }
 
-function MealsCard({ cell }: { cell: MealCellStatus }) {
-  const isHero = cell.isToday && cell.kind === 'cook';
+function MealsCard({ cell, isHero }: { cell: MealCellStatus; isHero: boolean }) {
   const isOpen = cell.kind === 'open';
 
   const className = [
@@ -50,7 +55,7 @@ function MealsCard({ cell }: { cell: MealCellStatus }) {
       )}
       <div className="meals-card-chip">
         {cell.kind === 'cook' && <StatusChip kind="cook" onHero={isHero} />}
-        {cell.kind === 'shop' && <StatusChip kind="shop" missingCount={cell.missingCount} />}
+        {cell.kind === 'shop' && <StatusChip kind="shop" missingCount={cell.missingCount} onHero={isHero} />}
         {cell.kind === 'open' && <StatusChip kind="open" />}
       </div>
     </Link>

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { AISLE_LABEL } from '@eat/taxonomy';
 import type { ShopSummary } from './homeDerivations';
 import './ShopPreview.css';
 
@@ -37,7 +38,7 @@ export function ShopPreview({ shop }: ShopPreviewProps) {
               key={a.name}
               className={`shop-preview-aisle${i < shop.aisles.length - 1 ? ' has-rule' : ''}`}
             >
-              <div className="shop-preview-aisle-name">{a.name}</div>
+              <div className="shop-preview-aisle-name">{AISLE_LABEL[a.name]}</div>
               <div className="shop-preview-aisle-items">{a.sampleItems.join(' · ')}</div>
               <div className="shop-preview-aisle-count">{a.count}</div>
             </div>

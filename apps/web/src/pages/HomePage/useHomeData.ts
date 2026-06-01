@@ -74,7 +74,7 @@ export function useHomeData(now: Date = new Date()): HomeData {
       pill: coveragePill(meals),
       onHandCount: inventory.length,
       expiringSoonCount: expiring.totalCount,
-      expirySubcopyDay: subcopyDay(now),
+      expirySubcopyDay: subcopyDay(expiring, now),
     },
     meals,
     expiring,

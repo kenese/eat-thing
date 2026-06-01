@@ -287,10 +287,42 @@ describe('coveragePill', () => {
 });
 
 import { subcopyDay } from './homeDerivations';
+import type { ExpiringSummary } from './homeDerivations';
 
 describe('subcopyDay', () => {
-  it('returns the long day name 3 days from today', () => {
-    expect(subcopyDay(new Date('2026-05-10T00:00:00'))).toBe('wednesday'); // sun + 3 = wed
-    expect(subcopyDay(new Date('2026-05-12T00:00:00'))).toBe('friday');    // tue + 3 = fri
+  it('returns the day name of the soonest-expiring item', () => {
+    const today = new Date('2026-05-11T00:00:00'); // Monday
+    const expiring: ExpiringSummary = {
+      rows: [{ id: 'x', name: 'buttermilk', qtyDisplay: '½ pt', daysLeft: 2 }],
+      totalCount: 1,
+    };
+    expect(subcopyDay(expiring, today)).toBe('wednesday'); // mon + 2 = wed
+  });
+
+  it('falls back to today when expiring is empty (never rendered when empty)', () => {
+    const today = new Date('2026-05-11T00:00:00'); // Monday
+    expect(subcopyDay({ rows: [], totalCount: 0 }, today)).toBe('monday');
+  });
+});
+
+describe('formatQty (via computeExpiring)', () => {
+  const today = new Date('2026-05-12T08:00:00');
+
+  it('maps 0.5 to ½ fraction', () => {
+    const items = [inv({ foodName: 'buttermilk', qty: 0.5, unit: 'pt', expiresAt: '2026-05-13' })];
+    const result = computeExpiring(items, today);
+    expect(result.rows[0].qtyDisplay).toBe('½ pt');
+  });
+
+  it('maps bn to bunch', () => {
+    const items = [inv({ foodName: 'cilantro', qty: 1, unit: 'bn', expiresAt: '2026-05-13' })];
+    const result = computeExpiring(items, today);
+    expect(result.rows[0].qtyDisplay).toBe('1 bunch');
+  });
+
+  it('maps lf to loaf', () => {
+    const items = [inv({ foodName: 'sourdough', qty: 0.5, unit: 'lf', expiresAt: '2026-05-13' })];
+    const result = computeExpiring(items, today);
+    expect(result.rows[0].qtyDisplay).toBe('½ loaf');
   });
 });
