@@ -50,15 +50,51 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Horizon strip header */
+.plan-horizon-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 14px 0 8px;
+  border-top: 1px solid var(--rule);
+}
+.plan-horizon-eyebrow {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--mute);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.plan-horizon-legend {
+  display: flex;
+  gap: 14px;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  color: var(--ink2);
+}
+.plan-horizon-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.plan-horizon-legend-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.plan-horizon-legend-count {
+  color: var(--mute);
+  font-variant-numeric: tabular-nums;
+}
+
 /* Horizon strip */
 .plan-horizon {
-  display: flex;
-  gap: 4px;
-  overflow-x: auto;
-  padding: 14px 0;
-  border-top: 1px solid var(--rule);
+  display: grid;
+  gap: 6px;
+  padding: 10px 0 14px;
   border-bottom: 1px solid var(--rule);
-  scrollbar-width: none;
 }
 .plan-horizon::-webkit-scrollbar { display: none; }
 
@@ -68,14 +104,12 @@
   align-items: center;
   justify-content: center;
   gap: 2px;
-  min-width: 48px;
-  padding: 8px 10px;
+  padding: 8px 4px;
   border-radius: 10px;
   border: 1px solid transparent;
   background: transparent;
   cursor: pointer;
   position: relative;
-  flex-shrink: 0;
 }
 .horizon-pill:hover { background: var(--cream); }
 
@@ -119,7 +153,7 @@
   font-family: var(--font-sans);
   font-size: 9px;
   font-weight: 700;
-  color: var(--persimmon);
+  color: var(--persim-deep);
   margin-top: 2px;
 }
 .horizon-pill--today .horizon-pill-multi { color: var(--persimmon); }
@@ -197,11 +231,10 @@
 }
 
 .day-col-name {
-  font-family: var(--font-serif);
-  font-style: italic;
+  font-family: var(--font-sans);
   font-size: 17px;
-  font-weight: 400;
-  letter-spacing: -0.01em;
+  font-weight: 600;
+  letter-spacing: -0.012em;
   line-height: 1.2;
 }
 .day-col-name--past { text-decoration: line-through; }
@@ -245,21 +278,43 @@
   font-size: 18px;
   color: var(--ink3);
 }
-.day-col-empty-hint { font-size: 11px; margin-top: 6px; }
+.day-col-empty-hint {
+  font-size: 11px;
+  margin-top: 6px;
+  color: var(--persimmon);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* Past day layout */
+.day-col-past-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.day-col-past-name-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 4px 0 10px;
+}
 
 /* Compact follow-up entries within a day */
 .day-col-extra {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
-  padding: 6px 8px;
+  padding: 6px 0;
   border-top: 1px solid var(--rule2);
   font-size: 13px;
 }
 .day-col.today .day-col-extra { border-top-color: rgba(243,245,242,0.14); }
-.day-col-extra-name { font-weight: 500; }
-.day-col-extra-actions { display: flex; gap: 4px; }
+.day-col-extra-body { flex: 1; min-width: 0; }
+.day-col-extra-name { font-weight: 600; font-size: 13px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.day-col-extra-meta { font-family: var(--font-serif); font-style: italic; font-size: 11px; color: var(--mute); display: block; margin-top: 2px; }
+.day-col-extra-actions { display: flex; gap: 4px; opacity: 0; transition: opacity 0.15s; }
+.day-col-extra:hover .day-col-extra-actions,
+.day-col-extra:focus-within .day-col-extra-actions { opacity: 1; }
 .day-col-extra-btn {
   background: transparent;
   border: none;
@@ -269,6 +324,17 @@
   opacity: 0.6;
 }
 .day-col-extra-btn:hover { opacity: 1; }
+
+/* Hover-reveal controls for the primary entry */
+.day-col-primary-actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.day-col:hover .day-col-primary-actions,
+.day-col:focus-within .day-col-primary-actions { opacity: 1; }
+
 .day-col-cap { font-size: 11px; color: var(--mute); font-style: italic; margin-top: 6px; }
 
 /* Recipe drag grid — full width below day grid */

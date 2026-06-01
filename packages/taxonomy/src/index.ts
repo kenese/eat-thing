@@ -18,3 +18,15 @@ export const CATEGORY_LABEL: Record<Category, string> = {
 export const CATEGORY_ORDER: Category[] = [
   'produce', 'meat', 'dairy', 'pantry', 'frozen', 'drinks', 'other',
 ];
+
+// Aisle-display names — warmer vocabulary for shopping list and home preview.
+// Keep distinct from CATEGORY_LABEL (used in inventory forms / taxonomy UI).
+export const AISLE_LABEL: Record<Category, string> = {
+  produce: 'Produce',
+  meat:    'Butcher',
+  dairy:   'Dairy & cheese',
+  pantry:  'Pantry & oils',
+  frozen:  'Frozen',
+  drinks:  'Drinks',
+  other:   'Other',
+};

@@ -10,7 +10,8 @@ import {
 import { CookModal } from './CookModal';
 import { PageTitle } from '../../components/PageTitle';
 import { StatusChip } from '../../components/StatusChip';
-import type { MealPlanEntry, Recipe } from '@eat/shared';
+import type { MealPlanEntry } from '@eat/shared';
+import { computeMissingFromIds } from '../../lib/recipeMatch';
 import { planWindow, planWindowDays, TODAY_INDEX } from '../../lib/dateUtils';
 import { useNavigate } from 'react-router-dom';
 import './PlanPage.css';
@@ -24,9 +25,48 @@ type DayKind = 'cook' | 'shop' | 'leftover' | 'open';
 
 interface DayEntry {
   entry: MealPlanEntry;
-  recipe: Recipe | undefined;
-  missing: string[];
+  missingCount: number;
   kind: DayKind;
+  totalTimeMinutes: number | null;
+  sourceImage: string | null;
+}
+
+function MealRow({
+  de,
+  dark,
+  isPast,
+  onMarkCooked,
+  onDelete,
+}: {
+  de: DayEntry;
+  dark: boolean;
+  isPast: boolean;
+  onMarkCooked: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <div className="day-col-extra">
+      <div className="day-col-extra-body">
+        <span className={`day-col-extra-name${isPast ? ' day-col-name--past' : ''}`}>{de.entry.recipeName}</span>
+        {de.missingCount > 0 ? (
+          <span className="day-col-need" style={{ color: dark ? 'rgba(243,245,242,0.7)' : undefined }}>
+            need {de.missingCount} item{de.missingCount !== 1 ? 's' : ''}
+          </span>
+        ) : de.totalTimeMinutes ? (
+          <span className="day-col-extra-meta">{de.totalTimeMinutes}m · serves {de.entry.servings}</span>
+        ) : (
+          <span className="day-col-extra-meta">serves {de.entry.servings}</span>
+        )}
+      </div>
+      <StatusChip kind={de.kind === 'open' ? 'open' : de.kind} />
+      <div className="day-col-extra-actions">
+        {!isPast && de.entry.status === 'planned' && (
+          <button className="day-col-extra-btn" onClick={onMarkCooked} title="Mark cooked">✓</button>
+        )}
+        <button className="day-col-extra-btn" onClick={onDelete} aria-label="Remove">✕</button>
+      </div>
+    </div>
+  );
 }
 
 function DayCard({
@@ -102,62 +142,89 @@ function DayCard({
 
       {first ? (
         <>
-          <div
-            className="day-col-drag-handle"
-            draggable={!isPast}
-            onDragStart={(e) => {
-              e.dataTransfer.setData(DRAG_ENTRY_TYPE, first.entry.id);
-              e.dataTransfer.setData(DRAG_ENTRY_DATE_TYPE, iso);
-              e.dataTransfer.effectAllowed = 'move';
-              e.stopPropagation();
-            }}
-          >
-            <div className="day-col-image">
-              {first.recipe?.sourceImage
-                ? <img src={first.recipe.sourceImage} alt="" />
-                : <span className="day-col-image-fallback">{first.entry.recipeName}</span>}
-            </div>
-            <div className={`day-col-name${isPast ? ' day-col-name--past' : ''}`}>{first.entry.recipeName}</div>
-          </div>
-          <div className="day-col-meta">serves {first.entry.servings}</div>
-          <StatusChip kind={kind === 'open' ? 'open' : kind} />
-          {followUps.map((fu) => (
-            <div key={fu.entry.id} className="day-col-extra">
-              <span className={`day-col-extra-name${isPast ? ' day-col-name--past' : ''}`}>{fu.entry.recipeName}</span>
-              <span style={{ fontSize: 11, color: 'var(--mute)' }}>serves {fu.entry.servings}</span>
-              <div className="day-col-extra-actions">
-                {!isPast && fu.entry.status === 'planned' && (
-                  <button className="day-col-extra-btn" onClick={() => onMarkCookedEntry(fu.entry.id)} title="Mark cooked">✓</button>
-                )}
-                <button className="day-col-extra-btn" onClick={() => onDeleteEntry(fu.entry.id)} aria-label="Remove">✕</button>
+          {isPast ? (
+            /* Past day — no image, checkmark + line-through name + cooked footer */
+            <div className="day-col-past-body">
+              <div className="day-col-past-name-row">
+                <svg width="16" height="16" viewBox="0 0 12 12" fill="none" style={{ flexShrink: 0, marginTop: 2 }}>
+                  <path d="M2 6.5L4.5 9L10 3.5" stroke="var(--fresh)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <span className="day-col-name day-col-name--past">{first.entry.recipeName}</span>
+              </div>
+              <div style={{ flex: 1 }} />
+              <div className="day-col-cooked-label">
+                cooked{first.totalTimeMinutes ? ` · ${first.totalTimeMinutes}m` : ''}
               </div>
             </div>
-          ))}
-          {!isPast && (
-            <div style={{ marginTop: 6, display: 'flex', gap: 4 }}>
-              {first.entry.status === 'planned' && (
-                <button className="day-col-extra-btn" onClick={() => onMarkCookedEntry(first.entry.id)} title="Mark cooked">cooked ✓</button>
-              )}
-              <button className="day-col-extra-btn" onClick={() => onDeleteEntry(first.entry.id)} aria-label="Remove">remove ✕</button>
-              <input
-                className="day-col-extra-btn"
-                type="number"
-                min="0"
-                step="any"
-                defaultValue={first.entry.servings}
-                onBlur={(e) => {
-                  const n = parseFloat(e.currentTarget.value);
-                  if (!isNaN(n) && n > 0 && n !== first.entry.servings) {
-                    onUpdateEntry(first.entry.id, { servings: n });
-                  }
+          ) : (
+            <>
+              <div
+                className="day-col-drag-handle"
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.setData(DRAG_ENTRY_TYPE, first.entry.id);
+                  e.dataTransfer.setData(DRAG_ENTRY_DATE_TYPE, iso);
+                  e.dataTransfer.effectAllowed = 'move';
+                  e.stopPropagation();
                 }}
-                style={{ width: 50, textAlign: 'right' }}
-                title="Edit servings"
-              />
-            </div>
-          )}
-          {isPast && (
-            <div className="day-col-cooked-label">cooked</div>
+              >
+                <div className="day-col-image">
+                  {first.sourceImage
+                    ? <img src={first.sourceImage} alt="" />
+                    : <span className="day-col-image-fallback">{first.entry.recipeName}</span>}
+                </div>
+                <div className="day-col-name">{first.entry.recipeName}</div>
+              </div>
+
+              {first.missingCount > 0 && (
+                <div className="day-col-need">
+                  need {first.missingCount} item{first.missingCount !== 1 ? 's' : ''}
+                </div>
+              )}
+
+              {followUps.map((fu) => (
+                <MealRow
+                  key={fu.entry.id}
+                  de={fu}
+                  dark={isToday}
+                  isPast={false}
+                  onMarkCooked={() => onMarkCookedEntry(fu.entry.id)}
+                  onDelete={() => onDeleteEntry(fu.entry.id)}
+                />
+              ))}
+
+              <div style={{ flex: 1 }} />
+
+              <div className="day-col-meta">
+                {first.totalTimeMinutes && (
+                  <><span style={{ fontVariantNumeric: 'tabular-nums' }}>{first.totalTimeMinutes}m</span><span style={{ opacity: 0.5, margin: '0 5px' }}>·</span></>
+                )}
+                serves {first.entry.servings}
+              </div>
+              <StatusChip kind={kind === 'open' ? 'open' : kind} />
+
+              <div className="day-col-primary-actions">
+                {first.entry.status === 'planned' && (
+                  <button className="day-col-extra-btn" onClick={() => onMarkCookedEntry(first.entry.id)} title="Mark cooked">cooked ✓</button>
+                )}
+                <button className="day-col-extra-btn" onClick={() => onDeleteEntry(first.entry.id)} aria-label="Remove">remove ✕</button>
+                <input
+                  className="day-col-extra-btn"
+                  type="number"
+                  min="0"
+                  step="any"
+                  defaultValue={first.entry.servings}
+                  onBlur={(e) => {
+                    const n = parseFloat(e.currentTarget.value);
+                    if (!isNaN(n) && n > 0 && n !== first.entry.servings) {
+                      onUpdateEntry(first.entry.id, { servings: n });
+                    }
+                  }}
+                  style={{ width: 50, textAlign: 'right' }}
+                  title="Edit servings"
+                />
+              </div>
+            </>
           )}
           {atCapacity && !isPast && (
             <div className="day-col-cap">max 4 recipes</div>
@@ -182,7 +249,6 @@ export function PlanPage() {
   const { data: entriesResp, isLoading: planLoading } = useMealPlanEntries(from, to);
   const { data: recipes = [] } = useRecipes();
   const { data: inventory = [] } = useInventory({});
-  void inventory;
 
   const addEntry = useAddMealPlanEntry();
   const updateEntry = useUpdateMealPlanEntry();
@@ -193,28 +259,42 @@ export function PlanPage() {
     ? (entriesResp?.entries ?? []).find((e) => e.id === cookingEntryId) ?? null
     : null;
 
+  const recipeById = useMemo(() => {
+    const m = new Map(recipes.map((r) => [r.id, r]));
+    return m;
+  }, [recipes]);
+
   const entriesByDay = useMemo(() => {
     const map: Record<string, DayEntry[]> = {};
     for (const e of entriesResp?.entries ?? []) {
+      const recipe = recipeById.get(e.recipeId);
+      const missingIds = recipe ? computeMissingFromIds(recipe.canonicalFoodIds, inventory) : [];
+      const missingCount = missingIds.length;
+      const kind: DayKind = e.status === 'cooked' ? 'cook' : missingCount > 0 ? 'shop' : 'cook';
       (map[e.date] ??= []).push({
         entry: e,
-        recipe: undefined,
-        missing: [],
-        kind: 'cook',
+        missingCount,
+        kind,
+        totalTimeMinutes: recipe?.totalTimeMinutes ?? null,
+        sourceImage: recipe?.sourceImage ?? null,
       });
     }
     return map;
-  }, [entriesResp]);
+  }, [entriesResp, recipeById, inventory]);
 
-  const shopCount = days.filter((d) =>
-    !d.isPast && (entriesByDay[d.iso] ?? []).some((de) => de.kind === 'shop'),
+  // Summary counts for the next 7 days only (per spec "next 7 days" caption)
+  const todayIdx = days.findIndex((d) => d.isToday);
+  const next7 = days.slice(todayIdx, todayIdx + 7);
+
+  const shopCount = next7.filter((d) =>
+    (entriesByDay[d.iso] ?? []).some((de) => de.kind === 'shop'),
   ).length;
 
-  const pantryCount = days.filter((d) =>
-    !d.isPast && (entriesByDay[d.iso] ?? []).some((de) => de.kind === 'cook'),
+  const pantryCount = next7.filter((d) =>
+    (entriesByDay[d.iso] ?? []).some((de) => de.kind === 'cook'),
   ).length;
 
-  const openCount = days.filter((d) => !d.isPast && !(entriesByDay[d.iso]?.length)).length;
+  const openCount = next7.filter((d) => !(entriesByDay[d.iso]?.length)).length;
 
   function handleDrop(date: string, recipeId: string) {
     const recipe = recipes.find((r) => r.id === recipeId);
@@ -289,13 +369,41 @@ export function PlanPage() {
               {shopCount > 0 && (
                 <span className="plan-add-to-list-count">{shopCount}</span>
               )}
+              <span style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: 16 }}>→</span>
             </button>
           </div>
         }
       />
 
+      {/* Horizon strip header + legend */}
+      <div className="plan-horizon-header">
+        <div className="plan-horizon-eyebrow">
+          {days.length}-day horizon
+        </div>
+        <div className="plan-horizon-legend">
+          {([
+            ['cook now',    pantryCount, 'var(--fresh)',     false],
+            ['needs shop',  shopCount,   'var(--persimmon)', false],
+            ['open',        openCount,   'var(--mute)',      true],
+          ] as [string, number, string, boolean][]).map(([lbl, n, color, dashed]) => (
+            <div key={lbl} className="plan-horizon-legend-item">
+              <span className="plan-horizon-legend-dot" style={{
+                background: dashed ? 'transparent' : color,
+                border: dashed ? `1.5px dashed ${color}` : 'none',
+              }} />
+              <span>{lbl}</span>
+              <span className="plan-horizon-legend-count">{n}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Horizon strip */}
-      <div className="plan-horizon" ref={horizonRef}>
+      <div
+        className="plan-horizon"
+        ref={horizonRef}
+        style={{ gridTemplateColumns: `repeat(${days.length}, 1fr)` }}
+      >
         {days.map((d, i) => {
           const dayEntries = entriesByDay[d.iso] ?? [];
           const mealCount = dayEntries.length;
