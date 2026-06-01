@@ -143,7 +143,8 @@ describe('RecipeForm delete', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('shows delete button in read-only mode', () => {
-    vi.mocked(require('../../hooks/useRecipes').useRecipe).mockReturnValue({
+    const mockUseRecipe = vi.mocked(require('../../hooks/useRecipes').useRecipe);
+    (mockUseRecipe as any).mockReturnValue({
       data: {
         id: 'r1',
         name: 'Test Recipe',
@@ -161,13 +162,14 @@ describe('RecipeForm delete', () => {
         updatedAt: '2026-01-01T00:00:00Z',
       },
       isLoading: false,
-    } as unknown as ReturnType<typeof require('../../hooks/useRecipes').useRecipe>);
+    });
     render(<RecipeForm mode="edit" recipeId="r1" onClose={vi.fn()} />, { wrapper });
     expect(screen.getByRole('button', { name: /delete/i })).toBeInTheDocument();
   });
 
   it('shows confirm prompt when delete is clicked', () => {
-    vi.mocked(require('../../hooks/useRecipes').useRecipe).mockReturnValue({
+    const mockUseRecipe = vi.mocked(require('../../hooks/useRecipes').useRecipe);
+    (mockUseRecipe as any).mockReturnValue({
       data: {
         id: 'r1',
         name: 'Test Recipe',
@@ -183,7 +185,7 @@ describe('RecipeForm delete', () => {
         updatedAt: '2026-01-01T00:00:00Z',
       },
       isLoading: false,
-    } as unknown as ReturnType<typeof require('../../hooks/useRecipes').useRecipe>);
+    });
     render(<RecipeForm mode="edit" recipeId="r1" onClose={vi.fn()} />, { wrapper });
     fireEvent.click(screen.getByRole('button', { name: /^delete$/i }));
     expect(screen.getByText(/delete this recipe/i)).toBeInTheDocument();
@@ -192,7 +194,8 @@ describe('RecipeForm delete', () => {
   });
 
   it('calls deleteRecipe and onClose on confirm', async () => {
-    vi.mocked(require('../../hooks/useRecipes').useRecipe).mockReturnValue({
+    const mockUseRecipe = vi.mocked(require('../../hooks/useRecipes').useRecipe);
+    (mockUseRecipe as any).mockReturnValue({
       data: {
         id: 'r1',
         name: 'Test Recipe',
@@ -205,11 +208,12 @@ describe('RecipeForm delete', () => {
         updatedAt: '2026-01-01T00:00:00Z',
       },
       isLoading: false,
-    } as unknown as ReturnType<typeof require('../../hooks/useRecipes').useRecipe>);
+    });
     const deleteFn = vi.fn().mockResolvedValue({ id: 'r1' });
-    vi.mocked(require('../../hooks/useRecipes').useDeleteRecipe).mockReturnValue({
+    const mockUseDeleteRecipe = vi.mocked(require('../../hooks/useRecipes').useDeleteRecipe);
+    (mockUseDeleteRecipe as any).mockReturnValue({
       mutateAsync: deleteFn, isPending: false,
-    } as unknown as ReturnType<typeof require('../../hooks/useRecipes').useDeleteRecipe>);
+    });
     const onClose = vi.fn();
     render(<RecipeForm mode="edit" recipeId="r1" onClose={onClose} />, { wrapper });
     fireEvent.click(screen.getByRole('button', { name: /^delete$/i }));
@@ -219,7 +223,8 @@ describe('RecipeForm delete', () => {
   });
 
   it('cancels the confirm prompt', () => {
-    vi.mocked(require('../../hooks/useRecipes').useRecipe).mockReturnValue({
+    const mockUseRecipe = vi.mocked(require('../../hooks/useRecipes').useRecipe);
+    (mockUseRecipe as any).mockReturnValue({
       data: {
         id: 'r1',
         name: 'Test Recipe',
@@ -232,7 +237,7 @@ describe('RecipeForm delete', () => {
         updatedAt: '2026-01-01T00:00:00Z',
       },
       isLoading: false,
-    } as unknown as ReturnType<typeof require('../../hooks/useRecipes').useRecipe>);
+    });
     render(<RecipeForm mode="edit" recipeId="r1" onClose={vi.fn()} />, { wrapper });
     fireEvent.click(screen.getByRole('button', { name: /^delete$/i }));
     fireEvent.click(screen.getByRole('button', { name: /^cancel$/i }));
@@ -244,7 +249,8 @@ describe('RecipeForm sections rendering', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('renders section header for sectioned ingredients', () => {
-    vi.mocked(require('../../hooks/useRecipes').useRecipe).mockReturnValue({
+    const mockUseRecipe = vi.mocked(require('../../hooks/useRecipes').useRecipe);
+    (mockUseRecipe as any).mockReturnValue({
       data: {
         id: 'r1',
         name: 'Test Recipe',
@@ -260,14 +266,15 @@ describe('RecipeForm sections rendering', () => {
         updatedAt: '2026-01-01T00:00:00Z',
       },
       isLoading: false,
-    } as unknown as ReturnType<typeof require('../../hooks/useRecipes').useRecipe>);
+    });
     render(<RecipeForm mode="edit" recipeId="r1" onClose={vi.fn()} />, { wrapper });
     // The mocked recipe has an ingredient with section: 'For the sauce'
     expect(screen.getByText('for the sauce')).toBeInTheDocument();
   });
 
   it('renders ## headings in instructions as h3 elements', () => {
-    vi.mocked(require('../../hooks/useRecipes').useRecipe).mockReturnValue({
+    const mockUseRecipe = vi.mocked(require('../../hooks/useRecipes').useRecipe);
+    (mockUseRecipe as any).mockReturnValue({
       data: {
         id: 'r1',
         name: 'Test Recipe',
@@ -280,14 +287,15 @@ describe('RecipeForm sections rendering', () => {
         updatedAt: '2026-01-01T00:00:00Z',
       },
       isLoading: false,
-    } as unknown as ReturnType<typeof require('../../hooks/useRecipes').useRecipe>);
+    });
     render(<RecipeForm mode="edit" recipeId="r1" onClose={vi.fn()} />, { wrapper });
     // The mocked recipe instructions contain '## Sauce'
     expect(screen.getByRole('heading', { name: 'Sauce', level: 3 })).toBeInTheDocument();
   });
 
   it('renders non-heading instruction lines as paragraphs', () => {
-    vi.mocked(require('../../hooks/useRecipes').useRecipe).mockReturnValue({
+    const mockUseRecipe = vi.mocked(require('../../hooks/useRecipes').useRecipe);
+    (mockUseRecipe as any).mockReturnValue({
       data: {
         id: 'r1',
         name: 'Test Recipe',
@@ -300,7 +308,7 @@ describe('RecipeForm sections rendering', () => {
         updatedAt: '2026-01-01T00:00:00Z',
       },
       isLoading: false,
-    } as unknown as ReturnType<typeof require('../../hooks/useRecipes').useRecipe>);
+    });
     render(<RecipeForm mode="edit" recipeId="r1" onClose={vi.fn()} />, { wrapper });
     expect(screen.getByText('Step 1')).toBeInTheDocument();
     expect(screen.getByText('Step 2')).toBeInTheDocument();
