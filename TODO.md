@@ -4,13 +4,14 @@ This file tracks design-spec discrepancies across all five pages. **It is not a 
 
 **0 · Source of truth.** The spec is the handoff bundle, not this file's prose. For exact hex / spacing / type, open `design_handoff_eat_thing/<page>.jsx` and `design_handoff_eat_thing/README.md`. This list points at them; it doesn't replace them.
 
-**1 · Resolve the "Decide intent first" items before writing any code.** Items marked **"Decide intent first"** are design decisions, not coding tasks. An agent will guess on these and create drift. Answer them inline in this file first. The *still-open* ones are:
-- *Cross-page* — section-header size: **22px** (spec) or **28px** (live)? Decide once; applies to Inventory §3, Shopping List §2, and the landed Recipes work.
-- *Home §1* — shop-preview day anchor; *Home §2* — hero-cell category tag vs status word.
-- *Plan §1* — where edit controls live (hover-reveal vs popover); *Plan §2* — horizon strip grid vs scroll; *Plan §3* — grouped vs separate title controls.
-- *Shopping List §3* — keep the staples flow or consolidate; *§4* — `⋯` row menu vs `✕` delete.
+**1 · Decisions are resolved — every item is now a code task.** The "Decide intent first" calls have been made and recorded inline as `> **DECISION:** …` blockquotes under each item. Read the decision before implementing; don't re-litigate. The calls made (2026-06-01):
+- *Cross-page section-header size* → **28px** (update spec, don't revert).
+- *Home §1 subcopy day* → derive from soonest-expiring item.
+- *Home §2 hero chip* → keep status-word labels + adopt spec's white-pill hero inversion.
+- *Plan §1 edit controls* → hover-reveal. *Plan §2 horizon* → equal-width grid. *Plan §3 title controls* → keep grouped pill.
+- *Shopping §3 staples* → keep the flow. *Shopping §4 row delete* → keep `✕` (hover-reveal).
 
-> **Already decided in the repo docs — do NOT re-open these:**
+> **Already decided in the repo docs — do NOT re-open these either:**
 > - *Inventory §1 (location vs category)* → **decided: keep category, defer location.** PLAN.md: `[-] Restore inventory location field — defer until category-derived counts cause a demonstrated problem`. So the spec's location grouping is intentionally not matched; *Inventory §2 (`spot` field)* drops in priority with it.
 > - *Inventory §3 (scan-receipt button)* → **deferred.** IDEAS.md parks receipt scanning post-MVP; don't add the button now.
 > - *Home §3 / Shopping List §5 (delivery-window grid)* → **deferred**, PLAN.md Slice 6.
@@ -106,11 +107,11 @@ Home landed mostly intact — hero, "use this week" card, 5-cell meals strip, sh
 ## 1 · Hero band
 
 ### [ ] Subcopy day reference may drift past "wednesday"
+> **DECISION:** derive the day from the soonest-expiring item in the use-this-week set (items with no expiry are already excluded by `computeExpiring`). When the set is empty, the clause is already omitted — keep that. Do **not** use `today+3`.
 - **Where:** `HomePage/homeDerivations.ts` → `subcopyDay()` + `HeroBand.tsx`.
 - **Spec:** `127 things on hand · 4 won't make it past wednesday · the list builds itself.`
 - **Now:** Day is computed as `today + 3 days`. On a Sunday that's Wednesday (spec); on a Friday that's Monday.
 - **Decide intent first:** spec is a static reference to "the next shop day" — i.e. the next auto-shop date, not "today + 3". Until a delivery-window data model exists, leaving the today+3 fallback is OK, but the right anchor is the shop's `builtLabel` day.
-- **DECISION:** derive the day from the soonest-expiring item in the use-this-week set (items with no expiry are already excluded by computeExpiring). When the set is empty, the clause is already omitted — leave that behavior.
 
 ---
 
@@ -123,6 +124,7 @@ Home landed mostly intact — hero, "use this week" card, 5-cell meals strip, sh
 - **Fix:** Highlight the *next* non-past cell that has a recipe regardless of kind. Falls back to the first cell with a recipe; if none, no highlight. Today is fine as a tiebreaker.
 
 ### [ ] Hero card uses persimmon-on-green status chip vs spec's white-pill-with-green-text
+> **DECISION:** keep the status-word labels (`cook now` / `missing N` / `open seat`) — more informative, no schema dependency. Adopt the spec's hero-card chip **visual inversion** (white pill / green text) for hierarchy. Do NOT add category tags. Verify the current hero chip color in `StatusChip.tsx` first.
 - **Where:** `MealsStrip.tsx` → `<StatusChip kind="cook" onHero={isHero} />` + `StatusChip` component.
 - **Spec:** On the green hero card, the tag is a white pill with green text — inverted from the off-card chip — and the label is the *category tag* (`pantry`, `shopping`, `leftover`), not the status word.
 - **Now:** StatusChip is reused on-hero; visual treatment is fine but the label says `cook now` / `missing N` regardless.
@@ -218,6 +220,7 @@ The category-vs-location question is the central decision; once made, everything
 ## 3 · Visual / cosmetic
 
 ### [ ] Section header label drift — 28px vs spec 22px
+> **DECISION (cross-page):** keep **28px**. It already shipped on Recipes/Inventory/Shopping; update the spec to 28, don't revert three files. Applies equally to Shopping List §2.
 - **Where:** `InventoryPage.css` → `.inv-group-label`.
 - **Now:** `font-size: 28px` (bumped from 22 in HANDOFF-LANDED).
 - **Spec:** 22px italic Lora green.
@@ -294,6 +297,7 @@ The recipe drag grid is an intentional deviation per `HANDOFF-LANDED.md`. Don't 
 - **Fix:** `.day-col-empty-hint { color: var(--persimmon); font-weight: 700; letter-spacing: 0.02em; }`.
 
 ### [ ] Servings + remove + cooked controls are always visible
+> **DECISION:** **hover-reveal**, matching Inventory's `.inv-row-actions` (opacity 0→1 on `:hover`/`:focus-within`). Not a popover.
 - **Where:** `PlanPage.tsx` → `DayCard`, the `style={{ marginTop: 6, display: 'flex', gap: 4 }}` row.
 - **Spec:** No edit controls visible on the card — spec is a viewing artifact. But this is a real product, so we need them. Spec doesn't tell us where.
 - **Decide intent first:** hover-reveal (consistent with Inventory's `.inv-row-actions`) or move into a small popover triggered by `⋯`. Right now the controls dominate the bottom of every card. Hover-reveal is the lower-lift, more spec-faithful option.
@@ -311,6 +315,7 @@ The recipe drag grid is an intentional deviation per `HANDOFF-LANDED.md`. Don't 
 - **Fix:** Add a flex row above the pill rail. The legend reuses the kind counts the title summary already derives.
 
 ### [ ] Horizon pills are min-width scroll instead of equal-width grid
+> **DECISION:** switch to an **equal-width grid** (`grid-template-columns: repeat(N, 1fr)`), N from `planWindowDays`. Matches the system geometry; drop the horizontal scroll.
 - **Where:** `PlanPage.css` → `.plan-horizon` + `.horizon-pill`.
 - **Spec:** `display: grid; grid-template-columns: repeat(16, 1fr); gap: 6px` — the strip exactly spans the page gutter and every pill is the same width.
 - **Now:** `display: flex; overflow-x: auto; min-width: 48px` — scrollable, pills inconsistent width depending on label.
@@ -338,6 +343,7 @@ The recipe drag grid is an intentional deviation per `HANDOFF-LANDED.md`. Don't 
 - **Fix:** Append `<span style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic' }}>→</span>` after the count.
 
 ### [ ] ←/today/→/load-date are grouped in a single paper2 pill; spec is four separate buttons
+> **DECISION:** **keep the grouped pill.** Quieter next to the persimmon CTA; spec's four separate buttons are heavier than needed. Leave as-is on desktop + mobile.
 - **Where:** `PlanPage.css` → `.plan-scroll-btns` group + `.plan-scroll-btn`.
 - **Spec:** Four separate 38×38 outline buttons (38×38 for ← and →, auto-width for `today` and `load date`).
 - **Now:** Grouped in a paper2 pill container with 2px internal padding.
@@ -394,6 +400,7 @@ Section titles, fresh-green checkboxes, reason-below-name layout, and the agent 
 - **Fix:** Add an `AISLE_LABEL` map in `@eat/taxonomy` (next to `CATEGORY_LABEL`); use it on this page, ShopPreview, and any aisle-grouped list. Don't touch `CATEGORY_LABEL` — that's the form/inventory taxonomy and should stay as-is.
 
 ### [ ] Section header label size — 28px vs spec 22px
+> **DECISION:** keep **28px** — see the cross-page decision under Inventory §3.
 - **Where:** `ShoppingListPage.css` → `.sl-section-title`.
 - **Now:** 28px (per HANDOFF).
 - **Spec:** 22px italic Lora.
@@ -410,6 +417,7 @@ Section titles, fresh-green checkboxes, reason-below-name layout, and the agent 
 - **Fix:** Count distinct categories in `list.items` and inject.
 
 ### [ ] Title actions don't match spec — spec is `+ add item` + `print`
+> **DECISION:** **keep the staples flow** — it's real functionality the spec didn't cover. Don't consolidate or drop it. Flag to design that the spec's `+ add item` / `print` pair is superseded by {add-from-plan, staples, inline-add}. (Treat this item as resolved-keep.)
 - **Where:** `ShoppingListPage.tsx` → `<PageTitle actions>`.
 - **Spec:** Two outline buttons — `+ add item` + `print`.
 - **Now:** `staples` (outline) + `Add from planned recipes` (persimmon primary).
@@ -428,6 +436,7 @@ Section titles, fresh-green checkboxes, reason-below-name layout, and the agent 
 ## 4 · Row layout
 
 ### [ ] Delete affordance is `✕`; spec is a `⋯` menu
+> **DECISION:** **keep `✕`** (hover-reveal it). Don't build the `⋯` row menu until there's a second row action to justify it.
 - **Where:** `ShoppingListPage.tsx` → `.sl-row-menu`.
 - **Spec:** `⋯` ellipsis mute 16px — opens a row menu (rename / change qty / remove).
 - **Now:** `✕` close button deletes immediately.
