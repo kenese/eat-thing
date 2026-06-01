@@ -131,3 +131,12 @@ describe('SelectionBar', () => {
     await waitFor(() => expect(onClear).toHaveBeenCalledOnce());
   });
 });
+
+describe('Library bucket removal', () => {
+  it('does not render a Library tab', () => {
+    const libraryMatch = { bucket: 'library' as const, missing: ['a', 'b', 'c', 'd', 'e'] };
+    render(<RecipeCard recipe={recipe} match={libraryMatch} onOpen={vi.fn()} />);
+    // Library-bucketed recipe shows the shop chip (missingCount > 0), not a separate label
+    expect(screen.queryByText(/library/i)).not.toBeInTheDocument();
+  });
+});
