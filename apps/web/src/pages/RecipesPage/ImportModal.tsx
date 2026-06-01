@@ -116,10 +116,10 @@ export function ImportModal({ onClose }: ImportModalProps) {
               {t === 'url'
                 ? 'URL'
                 : t === 'photo'
-                  ? 'Photo'
+                  ? 'photo'
                   : t === 'search'
-                    ? 'Search'
-                    : 'Meal Planner'}
+                    ? 'search'
+                    : 'meal planner'}
             </button>
           ))}
         </div>
@@ -137,7 +137,7 @@ export function ImportModal({ onClose }: ImportModalProps) {
             />
             {error && <p className="form-error">{API_ERROR}</p>}
             <button className="btn-primary" type="submit" disabled={isLoading || !urlInput.trim()}>
-              {isLoading ? 'Extracting…' : 'Extract recipe'}
+              {isLoading ? 'extracting…' : 'extract recipe'}
             </button>
           </form>
         )}
@@ -167,7 +167,7 @@ export function ImportModal({ onClose }: ImportModalProps) {
             <input ref={fileRef} type="file" accept="image/*" onChange={handleFilePick} hidden />
             {error && <p className="form-error">{API_ERROR}</p>}
             <button className="btn-primary" type="submit" disabled={isLoading || !photoFile}>
-              {isLoading ? 'Extracting…' : 'Extract recipe'}
+              {isLoading ? 'extracting…' : 'extract recipe'}
             </button>
           </form>
         )}
@@ -200,7 +200,7 @@ export function ImportModal({ onClose }: ImportModalProps) {
                         setImported(result);
                       }}
                     >
-                      {mealPlannerParse.isPending ? 'Importing…' : 'Import'}
+                      {mealPlannerParse.isPending ? 'importing…' : 'import'}
                     </button>
                   </li>
                 ))}
@@ -221,7 +221,7 @@ export function ImportModal({ onClose }: ImportModalProps) {
                 onChange={e => setSearchInput(e.target.value)}
               />
               <button className="btn-primary" type="submit" disabled={isLoading || !searchInput.trim()}>
-                {isLoading ? 'Searching…' : 'Search'}
+                {isLoading ? 'searching…' : 'search'}
               </button>
             </form>
             {error && <p className="form-error">{API_ERROR}</p>}
@@ -234,7 +234,7 @@ export function ImportModal({ onClose }: ImportModalProps) {
                       <span>{r.ingredients.length} ingredients</span>
                     </div>
                     <button className="btn-secondary" onClick={() => setImported(r)}>
-                      Use this
+                      use this
                     </button>
                   </li>
                 ))}
