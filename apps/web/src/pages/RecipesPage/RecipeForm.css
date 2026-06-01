@@ -1,9 +1,8 @@
 /* ── Modal width override ────────────────────────────────── */
 
-@media (min-width: 600px) {
-  .modal-panel--recipe {
-    min-width: 960px;
-  }
+.modal-panel--recipe {
+  width: 100%;
+  max-width: 760px;
 }
 
 /* ── Form shell ──────────────────────────────────────────── */
