@@ -16,6 +16,8 @@ import { useNavigate } from 'react-router-dom';
 import './PlanPage.css';
 
 const DRAG_TYPE = 'application/x-eat-recipe-id';
+const DRAG_ENTRY_TYPE = 'application/x-eat-entry-id';
+const DRAG_ENTRY_DATE_TYPE = 'application/x-eat-entry-date';
 const MAX_ENTRIES_PER_DAY = 4;
 
 type DayKind = 'cook' | 'shop' | 'leftover' | 'open';
@@ -37,6 +39,7 @@ function DayCard({
   onUpdateEntry,
   onDeleteEntry,
   onMarkCookedEntry,
+  onMoveEntry,
 }: {
   iso: string;
   label: string;
@@ -47,6 +50,7 @@ function DayCard({
   onUpdateEntry: (id: string, patch: { servings?: number; status?: MealPlanEntry['status'] }) => void;
   onDeleteEntry: (id: string) => void;
   onMarkCookedEntry: (id: string) => void;
+  onMoveEntry: (entryId: string) => void;
 }) {
   const [dragOver, setDragOver] = useState(false);
   const atCapacity = entries.length >= MAX_ENTRIES_PER_DAY;
@@ -57,9 +61,9 @@ function DayCard({
 
   function onDragOver(e: React.DragEvent) {
     if (atCapacity || isPast) return;
-    if (e.dataTransfer.types.includes(DRAG_TYPE)) {
+    if (e.dataTransfer.types.includes(DRAG_TYPE) || e.dataTransfer.types.includes(DRAG_ENTRY_TYPE)) {
       e.preventDefault();
-      e.dataTransfer.dropEffect = 'copy';
+      e.dataTransfer.dropEffect = e.dataTransfer.types.includes(DRAG_TYPE) ? 'copy' : 'move';
       setDragOver(true);
     }
   }
@@ -67,8 +71,15 @@ function DayCard({
     if (atCapacity || isPast) return;
     e.preventDefault();
     setDragOver(false);
+
     const recipeId = e.dataTransfer.getData(DRAG_TYPE);
-    if (recipeId) onDropRecipe(recipeId);
+    if (recipeId) { onDropRecipe(recipeId); return; }
+
+    const entryId = e.dataTransfer.getData(DRAG_ENTRY_TYPE);
+    const sourceDate = e.dataTransfer.getData(DRAG_ENTRY_DATE_TYPE);
+    if (entryId && sourceDate !== iso) {
+      onMoveEntry(entryId);
+    }
   }
 
   return (
@@ -91,12 +102,23 @@ function DayCard({
 
       {first ? (
         <>
-          <div className="day-col-image">
-            {first.recipe?.sourceImage
-              ? <img src={first.recipe.sourceImage} alt="" />
-              : <span className="day-col-image-fallback">{first.entry.recipeName}</span>}
+          <div
+            className="day-col-drag-handle"
+            draggable={!isPast}
+            onDragStart={(e) => {
+              e.dataTransfer.setData(DRAG_ENTRY_TYPE, first.entry.id);
+              e.dataTransfer.setData(DRAG_ENTRY_DATE_TYPE, iso);
+              e.dataTransfer.effectAllowed = 'move';
+              e.stopPropagation();
+            }}
+          >
+            <div className="day-col-image">
+              {first.recipe?.sourceImage
+                ? <img src={first.recipe.sourceImage} alt="" />
+                : <span className="day-col-image-fallback">{first.entry.recipeName}</span>}
+            </div>
+            <div className={`day-col-name${isPast ? ' day-col-name--past' : ''}`}>{first.entry.recipeName}</div>
           </div>
-          <div className={`day-col-name${isPast ? ' day-col-name--past' : ''}`}>{first.entry.recipeName}</div>
           <div className="day-col-meta">serves {first.entry.servings}</div>
           <StatusChip kind={kind === 'open' ? 'open' : kind} />
           {followUps.map((fu) => (
@@ -197,6 +219,10 @@ export function PlanPage() {
   function handleDrop(date: string, recipeId: string) {
     const recipe = recipes.find((r) => r.id === recipeId);
     addEntry.mutate({ date, recipeId, servings: recipe?.servings ?? 1 });
+  }
+
+  function handleMoveEntry(entryId: string, targetDate: string) {
+    updateEntry.mutate({ id: entryId, date: targetDate });
   }
 
   const weekRef = useRef<HTMLDivElement | null>(null);
@@ -321,6 +347,7 @@ export function PlanPage() {
               onUpdateEntry={(id, patch) => updateEntry.mutate({ id, ...patch })}
               onDeleteEntry={(id) => deleteEntry.mutate(id)}
               onMarkCookedEntry={(id) => setCookingEntryId(id)}
+              onMoveEntry={(entryId) => handleMoveEntry(entryId, d.iso)}
             />
           ))}
         </div>
