@@ -4,9 +4,11 @@ Living plan for eat-thing. Tasks update as we go. New work appends; completed wo
 
 **Status legend:** `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` deferred / dropped
 
-**Currently on:** Phase 4 complete — execute handoff backlog roadmap, starting with inventory low-stock staples
+**Currently on:** Phase 4 complete — execute architecture-audit remediation, starting with tenant isolation and scraper HMAC consistency
 
 Execution order and acceptance criteria: [docs/superpowers/plans/2026-06-01-handoff-backlog-roadmap.md](./docs/superpowers/plans/2026-06-01-handoff-backlog-roadmap.md)
+
+Architecture audit recommendations: [architecture-audit-recommendations.html](./architecture-audit-recommendations.html)
 
 For per-decision rationale see [DECISIONS.md](./DECISIONS.md). For architecture see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
@@ -122,11 +124,51 @@ Pure restyle to the Crisp + Persimmon system; behaviour preserved.
 - [ ] Backups: Supabase point-in-time + occasional dump to local disk
 - [ ] Multi-household readiness: keep `household_id` discipline in every new query/migration
 
+## Architecture-audit remediation — accepted 2026-06-01
+
+Audit artifact: [architecture-audit-recommendations.html](./architecture-audit-recommendations.html)
+
+Complete these before resuming the remaining handoff backlog. Each runtime slice must update relevant Vitest and Playwright coverage and pass `pnpm test` plus `pnpm test:e2e` before moving to Done.
+
+### Slice A — Tenant isolation + worker contract
+
+- [ ] Scope shopping-list price refresh, send-to-cart, price reads, and related joins by the authenticated `household_id`
+- [ ] Add `household_id` to `shopping_list_prices` with a migration; keep `canonical_foods` global and explicitly document global reference-table / Better-Auth-table exceptions
+- [ ] Standardize scraper worker auth on `SCRAPER_HMAC_SECRET` across server, worker SDK, tests, templates, and docs
+- [ ] Add shipped `add_to_cart` to the shared scraper-job type
+
+### Slice B — Low-stock staples
+
+- [ ] Add one shared server-side low-stock staples derivation using current inventory and unit conversion
+- [ ] Merge low-stock staple items into the current shopping list when `POST /api/shopping-lists/from-plan` runs, while preserving manual items
+- [ ] Wire the Inventory sidebar "Low staples" widget to the same behavior
+
+### Slice C — Recipe + inventory model alignment
+
+- [ ] Restrict inventory storage units to canonical `g`, `ml`, or `count`
+- [ ] Preserve original recipe ingredient quantity/unit text while retaining normalized metric annotations for calculations
+- [ ] Accept and persist `recipes.total_time_minutes` and `recipes.tags` in recipe create/update routes and imports
+- [ ] Replace silent global `canonical_foods` insertion with an explicit confirm-new-food taxonomy review step (scope depends on Decision Gate 2)
+- [ ] Enforce the four-recipes-per-day limit in the meal-plan API as well as the existing UI
+
+### Slice D — Ops cleanup + accurate documentation
+
+- [ ] Delete obsolete `apps/server/launchd/com.eat-thing.openbrain-sync.plist`
+- [ ] Keep Mac-mini scraper `launchd` supervision as planned architecture; document it as pending until the scraper plist lands in handoff Slice 2
+- [ ] Update `ARCHITECTURE.md`: mutable inventory balances + append-only cooking audit events; current unit model; current public recipe-photo URLs and no inventory photos; Meal Planner HTTP MCP topology with local stdio fallback; single-household-first middleware; actual Better-Auth tables; global-table exceptions; no current shopping-list finalization; cook prompts retained for audit and future refinement
+- [ ] Add a new `DECISIONS.md` entry recording the accepted architecture-audit corrections and any resolved decision gates
+
+### Decision gates
+
+- [x] Decision Gate 1: retain public recipe URLs for operational simplicity; defer private bucket paths + signed reads — _2026-06-01_
+- [x] Decision Gate 2: phase explicit confirm-new-food taxonomy review after tenant isolation and low-stock staples work — _2026-06-01_
+- [x] Decision Gate 3: enforce the four-recipes-per-day rule as a server invariant — _2026-06-01_
+
 ## Handoff backlog — ordered delivery slices
 
 Detailed roadmap: [docs/superpowers/plans/2026-06-01-handoff-backlog-roadmap.md](./docs/superpowers/plans/2026-06-01-handoff-backlog-roadmap.md)
 
-- [ ] Slice 1: wire Inventory low-stock staples sidebar widget
+- [ ] Slice 1: wire Inventory low-stock staples sidebar widget — absorbed into architecture-audit remediation Slice B
 - [ ] Slice 2: New World logged-out prompt, transient retry/backoff, and Mac-mini `launchd` service
 - [ ] Slice 3: shared date picker for Plan load-date and Recipes hero add-to-day
 - [ ] Slice 4: shopping-list scheduled date + dynamic Recipes quick-shop copy
@@ -140,6 +182,7 @@ Detailed roadmap: [docs/superpowers/plans/2026-06-01-handoff-backlog-roadmap.md]
 
 - [-] Native mobile shell (Capacitor / React Native) — defer unless PWA limitations hurt
 - [-] Offline writes / write queue — revisit once usage shows it matters
+- [-] Private recipe-photo bucket paths + signed reads — public recipe URLs are sufficient for now; revisit if imported images may contain personal content
 - [-] Auto-place orders — out of scope, see [D3](./DECISIONS.md#d3--supermarket-integration-ceiling-build-to-cart)
 - [-] Learned staples / cadence from history — needs months of data, see [D7](./DECISIONS.md#d7--staples-manual-first-learned-later)
 
