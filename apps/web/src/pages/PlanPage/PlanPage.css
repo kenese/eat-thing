@@ -1,4 +1,4 @@
-.plan-page { padding: 0 var(--gutter) 36px; max-width: 1440px; margin: 0 auto; }
+.plan-page { padding: 0 var(--gutter) 36px; max-width: 1440px; margin: 0 auto; width: 100%; overflow-x: hidden; }
 
 /* Title controls row */
 .plan-title-controls {
@@ -130,6 +130,7 @@
   scroll-snap-type: x proximity;
   -webkit-overflow-scrolling: touch;
   padding: 20px 0 8px;
+  width: 100%;
 }
 .plan-week-rail {
   display: grid;
