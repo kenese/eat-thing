@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useFoodSearch, useCreateFood } from '../../hooks/useFoodSearch';
-import { useRecipe, useAddRecipe, useUpdateRecipe } from '../../hooks/useRecipes';
+import { useRecipe, useAddRecipe, useUpdateRecipe, useDeleteRecipe } from '../../hooks/useRecipes';
 import type { CanonicalFood, RecipeIngredientInput, ImportedRecipe } from '@eat/shared';
 import { toCanonical, isMassUnit, isVolumeUnit } from '@eat/taxonomy';
 import type { DisplayUnit } from '@eat/taxonomy';
@@ -69,6 +69,34 @@ interface IngredientDraft {
 
 function createIngredientDraftId() {
   return globalThis.crypto?.randomUUID?.() ?? `ingredient-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function groupBySection(ings: IngredientDraft[]): Array<{ section: string | null; items: IngredientDraft[] }> {
+  const groups: Array<{ section: string | null; items: IngredientDraft[] }> = [];
+  const seen = new Map<string | null, number>();
+  for (const ing of ings) {
+    const key = ing.section ?? null;
+    if (!seen.has(key)) {
+      seen.set(key, groups.length);
+      groups.push({ section: key, items: [] });
+    }
+    groups[seen.get(key)!].items.push(ing);
+  }
+  return groups;
+}
+
+function renderInstructions(text: string): React.ReactNode {
+  const lines = text.split('\n');
+  return lines.map((line, i) => {
+    const headingMatch = line.match(/^#{1,3}\s+(.+)/);
+    if (headingMatch) {
+      return <h3 key={i} className="recipe-instructions-heading">{headingMatch[1]}</h3>;
+    }
+    if (!line.trim()) {
+      return <div key={i} className="recipe-instructions-gap" />;
+    }
+    return <p key={i} className="recipe-instructions-para">{line}</p>;
+  });
 }
 
 interface MetricControlProps {
@@ -330,8 +358,10 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose,
   const [photoBase64, setPhotoBase64] = useState<string | null>(pendingPhoto?.base64 ?? null);
   const [photoMimeType, setPhotoMimeType] = useState<string | null>(pendingPhoto?.mimeType ?? null);
   const [readOnly, setReadOnly] = useState(mode === 'edit');
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [addToPlanStatus, setAddToPlanStatus] = useState<'idle' | 'pending' | 'success' | 'error'>('idle');
   const [addToPlanLabel, setAddToPlanLabel] = useState('add to plan');
+  const deleteRecipe = useDeleteRecipe();
 
   useEffect(() => {
     if (mode === 'edit' && existing && !hydrated) {
@@ -422,6 +452,12 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose,
     }
   }
 
+  async function handleDelete() {
+    if (!recipeId) return;
+    await deleteRecipe.mutateAsync(recipeId);
+    onClose();
+  }
+
   const viewImageSrc = photoBase64
     ? `data:${photoMimeType};base64,${photoBase64}`
     : (existing?.sourceImage ?? null);
@@ -463,51 +499,92 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose,
               {ingredients.length > 0 && (
                 <div className="recipe-view-section">
                   <span className="ingredients-section-title">Ingredients</span>
-                  <ul className="recipe-view-ingredients">
-                    {ingredients.map(ing => (
-                      <li key={ing.clientId} className="recipe-view-ingredient">
-                        {formatIngredient(ing)}
-                        {ing.optional && <span className="recipe-view-optional"> (optional)</span>}
-                      </li>
-                    ))}
-                  </ul>
+                  {groupBySection(ingredients).map((group, gi) => (
+                    <div key={gi} className="recipe-view-ingredient-group">
+                      {group.section && (
+                        <div className="recipe-view-ingredient-section-header">{group.section.toLowerCase()}</div>
+                      )}
+                      <ul className="recipe-view-ingredients">
+                        {group.items.map(ing => (
+                          <li key={ing.clientId} className="recipe-view-ingredient">
+                            {formatIngredient(ing)}
+                            {ing.optional && <span className="recipe-view-optional"> (optional)</span>}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
                 </div>
               )}
 
               {instructions && (
                 <div className="recipe-view-section">
                   <span className="ingredients-section-title">Instructions</span>
-                  <p className="recipe-view-instructions">{instructions}</p>
+                  <div className="recipe-view-instructions">
+                    {renderInstructions(instructions)}
+                  </div>
                 </div>
               )}
 
               <div className="form-actions">
-                <button type="button" className="btn-secondary" onClick={onClose}>close</button>
-                {onAddToPlan && recipeId && (
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    disabled={addToPlanStatus === 'pending'}
-                    aria-label={addToPlanLabel}
-                    onClick={async () => {
-                      setAddToPlanStatus('pending');
-                      try {
-                        const { addedTo } = await onAddToPlan(recipeId, Number(servings));
-                        const label = addedTo[0] ? `added to ${addedTo[0]}` : 'added to plan';
-                        setAddToPlanLabel(label);
-                        setAddToPlanStatus('success');
-                        setTimeout(() => { setAddToPlanStatus('idle'); setAddToPlanLabel('add to plan'); }, 2500);
-                      } catch {
-                        setAddToPlanLabel('failed — try again');
-                        setAddToPlanStatus('error');
-                        setTimeout(() => { setAddToPlanStatus('idle'); setAddToPlanLabel('add to plan'); }, 2500);
-                      }
-                    }}
-                  >
-                    {addToPlanStatus === 'pending' ? 'adding…' : addToPlanLabel}
-                  </button>
+                {deleteConfirm ? (
+                  <>
+                    <span className="recipe-view-delete-warning">delete this recipe?</span>
+                    <button
+                      type="button"
+                      className="btn-danger"
+                      onClick={handleDelete}
+                      disabled={deleteRecipe.isPending}
+                    >
+                      {deleteRecipe.isPending ? 'deleting…' : 'yes, delete'}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={() => setDeleteConfirm(false)}
+                    >
+                      cancel
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {mode === 'edit' && recipeId && (
+                      <button
+                        type="button"
+                        className="btn-danger btn-danger--ghost"
+                        onClick={() => setDeleteConfirm(true)}
+                      >
+                        delete
+                      </button>
+                    )}
+                    <button type="button" className="btn-secondary" onClick={onClose}>close</button>
+                    {onAddToPlan && recipeId && (
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        disabled={addToPlanStatus === 'pending'}
+                        aria-label={addToPlanLabel}
+                        onClick={async () => {
+                          setAddToPlanStatus('pending');
+                          try {
+                            const { addedTo } = await onAddToPlan(recipeId, Number(servings));
+                            const label = addedTo[0] ? `added to ${addedTo[0]}` : 'added to plan';
+                            setAddToPlanLabel(label);
+                            setAddToPlanStatus('success');
+                            setTimeout(() => { setAddToPlanStatus('idle'); setAddToPlanLabel('add to plan'); }, 2500);
+                          } catch {
+                            setAddToPlanLabel('failed — try again');
+                            setAddToPlanStatus('error');
+                            setTimeout(() => { setAddToPlanStatus('idle'); setAddToPlanLabel('add to plan'); }, 2500);
+                          }
+                        }}
+                      >
+                        {addToPlanStatus === 'pending' ? 'adding…' : addToPlanLabel}
+                      </button>
+                    )}
+                    <button type="button" className="btn-primary" onClick={() => setReadOnly(false)}>edit</button>
+                  </>
                 )}
-                <button type="button" className="btn-primary" onClick={() => setReadOnly(false)}>edit</button>
               </div>
             </div>
           </div>

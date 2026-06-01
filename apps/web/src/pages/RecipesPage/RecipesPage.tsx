@@ -11,7 +11,7 @@ import { computeMissing, computeMissingFromIds, bucketRecipe } from '../../lib/r
 import type { Recipe, RecipeSummary } from '@eat/shared';
 import './RecipesPage.css';
 
-type Tab = 'all' | 'cookable' | 'shoppable' | 'library';
+type Tab = 'all' | 'cookable' | 'shoppable';
 type SortOrder = 'cookable-first' | 'recently-added' | 'name-az';
 
 interface MatchInfo {
@@ -403,24 +403,22 @@ export function RecipesPage() {
   const library   = sortedByMatch.filter((x) => x.match.bucket === 'library');
 
   const tabs = [
-    { key: 'all',       label: 'All',         count: recipes.length },
-    { key: 'cookable',  label: 'Cook now',    count: cookable.length,  dotColor: 'var(--fresh)' },
-    { key: 'shoppable', label: 'Quick shop',  count: shoppable.length, dotColor: 'var(--persimmon)' },
-    { key: 'library',   label: 'Library',     count: library.length },
+    { key: 'all',       label: 'all',         count: recipes.length },
+    { key: 'cookable',  label: 'cook now',    count: cookable.length,  dotColor: 'var(--fresh)' },
+    { key: 'shoppable', label: 'quick shop',  count: shoppable.length, dotColor: 'var(--persimmon)' },
   ];
 
   const flatSorted = useMemo(() => {
     const base = tab === 'all' ? sortedByMatch
       : tab === 'cookable' ? cookable
-      : tab === 'shoppable' ? shoppable
-      : library;
+      : shoppable;
     if (sortOrder === 'cookable-first') return base;
     return [...base].sort((a, b) =>
       sortOrder === 'recently-added'
         ? new Date(b.recipe.createdAt).getTime() - new Date(a.recipe.createdAt).getTime()
         : a.recipe.name.localeCompare(b.recipe.name),
     );
-  }, [tab, sortedByMatch, cookable, shoppable, library, sortOrder]);
+  }, [tab, sortedByMatch, cookable, shoppable, sortOrder]);
 
   function handleAddFeatureToNextDay() {
     if (!feature) return;
@@ -438,8 +436,8 @@ export function RecipesPage() {
             {' · '}
             <span style={{ color: 'var(--persim-deep)', fontWeight: 600 }}>{shoppable.length} a quick shop away</span>
             {' · '}
-            <span style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: 16 }}>
-              {recipes.length} in the library
+            <span style={{ color: 'var(--mute)', fontSize: 14 }}>
+              {recipes.length} total
             </span>
           </>
         }
@@ -544,28 +542,18 @@ export function RecipesPage() {
           )}
 
           {library.length > 0 && (
-            <section className="rx-section">
-              <div className="rx-section-header">
-                <span className="rx-section-title">
-                  The library<span className="dot" style={{ color: 'var(--green)' }}>.</span>
-                </span>
-                <span className="rx-section-count">{library.length} {library.length === 1 ? 'recipe' : 'recipes'}</span>
-                <span className="rx-section-hint">all recipes</span>
-              </div>
-              <div className="rx-grid rx-grid--dense">
-                {library.map(({ recipe, match }) => (
-                  <RecipeCard
-                    key={recipe.id}
-                    recipe={recipe}
-                    match={match}
-                    dense
-                    selected={selectedIds.has(recipe.id)}
-                    onSelect={() => toggleSelection(recipe.id)}
-                    onOpen={() => setModal({ mode: 'edit', id: recipe.id })}
-                  />
-                ))}
-              </div>
-            </section>
+            <div className="rx-grid">
+              {library.map(({ recipe, match }) => (
+                <RecipeCard
+                  key={recipe.id}
+                  recipe={recipe}
+                  match={match}
+                  selected={selectedIds.has(recipe.id)}
+                  onSelect={() => toggleSelection(recipe.id)}
+                  onOpen={() => setModal({ mode: 'edit', id: recipe.id })}
+                />
+              ))}
+            </div>
           )}
 
           {recipes.length === 0 && !isLoading && (
