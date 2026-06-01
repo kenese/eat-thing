@@ -274,7 +274,7 @@ export function SelectionBar({
             disabled={isPending}
             aria-label="Confirm"
           >
-            {isPending ? 'Deleting…' : 'Confirm'}
+            {isPending ? 'deleting…' : 'confirm'}
           </button>
           <button
             className="btn-outline rx-selection-bar-btn"
@@ -282,19 +282,19 @@ export function SelectionBar({
             disabled={isPending}
             aria-label="Cancel"
           >
-            Cancel
+            cancel
           </button>
         </>
       ) : (
         <>
           <span className="rx-selection-bar-count">{count} selected</span>
-          <button className="rx-selection-bar-clear" onClick={onClear}>× Clear</button>
+          <button className="rx-selection-bar-clear" onClick={onClear}>× clear</button>
           <button
             className="btn-primary rx-selection-bar-btn"
             onClick={handleAddToPlan}
             disabled={isPending || count === 0}
           >
-            {isPending ? 'Adding…' : 'Add to plan'}
+            {isPending ? 'adding…' : 'add to plan'}
           </button>
           <button
             className="rx-selection-bar-delete"
@@ -302,7 +302,7 @@ export function SelectionBar({
             disabled={isPending || count === 0}
             aria-label="Delete"
           >
-            Delete
+            delete
           </button>
         </>
       )}
@@ -445,7 +445,7 @@ export function RecipesPage() {
         }
         actions={
           <>
-            <button className="btn-outline" onClick={() => setModal({ mode: 'import' })}>↓ Import</button>
+            <button className="btn-outline" onClick={() => setModal({ mode: 'import' })}>↓ import</button>
             <button className="btn-primary" onClick={() => setModal({ mode: 'add' })}>
               <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> new recipe
             </button>
