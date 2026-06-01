@@ -28,13 +28,15 @@ Source: `TODO.md` (12-item review against live `/recipes` page). Three commits o
 
 ### Stubs / open questions remaining
 
-1. **`// HANDOFF: day picker`** in `EditorialHero` — outline button labels `add to next open day`; replace handler + label when day-picker is designed.
-2. **`ShoppingList.scheduledDate`** — quick shop hint uses generic fallback `auto-added to your next list`; add a scheduled-date field to the data model to make it dynamic.
+1. **`// HANDOFF: day picker`** in `EditorialHero` — outline button labels `add to next open day`; replace handler + label when day-picker is designed (PLAN.md Slice 3).
+2. **`ShoppingList.scheduledDate`** — quick shop hint uses generic fallback `auto-added to your next list`; add a scheduled-date field to the data model to make it dynamic (PLAN.md Slice 4).
 3. **`total_time_minutes` migration** — run `pnpm --filter @eat/server db:migrate` to apply `0009_recipe_time_tags.sql` against production DB.
 
 ---
 
-Design refresh landed 2026-05-17. Source: `design_handoff_eat_thing/`.
+> **Reconciliation note (2026-06-01):** the section below records the *initial* system-wide restyle (landed 2026-05-17). The Recipes deep-fix above happened afterward and **supersedes any Recipes-specific rows below** — those rows have been annotated rather than deleted, to preserve history.
+
+## Design refresh landed 2026-05-17. Source: `design_handoff_eat_thing/`.
 
 ---
 
@@ -55,6 +57,7 @@ Design refresh landed 2026-05-17. Source: `design_handoff_eat_thing/`.
 ### Recipes
 - `apps/web/src/pages/RecipesPage/RecipesPage.tsx` — color dots before section headers (fresh-green / persimmon / green)
 - `apps/web/src/pages/RecipesPage/RecipesPage.css` — `.rx-section-dot`, `.rx-section-header` align-items center, mobile 2-col grid
+  - ⓘ **Superseded:** the leading `.rx-section-dot` circles were later removed in the Recipes review (commit `131d047`); the section accent now lives on the title's persimmon period.
 
 ### Plan
 - `apps/web/src/lib/dateUtils.ts` — added `isPast: boolean` to `PlanWindowDay` interface and `planWindowDays()`
@@ -84,11 +87,11 @@ Design refresh landed 2026-05-17. Source: `design_handoff_eat_thing/`.
 | TopNav | No `/shops` route | Added `shops` as a disabled `<span>` with `// HANDOFF:` comment; no NavLink so existing "does not include a shops link" test still passes |
 | PlanPage | `load date` picker UX not designed | Calendar icon button added; `disabled` stub with `// HANDOFF:` comment |
 | PlanPage | Recipe drag sidebar → user decided full-width grid | Removed sidebar; recipe drag-and-drop now lives as a full-width 4-column grid below the day grid |
-| PlanPage | "Auto-shop preview" panel | Not implemented; would require a shopping-list pre-flight API call |
-| RecipesPage `EditorialHero` | "add to wednesday" button | No `// HANDOFF:` stub added (button not visually present in current hero implementation) |
-| InventoryPage sidebar | Location breakdown uses category→location mapping | produce/meat/dairy → Fridge, pantry/drinks/other → Pantry, frozen → Freezer |
-| InventoryPage sidebar | Low-stock staples widget | Stub card with `// HANDOFF:` comment; requires `useStaples` hook integration |
-| ShoppingListPage | Delivery-window 2×2 grid (selected = persimmon outline) | Not implemented — no delivery-window data model exists yet |
+| PlanPage | "Auto-shop preview" panel | Not implemented; would require a shopping-list pre-flight API call (PLAN.md Slice 5) |
+| RecipesPage `EditorialHero` | "add to wednesday" button | ✅ **RESOLVED in the Recipes design review (commit `4c55e7d`)** — outline `add to next open day` button added, wired to `useAddToNextEmptyDays`, with a `// HANDOFF: day picker` comment. (This row originally read "no stub added / button not visually present" — that was true only of the initial restyle.) |
+| InventoryPage sidebar | Location breakdown uses category→location mapping | produce/meat/dairy → Fridge, pantry/drinks/other → Pantry, frozen → Freezer. A real `location` column is explicitly deferred (PLAN.md: "Restore inventory location field — defer until category-derived counts cause a demonstrated problem") |
+| InventoryPage sidebar | Low-stock staples widget | Stub card with `// HANDOFF:` comment; requires `useStaples` hook integration (PLAN.md Slice 1) |
+| ShoppingListPage | Delivery-window 2×2 grid (selected = persimmon outline) | Not implemented — no delivery-window data model exists yet (PLAN.md Slice 6) |
 | Cook flow | Not in handoff | Preserved as-is; CookModal inherits new button tokens automatically |
 | Auth / LoginPage | Not in handoff | Unchanged |
 | Storybook stories | Not in handoff | CSS inherits new tokens automatically |
@@ -99,6 +102,7 @@ Design refresh landed 2026-05-17. Source: `design_handoff_eat_thing/`.
 
 1. `apps/web/src/components/TopNav.tsx` — `// HANDOFF: shops route — nav tab present but /shops page not yet designed`
 2. `apps/web/src/pages/PlanPage/PlanPage.tsx` — `// HANDOFF: load-date picker — calendar icon button is a stub; no date picker modal yet`
+3. `apps/web/src/pages/RecipesPage/RecipesPage.tsx` — `// HANDOFF: day picker` (see Recipes review §"Stubs / open questions remaining" above for the full set: day picker, `ShoppingList.scheduledDate`, the `0009` migration).
 
 ---
 
@@ -110,7 +114,7 @@ Start the dev server: `pnpm --filter @eat/web dev`
 |---|---|---|---|
 | 1 | Plan page | `http://localhost:5173/plan` | Horizon strip, ink today card, ← today → controls, recipe grid below |
 | 2 | Inventory | `http://localhost:5173/inventory` | Two-pane with sidebar cards, 28px section headers |
-| 3 | Recipes | `http://localhost:5173/recipes` | Color dots before section titles, align-items center |
+| 3 | Recipes | `http://localhost:5173/recipes` | Section accent on the title period (leading dots removed), editorial hero with both CTAs |
 | 4 | Shopping List | `http://localhost:5173/list` | 28px section titles, 22px fresh-green checkboxes, reason below name, line-through on checked |
 | 5 | Home | `http://localhost:5173/` | Hero band, meals strip, shop preview — confirm unchanged |
 | 6 | TopNav | Any page | Shops stub visible and dimmed (opacity 0.35) |
@@ -123,8 +127,8 @@ Start the dev server: `pnpm --filter @eat/web dev`
 
 ## Open Questions
 
-1. **`load date` UX** — Calendar button is stubbed. When designed, spec should decide: modal mini-calendar vs. inline date-input. The `weekRef` scroll target is already wired — just need the picked date to compute the column index.
-2. **Inventory location model** — Sidebar derives "Fridge / Pantry / Freezer" from category. If the data model gains a real `location` field, update `locationCounts` in `InventoryPage.tsx`.
-3. **Auto-shop preview on Plan** — Handoff shows a delivery-window picker on the plan page. Not implemented — needs a pre-flight shopping-list API call. Flag for Slice 4.
-4. **`add to wednesday` in RecipesPage hero** — Needs a day-picker concept to be meaningful.
-5. **Tablet breakpoint** — BottomTabBar breakpoint is `≤768px`. Adjust to `≤960px` if tablet layout needs the tab bar earlier.
+1. **`load date` UX** — Calendar button is stubbed. When designed, spec should decide: modal mini-calendar vs. inline date-input. The `weekRef` scroll target is already wired — just need the picked date to compute the column index. (PLAN.md Slice 3 pairs this with the Recipes hero add-to-day picker — one shared component.)
+2. **Inventory location model** — Sidebar derives "Fridge / Pantry / Freezer" from category. A real `location` field is **explicitly deferred** (PLAN.md: defer until category-derived counts cause a demonstrated problem). If it lands, update `locationCounts` in `InventoryPage.tsx`.
+3. **Auto-shop preview on Plan** — Handoff shows a delivery-window picker on the plan page. Not implemented — needs a pre-flight shopping-list API call (PLAN.md Slice 5).
+4. **`add to wednesday` in RecipesPage hero** — ✅ Button **landed** as `add to next open day` (stub, wired to `useAddToNextEmptyDays`). The *day-picker* affordance that would let the user choose a specific day is the remaining open piece (PLAN.md Slice 3).
+5. **Tablet breakpoint** — BottomTabBar breakpoint is `≤768px`. Adjust to `≤960px` if tablet layout needs the tab bar earlier. (PLAN.md: spot-check during Slice 1; keep `≤768px` unless review shows a problem.)

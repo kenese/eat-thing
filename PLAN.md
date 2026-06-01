@@ -115,8 +115,6 @@ Pure restyle to the Crisp + Persimmon system; behaviour preserved.
 - [x] Shopping list: categories migration + two-pane layout + reason chips + agent status
 - [x] Home dashboard: hero, use-this-week inventory strip, five-day meals strip, shopping-list preview — _2026-05-12_
 
-Deferred (own specs): Shops nav destination, scan-receipt, print, delivery-window picker, per-meal reason pills, send-to-store CTA, `time`/`tags` on recipes, mobile re-cut.
-
 ## Cross-cutting / ongoing
 
 - [ ] Telemetry: structured logs + lightweight error reporting (Sentry free tier?)
