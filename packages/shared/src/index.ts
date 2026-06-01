@@ -92,6 +92,8 @@ export interface Recipe {
   sourceUrl: string | null;
   sourceImage: string | null;
   instructions: string | null;
+  totalTimeMinutes: number | null;
+  tags: string[];
   ingredients: RecipeIngredient[];
   createdAt: string;
   updatedAt: string;
@@ -112,6 +114,8 @@ export interface CreateRecipeInput {
   sourceUrl?: string | null;
   sourceImage?: string | null;
   instructions?: string | null;
+  totalTimeMinutes?: number | null;
+  tags?: string[];
   ingredients: RecipeIngredientInput[];
   photoBase64?: string;
   photoMimeType?: string;
@@ -123,6 +127,8 @@ export interface UpdateRecipeInput {
   sourceUrl?: string | null;
   sourceImage?: string | null;
   instructions?: string | null;
+  totalTimeMinutes?: number | null;
+  tags?: string[];
   ingredients?: RecipeIngredientInput[];
   photoBase64?: string;
   photoMimeType?: string;
@@ -149,6 +155,8 @@ export interface ImportedRecipe {
   sourceUrl: string | null;
   sourceImage: string | null;
   heroImageUrl: string | null;
+  totalTimeMinutes: number | null;
+  tags: string[];
   instructions: string | null;
   ingredients: ImportedIngredient[];
 }

@@ -38,6 +38,8 @@ async function stubAuthedShell(page: Page) {
           servings: 4,
           sourceUrl: null,
           sourceImage: null,
+          totalTimeMinutes: null,
+          tags: [],
           instructions: null,
           ingredients: [],
           createdAt: new Date().toISOString(),
@@ -75,9 +77,12 @@ async function stubAuthedShell(page: Page) {
   await page.route('**/api/shopping-lists*', (route) =>
     route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ error: 'No shopping list found' }) }),
   );
-  await page.route('**/api/staples*', (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }),
-  );
+  await page.route('**/api/staples*', (route) => {
+    if (route.request().url().includes('/api/staples/low-stock')) {
+      return route.fallback();
+    }
+    return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+  });
 }
 
 test('page title is eat-thing', async ({ page }) => {
@@ -136,6 +141,60 @@ test.describe('authenticated routes load', () => {
   test('inventory route loads', async ({ page }) => {
     await page.goto('/inventory');
     await expect(page.getByRole('heading', { level: 1, name: 'Inventory' })).toBeVisible();
+  });
+
+  test('inventory route shows low-stock staples from the server', async ({ page }) => {
+    await page.unroute('**/api/inventory*');
+    await page.unroute('**/api/staples*');
+    await page.route('**/api/inventory*', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          {
+            id: 'inv-1',
+            householdId: 'h-1',
+            canonicalFoodId: 'food-apples',
+            foodName: 'Apples',
+            brand: null,
+            qty: 3,
+            unit: 'count',
+            category: 'produce',
+            purchasedAt: new Date().toISOString(),
+            expiresAt: null,
+          },
+        ]),
+      }),
+    );
+    await page.route('**/api/staples/low-stock*', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          {
+            id: 'staple-rice',
+            householdId: 'h-1',
+            canonicalFoodId: 'food-rice',
+            foodName: 'Rice',
+            thresholdQty: 1000,
+            thresholdUnit: 'g',
+            currentQty: 250,
+            neededQty: 750,
+          },
+        ]),
+      }),
+    );
+    await page.route('**/api/staples*', (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }),
+    );
+
+    await Promise.all([
+      page.waitForResponse((response) => response.url().includes('/api/staples/low-stock') && response.ok()),
+      page.goto('/inventory'),
+    ]);
+    await expect(page.getByText('Low staples')).toBeVisible();
+    await expect(page.getByText('Rice')).toBeVisible();
+    await expect(page.getByText('750 g needed')).toBeVisible();
   });
 
   test('inventory item form only offers canonical storage units', async ({ page }) => {
@@ -234,6 +293,8 @@ test.describe('authenticated routes load', () => {
           sourceUrl: null,
           sourceImage: null,
           heroImageUrl: null,
+          totalTimeMinutes: 25,
+          tags: ['quick', 'pasta'],
           instructions: 'Toss pasta with lemon.',
           ingredients: [
             {
@@ -242,7 +303,7 @@ test.describe('authenticated routes load', () => {
               foodName: 'lemon',
               canonicalDefaultUnit: 'count',
               qty: '1',
-              unit: 'count',
+              unit: '',
               section: 'Pasta',
               optional: false,
               confidence: 'high',
@@ -274,6 +335,8 @@ test.describe('authenticated routes load', () => {
           servings: 3,
           sourceUrl: null,
           sourceImage: null,
+          totalTimeMinutes: 25,
+          tags: ['quick', 'pasta'],
           instructions: 'Toss pasta with lemon.',
           ingredients: [],
           createdAt: new Date().toISOString(),
@@ -294,13 +357,18 @@ test.describe('authenticated routes load', () => {
     await expect(page.locator('#servings')).toHaveValue('3');
     await expect(page.locator('.ingredients-grid .ingredient-name', { hasText: 'lemon' })).toHaveCount(2);
 
+    await expect(page.locator('#totalTimeMinutes')).toHaveValue('25');
+    await expect(page.locator('#tags')).toHaveValue('quick, pasta');
+    await expect(page.locator('.ingredient-unit').first()).toHaveValue('');
+    await expect(page.locator('.ingredient-unit').nth(1)).toHaveValue('count');
+
     const recipeCreate = page.waitForRequest((request) =>
       request.url().endsWith('/api/recipes') && request.method() === 'POST',
     );
     await page.getByRole('button', { name: /save imported recipe/i }).click();
     const payload = (await recipeCreate).postDataJSON();
     expect(payload.ingredients).toMatchObject([
-      { canonicalFoodId: '00000000-0000-0000-0000-000000000001', section: 'Pasta' },
+      { canonicalFoodId: '00000000-0000-0000-0000-000000000001', section: 'Pasta', unit: '' },
       { canonicalFoodId: '00000000-0000-0000-0000-000000000001', section: 'Sauce' },
     ]);
   });

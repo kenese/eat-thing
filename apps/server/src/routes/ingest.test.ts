@@ -45,6 +45,8 @@ const MOCK_RECIPE = {
   sourceUrl: 'https://example.com/recipe',
   sourceImage: null as null,
   heroImageUrl: 'https://example.com/hero.jpg' as string | null,
+  totalTimeMinutes: 30 as number | null,
+  tags: ['quick', 'weeknight'] as string[],
   instructions: 'Mix and bake.',
   ingredients: [
     { rawText: 'flour', canonicalFoodId: 'cf-1', foodName: 'flour', canonicalDefaultUnit: 'g' as string | null, qty: '200', unit: 'g', section: null as null, metric: '200 g' as string | null, optional: false, confidence: 'high' as const },
@@ -78,6 +80,8 @@ describe('ingest router', () => {
       expect(res.status).toBe(200);
       expect(res.body.name).toBe('Test Recipe');
       expect(res.body.heroImageUrl).toBe('https://example.com/hero.jpg');
+      expect(res.body.totalTimeMinutes).toBe(30);
+      expect(res.body.tags).toEqual(['quick', 'weeknight']);
       expect(res.body.ingredients[0].metric).toBe('200 g');
       expect(res.body.ingredients).toHaveLength(1);
     });
@@ -170,6 +174,8 @@ describe('ingest router', () => {
       const res = await request(app).post('/api/ingest/meal-planner/parse').send({ id: 'mp-1' });
       expect(res.status).toBe(200);
       expect(res.body.name).toBe('Test Recipe');
+      expect(res.body.totalTimeMinutes).toBe(30);
+      expect(res.body.tags).toEqual(['quick', 'weeknight']);
     });
 
     it('returns 422 when recipe cannot be parsed', async () => {

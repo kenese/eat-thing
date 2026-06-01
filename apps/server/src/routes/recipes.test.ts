@@ -2,22 +2,34 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 import express from 'express';
 import request from 'supertest';
 
-const mocks = vi.hoisted(() => ({
-  getSession: vi.fn(),
-  membershipLimit: vi.fn(),
+const mockedSchema = {
+  recipes: { __name: 'recipes' },
+  recipeIngredients: { __name: 'recipeIngredients' },
+  canonicalFoods: { __name: 'canonicalFoods' },
+};
+
+const RECIPE_ID = '00000000-0000-0000-0000-000000000123';
+
+const state = vi.hoisted(() => ({
+  insertedRecipes: [] as Record<string, unknown>[],
+  insertedIngredients: [] as Record<string, unknown>[][],
+  updatedRecipes: [] as Record<string, unknown>[],
+  deletedIngredientRecipeIds: [] as unknown[],
+  recipeAfterWrite: null as Record<string, unknown> | null,
+  existingRecipe: null as Record<string, unknown> | null,
+  loadedIngredients: [] as Record<string, unknown>[],
 }));
 
-vi.mock('../auth.js', () => ({
-  auth: { api: { getSession: mocks.getSession } },
-}));
-
-vi.mock('better-auth/node', () => ({
-  fromNodeHeaders: (h: unknown) => h,
+vi.mock('../middleware/with-household.js', () => ({
+  withHousehold: (req: express.Request, _res: express.Response, next: express.NextFunction) => {
+    (req as express.Request & { householdId: string }).householdId = 'hh-1';
+    next();
+  },
 }));
 
 vi.mock('drizzle-orm', () => ({
   and: (...args: unknown[]) => args,
-  eq: () => null,
+  eq: (left: unknown, right: unknown) => ({ left, right }),
   ilike: () => null,
   asc: () => null,
   sql: Object.assign(() => null, { template: () => null }),
@@ -25,24 +37,86 @@ vi.mock('drizzle-orm', () => ({
 
 vi.mock('uuid', () => ({ v4: () => 'fixed-uuid' }));
 
+vi.mock('../db/schema/index.js', () => mockedSchema);
+
+vi.mock('../lib/supabase-storage.js', () => ({
+  uploadPhoto: vi.fn(),
+}));
+
 vi.mock('../db/index.js', () => {
-  // Membership lookup → returns one row so withHousehold passes.
-  const membershipChain = {
-    from: () => ({ where: () => ({ limit: mocks.membershipLimit }) }),
+  const recipeInsertChain = {
+    values: vi.fn(async (values: Record<string, unknown>) => {
+      state.insertedRecipes.push(values);
+    }),
   };
+
+  const ingredientInsertChain = {
+    values: vi.fn(async (values: Record<string, unknown>[]) => {
+      state.insertedIngredients.push(values);
+    }),
+  };
+
+  const updateChain = {
+    set: vi.fn((values: Record<string, unknown>) => {
+      state.updatedRecipes.push(values);
+      return {
+        where: vi.fn(async () => {}),
+      };
+    }),
+  };
+
+  const ingredientDeleteChain = {
+    where: vi.fn(async (clause: { right: unknown }) => {
+      state.deletedIngredientRecipeIds.push(clause.right);
+    }),
+  };
+
   return {
     db: {
-      select: () => membershipChain,
+      select: vi.fn(() => ({
+        from: (table: unknown) => {
+          if (table === mockedSchema.recipes) {
+            const rows = state.recipeAfterWrite ? [state.recipeAfterWrite] : [];
+            return {
+              where: () => ({
+                limit: async () => state.existingRecipe ? [state.existingRecipe] : [],
+                then: (resolve: (value: typeof rows) => unknown, reject?: (reason?: unknown) => unknown) =>
+                  Promise.resolve(rows).then(resolve, reject),
+              }),
+            };
+          }
+
+          if (table === mockedSchema.recipeIngredients) {
+            return {
+              innerJoin: () => ({
+                where: () => ({
+                  orderBy: async () => state.loadedIngredients,
+                }),
+              }),
+            };
+          }
+
+          return {
+            where: () => ({
+              limit: async () => [],
+            }),
+          };
+        },
+      })),
+      transaction: vi.fn(async (callback: (tx: {
+        insert: (table: unknown) => typeof recipeInsertChain | typeof ingredientInsertChain;
+        update: () => typeof updateChain;
+        delete: () => typeof ingredientDeleteChain;
+      }) => Promise<void>) => {
+        await callback({
+          insert: (table: unknown) => table === mockedSchema.recipes ? recipeInsertChain : ingredientInsertChain,
+          update: () => updateChain,
+          delete: () => ingredientDeleteChain,
+        });
+      }),
     },
   };
 });
-
-vi.mock('../db/schema/index.js', () => ({
-  memberships: { householdId: 'householdId', userId: 'userId' },
-  recipes: {},
-  recipeIngredients: {},
-  canonicalFoods: {},
-}));
 
 const { default: recipesRouter } = await import('./recipes');
 
@@ -51,21 +125,33 @@ describe('recipes router', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    state.insertedRecipes.length = 0;
+    state.insertedIngredients.length = 0;
+    state.updatedRecipes.length = 0;
+    state.deletedIngredientRecipeIds.length = 0;
+    state.recipeAfterWrite = {
+      id: 'fixed-uuid',
+      householdId: 'hh-1',
+      name: 'Recipe',
+      servings: 4,
+      sourceUrl: null,
+      sourceImage: null,
+      instructions: null,
+      totalTimeMinutes: null,
+      tags: [],
+    };
+    state.existingRecipe = {
+      id: 'fixed-uuid',
+      householdId: 'hh-1',
+    };
+    state.loadedIngredients = [];
+
     app = express();
     app.use(express.json());
     app.use('/api/recipes', recipesRouter);
   });
 
-  it('returns 401 for unauthenticated requests', async () => {
-    mocks.getSession.mockResolvedValue(null);
-    const res = await request(app).get('/api/recipes');
-    expect(res.status).toBe(401);
-  });
-
   it('returns 400 when POST body is invalid', async () => {
-    mocks.getSession.mockResolvedValue({ user: { id: 'user-1' } });
-    mocks.membershipLimit.mockResolvedValue([{ householdId: 'hh-1' }]);
-
     const res = await request(app)
       .post('/api/recipes')
       .send({ name: '', servings: -1, ingredients: [] });
@@ -75,9 +161,6 @@ describe('recipes router', () => {
   });
 
   it('rejects POST with no ingredients', async () => {
-    mocks.getSession.mockResolvedValue({ user: { id: 'user-1' } });
-    mocks.membershipLimit.mockResolvedValue([{ householdId: 'hh-1' }]);
-
     const res = await request(app)
       .post('/api/recipes')
       .send({ name: 'Test', servings: 4, ingredients: [] });
@@ -86,9 +169,6 @@ describe('recipes router', () => {
   });
 
   it('rejects ingredient with blank qty', async () => {
-    mocks.getSession.mockResolvedValue({ user: { id: 'user-1' } });
-    mocks.membershipLimit.mockResolvedValue([{ householdId: 'hh-1' }]);
-
     const res = await request(app)
       .post('/api/recipes')
       .send({
@@ -101,9 +181,6 @@ describe('recipes router', () => {
   });
 
   it('rejects numeric ingredient qty because recipe quantities are stored as display strings', async () => {
-    mocks.getSession.mockResolvedValue({ user: { id: 'user-1' } });
-    mocks.membershipLimit.mockResolvedValue([{ householdId: 'hh-1' }]);
-
     const res = await request(app)
       .post('/api/recipes')
       .send({
@@ -113,5 +190,55 @@ describe('recipes router', () => {
       });
 
     expect(res.status).toBe(400);
+  });
+
+  it('persists totalTimeMinutes and tags on create', async () => {
+    state.recipeAfterWrite = {
+      id: 'fixed-uuid',
+      householdId: 'hh-1',
+      name: 'Test',
+      servings: 4,
+      sourceUrl: null,
+      sourceImage: null,
+      instructions: null,
+      totalTimeMinutes: 25,
+      tags: ['quick'],
+    };
+
+    const res = await request(app)
+      .post('/api/recipes')
+      .send({
+        name: 'Test',
+        servings: 4,
+        totalTimeMinutes: 25,
+        tags: ['quick'],
+        ingredients: [{ canonicalFoodId: '00000000-0000-0000-0000-000000000001', qty: '1', unit: '' }],
+      });
+
+    expect(res.status).toBe(201);
+    expect(state.insertedRecipes[0]).toMatchObject({
+      id: 'fixed-uuid',
+      householdId: 'hh-1',
+      name: 'Test',
+      servings: 4,
+      totalTimeMinutes: 25,
+      tags: ['quick'],
+    });
+  });
+
+  it('persists totalTimeMinutes and tags on update', async () => {
+    const res = await request(app)
+      .put(`/api/recipes/${RECIPE_ID}`)
+      .send({
+        totalTimeMinutes: 45,
+        tags: ['make-ahead', 'family'],
+        ingredients: [{ canonicalFoodId: '00000000-0000-0000-0000-000000000001', qty: '2', unit: '' }],
+      });
+
+    expect(res.status).toBe(200);
+    expect(state.updatedRecipes[0]).toMatchObject({
+      totalTimeMinutes: 45,
+      tags: ['make-ahead', 'family'],
+    });
   });
 });

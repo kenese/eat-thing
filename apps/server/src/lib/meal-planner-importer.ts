@@ -55,6 +55,11 @@ export async function parseMealPlannerRecipe(id: string): Promise<ImportedRecipe
     sourceUrl: null,
     sourceImage: null,
     heroImageUrl: null,
+    totalTimeMinutes:
+      source.prep_time_minutes != null || source.cook_time_minutes != null
+        ? (source.prep_time_minutes ?? 0) + (source.cook_time_minutes ?? 0)
+        : null,
+    tags: source.tags ?? [],
     instructions: source.instructions?.join('\n') ?? null,
     ingredients,
   };
