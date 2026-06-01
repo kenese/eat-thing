@@ -10,7 +10,7 @@ vi.mock('./gemini.js', () => ({
   generateGeminiJson: vi.fn(),
 }));
 
-const { parseSchemaOrg, annotateMetric, resolveHeroImage } = await import('./recipe-extractor.js');
+const { parseSchemaOrg, annotateMetric, resolveHeroImage, extractFromUrl } = await import('./recipe-extractor.js');
 
 describe('parseSchemaOrg', () => {
   it('returns null when no ld+json script is present', () => {
@@ -141,5 +141,38 @@ describe('resolveHeroImage', () => {
   it('ignores data URIs in img tags', () => {
     const html = `<html><body><img src="data:image/png;base64,abc" /></body></html>`;
     expect(resolveHeroImage(html, 'https://example.com/recipe')).toBeNull();
+  });
+});
+
+describe('extractFromUrl headers', () => {
+  it('sends a Chrome-like User-Agent header', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      text: async () => `<script type="application/ld+json">${JSON.stringify({
+        '@type': 'Recipe', name: 'Test', recipeYield: '4',
+        recipeIngredient: ['1 cup water'],
+        recipeInstructions: [{ '@type': 'HowToStep', text: 'Boil.' }],
+      })}</script>`,
+      headers: new Headers({ 'content-type': 'text/html' }),
+    } as Response);
+
+    await extractFromUrl('https://example.com/recipe');
+
+    const [, init] = fetchSpy.mock.calls[0];
+    const headers = (init as RequestInit).headers as Record<string, string>;
+    expect(headers['User-Agent']).toMatch(/Chrome/);
+    expect(headers['Accept']).toBeDefined();
+    fetchSpy.mockRestore();
+  });
+
+  it('throws a clean error on non-ok response', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: false,
+      status: 403,
+      text: async () => 'Forbidden',
+    } as Response);
+
+    await expect(extractFromUrl('https://example.com/blocked')).rejects.toThrow('HTTP 403');
+    fetchSpy.mockRestore();
   });
 });
