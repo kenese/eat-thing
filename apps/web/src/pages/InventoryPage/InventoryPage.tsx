@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useInventory, useDeleteInventoryItem } from '../../hooks/useInventory';
+import { useLowStockStaples } from '../../hooks/useStaples';
 import { ItemForm } from './ItemForm';
 import { PageTitle } from '../../components/PageTitle';
 import { FilterStrip } from '../../components/FilterStrip';
@@ -145,6 +146,7 @@ export function InventoryPage() {
     category: categoryFilter === 'all' ? undefined : categoryFilter,
     q: debouncedSearch || undefined,
   });
+  const { data: lowStockStaples = [], isLoading: lowStockStaplesLoading } = useLowStockStaples();
 
   const sortedByCategory = useMemo(() => {
     const buckets: Record<Category, InventoryRow[]> = {
@@ -246,7 +248,7 @@ export function InventoryPage() {
         </p>
       )}
 
-      {!isLoading && items.length > 0 && (
+      {!isLoading && (items.length > 0 || lowStockStaples.length > 0) && (
         <div className="inv-body">
           <div className="inv-main">
             <div className="inv-col-header">
@@ -301,12 +303,22 @@ export function InventoryPage() {
               </div>
             )}
 
-            {/* HANDOFF: low-stock staples — requires useStaples hook integration */}
             <div className="inv-sidebar-card">
               <div className="inv-sidebar-card-title">Low staples</div>
-              <p style={{ fontSize: 13, color: 'var(--mute)', fontFamily: 'var(--font-serif)', fontStyle: 'italic' }}>
-                staple tracking coming soon.
-              </p>
+              {lowStockStaplesLoading ? (
+                <p className="inv-sidebar-note">Checking staples…</p>
+              ) : lowStockStaples.length === 0 ? (
+                <p className="inv-sidebar-note">All stocked up.</p>
+              ) : (
+                <div className="inv-sidebar-expiring">
+                  {lowStockStaples.map((staple) => (
+                    <div key={staple.id} className="inv-sidebar-exp-row">
+                      <span className="inv-sidebar-exp-name">{staple.foodName}</span>
+                      <span className="inv-sidebar-low-meta">{fmtQty(staple.neededQty, staple.thresholdUnit)} needed</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </aside>
         </div>
