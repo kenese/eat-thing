@@ -29,3 +29,6 @@ coverage/
 
 # Git worktrees
 .worktrees/
+
+# Local visual brainstorming companion
+.superpowers/
