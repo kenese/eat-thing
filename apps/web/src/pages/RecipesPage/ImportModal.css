@@ -130,3 +130,10 @@
   color: var(--text-secondary, #888);
   font-weight: 500;
 }
+
+.text-import-area {
+  resize: vertical;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.8rem;
+  min-height: 160px;
+}

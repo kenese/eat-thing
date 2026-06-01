@@ -37,6 +37,12 @@ export function useIngestMealPlannerList(enabled: boolean) {
   });
 }
 
+export function useIngestText() {
+  return useMutation({
+    mutationFn: (text: string) => api.post<ImportedRecipe>('/api/ingest/text', { text }),
+  });
+}
+
 export function useIngestMealPlannerParse() {
   return useMutation({
     mutationFn: (id: string) => api.post<ImportedRecipe>('/api/ingest/meal-planner/parse', { id }),
