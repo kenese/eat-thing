@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { useQueries } from '@tanstack/react-query';
 import { useRecipes } from '../../hooks/useRecipes';
 import { useInventory } from '../../hooks/useInventory';
 import {
@@ -10,8 +11,9 @@ import {
 import { CookModal } from './CookModal';
 import { PageTitle } from '../../components/PageTitle';
 import { StatusChip } from '../../components/StatusChip';
-import type { MealPlanEntry } from '@eat/shared';
-import { computeMissingFromIds } from '../../lib/recipeMatch';
+import type { MealPlanEntry, Recipe } from '@eat/shared';
+import { computeMissing } from '../../lib/recipeMatch';
+import { api } from '../../api/client';
 import { planWindow, planWindowDays, TODAY_INDEX } from '../../lib/dateUtils';
 import { useNavigate } from 'react-router-dom';
 import './PlanPage.css';
@@ -25,7 +27,7 @@ type DayKind = 'cook' | 'shop' | 'leftover' | 'open';
 
 interface DayEntry {
   entry: MealPlanEntry;
-  missingCount: number;
+  missingNames: string[];
   kind: DayKind;
   totalTimeMinutes: number | null;
   sourceImage: string | null;
@@ -48,9 +50,9 @@ function MealRow({
     <div className="day-col-extra">
       <div className="day-col-extra-body">
         <span className={`day-col-extra-name${isPast ? ' day-col-name--past' : ''}`}>{de.entry.recipeName}</span>
-        {de.missingCount > 0 ? (
+        {de.missingNames.length > 0 ? (
           <span className="day-col-need" style={{ color: dark ? 'rgba(243,245,242,0.7)' : undefined }}>
-            need {de.missingCount} item{de.missingCount !== 1 ? 's' : ''}
+            need {de.missingNames[0]}{de.missingNames.length > 1 ? ` & ${de.missingNames.length - 1} more` : ''}
           </span>
         ) : de.totalTimeMinutes ? (
           <span className="day-col-extra-meta">{de.totalTimeMinutes}m · serves {de.entry.servings}</span>
@@ -176,9 +178,10 @@ function DayCard({
                 <div className="day-col-name">{first.entry.recipeName}</div>
               </div>
 
-              {first.missingCount > 0 && (
+              {first.missingNames.length > 0 && (
                 <div className="day-col-need">
-                  need {first.missingCount} item{first.missingCount !== 1 ? 's' : ''}
+                  need {first.missingNames.slice(0, 2).join(', ')}
+                  {first.missingNames.length > 2 ? ` & ${first.missingNames.length - 2} more` : ''}
                 </div>
               )}
 
@@ -264,23 +267,43 @@ export function PlanPage() {
     return m;
   }, [recipes]);
 
+  // Fetch full Recipe objects (with ingredients) for each unique recipe in the plan.
+  // Mirrors the Home page pattern so computeMissing can return ingredient names.
+  const uniqueRecipeIds = useMemo(
+    () => [...new Set((entriesResp?.entries ?? []).map((e) => e.recipeId))],
+    [entriesResp],
+  );
+  const recipeDetailQueries = useQueries({
+    queries: uniqueRecipeIds.map((id) => ({
+      queryKey: ['recipe', id],
+      queryFn: () => api.get<Recipe>(`/api/recipes/${id}`),
+    })),
+  });
+  const fullRecipeById = useMemo(() => {
+    const m = new Map<string, Recipe>();
+    recipeDetailQueries.forEach((q, i) => {
+      if (q.data) m.set(uniqueRecipeIds[i], q.data);
+    });
+    return m;
+  }, [recipeDetailQueries, uniqueRecipeIds]);
+
   const entriesByDay = useMemo(() => {
     const map: Record<string, DayEntry[]> = {};
     for (const e of entriesResp?.entries ?? []) {
-      const recipe = recipeById.get(e.recipeId);
-      const missingIds = recipe ? computeMissingFromIds(recipe.canonicalFoodIds, inventory) : [];
-      const missingCount = missingIds.length;
-      const kind: DayKind = e.status === 'cooked' ? 'cook' : missingCount > 0 ? 'shop' : 'cook';
+      const summary = recipeById.get(e.recipeId);
+      const full = fullRecipeById.get(e.recipeId);
+      const missingNames = full ? computeMissing(full, inventory) : [];
+      const kind: DayKind = e.status === 'cooked' ? 'cook' : missingNames.length > 0 ? 'shop' : 'cook';
       (map[e.date] ??= []).push({
         entry: e,
-        missingCount,
+        missingNames,
         kind,
-        totalTimeMinutes: recipe?.totalTimeMinutes ?? null,
-        sourceImage: recipe?.sourceImage ?? null,
+        totalTimeMinutes: summary?.totalTimeMinutes ?? null,
+        sourceImage: summary?.sourceImage ?? null,
       });
     }
     return map;
-  }, [entriesResp, recipeById, inventory]);
+  }, [entriesResp, recipeById, fullRecipeById, inventory]);
 
   // Summary counts for the next 7 days only (per spec "next 7 days" caption)
   const todayIdx = days.findIndex((d) => d.isToday);
