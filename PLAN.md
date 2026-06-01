@@ -4,7 +4,9 @@ Living plan for eat-thing. Tasks update as we go. New work appends; completed wo
 
 **Status legend:** `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` deferred / dropped
 
-**Currently on:** Phase 4 complete — back to backlog / slice-2 hardening
+**Currently on:** Phase 4 complete — execute handoff backlog roadmap, starting with inventory low-stock staples
+
+Execution order and acceptance criteria: [docs/superpowers/plans/2026-06-01-handoff-backlog-roadmap.md](./docs/superpowers/plans/2026-06-01-handoff-backlog-roadmap.md)
 
 For per-decision rationale see [DECISIONS.md](./DECISIONS.md). For architecture see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
@@ -121,6 +123,20 @@ Deferred (own specs): Shops nav destination, scan-receipt, print, delivery-windo
 - [ ] Taxonomy expansion as new ingredients appear (interactive "add to taxonomy" prompt rather than silent insert)
 - [ ] Backups: Supabase point-in-time + occasional dump to local disk
 - [ ] Multi-household readiness: keep `household_id` discipline in every new query/migration
+
+## Handoff backlog — ordered delivery slices
+
+Detailed roadmap: [docs/superpowers/plans/2026-06-01-handoff-backlog-roadmap.md](./docs/superpowers/plans/2026-06-01-handoff-backlog-roadmap.md)
+
+- [ ] Slice 1: wire Inventory low-stock staples sidebar widget
+- [ ] Slice 2: New World logged-out prompt, transient retry/backoff, and Mac-mini `launchd` service
+- [ ] Slice 3: shared date picker for Plan load-date and Recipes hero add-to-day
+- [ ] Slice 4: shopping-list scheduled date + dynamic Recipes quick-shop copy
+- [ ] Slice 5: Plan auto-shop read-only preview + pre-flight API
+- [ ] Slice 6: research and design New World delivery-window integration before implementation
+- [ ] Slice 7: design and build the New World-first `/shops` route
+- [ ] Spot-check tablet breakpoint during Slice 1; keep `<=768px` unless review demonstrates a problem
+- [-] Restore inventory `location` field — defer until category-derived counts cause a demonstrated problem
 
 ## Deferred
 

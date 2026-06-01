@@ -133,11 +133,11 @@ const shoppingList: ShoppingList = {
 const prices: PricesForListResponse = {
   job: { id: 'dev-price-job', status: 'done', error: null },
   prices: [
-    { id: 'price-fish', shoppingListItemId: 'shop-fish', store: 'new_world', sku: 'fish-001', name: 'Fresh white fish fillets', price: 14.5, inStock: true, matched: true, checkedAt: ts('2026-05-12') },
-    { id: 'price-tortillas', shoppingListItemId: 'shop-tortillas', store: 'new_world', sku: 'tortilla-001', name: 'Flour tortillas 8 pack', price: 4.2, inStock: true, matched: true, checkedAt: ts('2026-05-12') },
-    { id: 'price-limes', shoppingListItemId: 'shop-limes', store: 'new_world', sku: 'lime-001', name: 'Limes', price: 1.1, inStock: true, matched: true, checkedAt: ts('2026-05-12') },
-    { id: 'price-coriander', shoppingListItemId: 'shop-coriander', store: 'new_world', sku: 'coriander-001', name: 'Fresh coriander', price: 3.0, inStock: true, matched: true, checkedAt: ts('2026-05-12') },
-    { id: 'price-milk', shoppingListItemId: 'shop-milk', store: 'new_world', sku: 'milk-001', name: 'Milk 2L', price: 5.1, inStock: true, matched: true, checkedAt: ts('2026-05-12') },
+    { id: 'price-fish', shoppingListItemId: 'shop-fish', store: 'new_world', sku: 'fish-001', name: 'Fresh white fish fillets', price: 14.5, inStock: true, matched: true, checkedAt: ts('2026-05-12'), candidates: [], chosenSku: null },
+    { id: 'price-tortillas', shoppingListItemId: 'shop-tortillas', store: 'new_world', sku: 'tortilla-001', name: 'Flour tortillas 8 pack', price: 4.2, inStock: true, matched: true, checkedAt: ts('2026-05-12'), candidates: [], chosenSku: null },
+    { id: 'price-limes', shoppingListItemId: 'shop-limes', store: 'new_world', sku: 'lime-001', name: 'Limes', price: 1.1, inStock: true, matched: true, checkedAt: ts('2026-05-12'), candidates: [], chosenSku: null },
+    { id: 'price-coriander', shoppingListItemId: 'shop-coriander', store: 'new_world', sku: 'coriander-001', name: 'Fresh coriander', price: 3.0, inStock: true, matched: true, checkedAt: ts('2026-05-12'), candidates: [], chosenSku: null },
+    { id: 'price-milk', shoppingListItemId: 'shop-milk', store: 'new_world', sku: 'milk-001', name: 'Milk 2L', price: 5.1, inStock: true, matched: true, checkedAt: ts('2026-05-12'), candidates: [], chosenSku: null },
   ],
 };
 

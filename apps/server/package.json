@@ -4,13 +4,14 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "dev": "tsx watch --inspect src/index.ts ",
+        "dev": "tsx watch --exclude '../../node_modules/**' src/index.ts",
+        "dev:debug": "tsx watch --exclude '../../node_modules/**' --inspect src/index.ts",
         "build": "tsc",
         "start": "node dist/index.js",
         "clean": "rm -rf dist",
         "test": "vitest run",
         "db:generate": "drizzle-kit generate",
-        "db:migrate": "drizzle-kit migrate",
+        "db:migrate": "node scripts/migrate.mjs",
         "db:push": "drizzle-kit push",
         "db:studio": "drizzle-kit studio",
         "db:seed": "tsx src/db/seed.ts"

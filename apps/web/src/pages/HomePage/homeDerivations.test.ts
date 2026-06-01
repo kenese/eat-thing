@@ -208,9 +208,9 @@ describe('computeShopSummary', () => {
       ],
     };
     const prices: ShoppingListPrice[] = [
-      { id: 'p1', shoppingListItemId: 'a', store: 'new_world', sku: null, name: null, price: 5.00, inStock: true, matched: true, checkedAt: '' },
-      { id: 'p2', shoppingListItemId: 'b', store: 'new_world', sku: null, name: null, price: 3.00, inStock: true, matched: true, checkedAt: '' },
-      { id: 'p3', shoppingListItemId: 'c', store: 'new_world', sku: null, name: null, price: 4.50, inStock: true, matched: true, checkedAt: '' },
+      { id: 'p1', shoppingListItemId: 'a', store: 'new_world', sku: null, name: null, price: 5.00, inStock: true, matched: true, checkedAt: '', candidates: [], chosenSku: null },
+      { id: 'p2', shoppingListItemId: 'b', store: 'new_world', sku: null, name: null, price: 3.00, inStock: true, matched: true, checkedAt: '', candidates: [], chosenSku: null },
+      { id: 'p3', shoppingListItemId: 'c', store: 'new_world', sku: null, name: null, price: 4.50, inStock: true, matched: true, checkedAt: '', candidates: [], chosenSku: null },
     ];
     const r = computeShopSummary(list, prices, new Date('2026-05-12T08:00:00'));
     // apple = 5 * 2, milk = 4.5 * 1, kale checked = ignored

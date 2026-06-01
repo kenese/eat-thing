@@ -13,8 +13,14 @@ export function LoginPage() {
         provider: 'google',
         callbackURL: window.location.origin,
       });
-    } catch {
-      setError('Google sign-in is not available in this local dev session.');
+    } catch (err) {
+      const isConnectionRefused =
+        err instanceof TypeError && /fetch|network|failed/i.test(err.message);
+      setError(
+        isConnectionRefused
+          ? 'Cannot reach the server — it may still be starting up. Try again in a moment.'
+          : 'Sign-in failed. Please try again.'
+      );
     }
   };
 
