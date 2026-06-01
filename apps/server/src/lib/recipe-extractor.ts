@@ -257,27 +257,39 @@ export interface ExtractedRecipe {
     ingredients: ImportedIngredient[];
 }
 
-export async function extractFromUrl(url: string): Promise<ExtractedRecipe> {
+async function extractFromUrl(url: string): Promise<ExtractedRecipe> {
     const response = await fetch(url, {
-        headers: {'User-Agent': 'Mozilla/5.0 (compatible; eat-thing-bot/1.0)'},
+        headers: {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Cache-Control': 'no-cache',
+        },
         signal: AbortSignal.timeout(20_000),
     });
-    const html = await response.text();
-    if (!response.ok) {
-        const body = await response.json().catch((e) => {
-            console.log(`Fetch failed: ${response.status}`, body, err);
-        });
-        const err = Object.assign(new Error(body?.error ?? `HTTP ${response.status}`), {
-            status: response.status,
-        });
-        console.log(`Fetch failed: ${response.status}`, body, err);
 
-        throw new Error(`Fetch failed: ${response.status}`);
+    if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
     }
+
+    const html = await response.text();
 
     try {
         const schemaRaw = parseSchemaOrg(html);
-        const raw = schemaRaw ?? await extractWithGemini(cleanHtmlWithReadability(html));
+        let raw = schemaRaw;
+
+        // If Schema.org parsed but has no instructions, supplement with Gemini
+        if (!raw?.instructions) {
+            const cleanText = cleanHtmlWithReadability(html);
+            const gemini = await extractWithGemini(cleanText);
+            if (schemaRaw) {
+                // Preserve Schema.org name/servings/ingredients; use Gemini instructions
+                raw = { ...schemaRaw, instructions: gemini?.instructions ?? null };
+            } else {
+                raw = gemini;
+            }
+        }
+
         if (!raw) {
             console.error('Could not extract recipe from this URL', raw, html);
             throw new Error('Could not extract recipe from this URL' + JSON.stringify(raw) + JSON.stringify(html));
@@ -324,4 +336,4 @@ export async function extractFromUrl(url: string): Promise<ExtractedRecipe> {
 }
 
 // Exported for testing only
-export {parseSchemaOrg, annotateMetric, resolveHeroImage};
+export {parseSchemaOrg, annotateMetric, resolveHeroImage, extractFromUrl};
