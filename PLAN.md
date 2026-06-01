@@ -134,26 +134,9 @@ Complete these before resuming the remaining handoff backlog. Each runtime slice
 
 Moved to Done after `pnpm test` and `pnpm test:e2e` passed.
 
-### Slice B — Low-stock staples
-
-- [ ] Add one shared server-side low-stock staples derivation using current inventory and unit conversion
-- [ ] Merge low-stock staple items into the current shopping list when `POST /api/shopping-lists/from-plan` runs, while preserving manual items
-- [ ] Wire the Inventory sidebar "Low staples" widget to the same behavior
-
 ### Slice C — Recipe + inventory model alignment
 
-- [ ] Restrict inventory storage units to canonical `g`, `ml`, or `count`
-- [ ] Preserve original recipe ingredient quantity/unit text while retaining normalized metric annotations for calculations
-- [ ] Accept and persist `recipes.total_time_minutes` and `recipes.tags` in recipe create/update routes and imports
 - [ ] Replace silent global `canonical_foods` insertion with an explicit confirm-new-food taxonomy review step (scope depends on Decision Gate 2)
-- [ ] Enforce the four-recipes-per-day limit in the meal-plan API as well as the existing UI
-
-### Slice D — Ops cleanup + accurate documentation
-
-- [ ] Delete obsolete `apps/server/launchd/com.eat-thing.openbrain-sync.plist`
-- [ ] Keep Mac-mini scraper `launchd` supervision as planned architecture; document it as pending until the scraper plist lands in handoff Slice 2
-- [ ] Update `ARCHITECTURE.md`: mutable inventory balances + append-only cooking audit events; current unit model; current public recipe-photo URLs and no inventory photos; Meal Planner HTTP MCP topology with local stdio fallback; single-household-first middleware; actual Better-Auth tables; global-table exceptions; no current shopping-list finalization; cook prompts retained for audit and future refinement
-- [ ] Add a new `DECISIONS.md` entry recording the accepted architecture-audit corrections and any resolved decision gates
 
 ### Decision gates
 
@@ -187,6 +170,7 @@ Detailed roadmap: [docs/superpowers/plans/2026-06-01-handoff-backlog-roadmap.md]
 
 ## Done
 
+- 2026-06-02 — Architecture-audit remediation Slices B, C1, C2, C3, C5, and D runtime/docs pass: added shared server-side low-stock staples derivation and reused it in `POST /api/shopping-lists/from-plan` plus the Inventory sidebar; preserved manual shopping-list items while refreshing recipe/staple-derived rows; restricted inventory storage units to canonical `g` / `ml` / `count` with migration `0013_inventory_canonical_units.sql`; enforced the four-recipes-per-day rule in the meal-plan API; preserved original recipe ingredient qty/unit text while retaining metric annotations; accepted and persisted `recipes.total_time_minutes` and `recipes.tags` through recipe create/update and import paths; deleted the obsolete OpenBrain `launchd` plist; refreshed architecture/agent docs to describe mutable inventory balances, append-only cooking audit events, public recipe-photo URLs, Meal Planner HTTP MCP with stdio fallback, single-household-first middleware, Better-Auth table exceptions, pending scraper `launchd` supervision, and the still-pending taxonomy-review gate. See D25.
 - 2026-06-01 — Architecture-audit remediation Slice A: added tenant ownership to `shopping_list_prices` with migration 0012; enforced direct household filtering and owned-list checks across shopping-list price/cart reads, enqueueing, selection, and mutation; rejected cross-household scraper result upserts; standardized scraper signing on `SCRAPER_HMAC_SECRET`; added shared `add_to_cart`; documented global `canonical_foods` and Better-Auth table exceptions. Also repaired stale web test copy selectors uncovered by the required full-suite run. See D24.
 - 2026-05-18 — Phase 4: build-to-cart (New World only) shipped. compare_prices now returns top-N candidates with sole/preferred/manual resolutions; shopping list UI shows state badges + per-row candidate picker; new add_to_cart job diffs the live trolley (idempotent), applies via product detail pages, returns a per-item action breakdown + cart total; reconcile modal surfaces the result with an "Open New World trolley" link. See D23 and docs/superpowers/specs/2026-05-17-phase4-build-to-cart-design.md.
 - 2026-05-17 — Plan refactor: replaced fixed Monday–Sunday weekly meal plan with a rolling 17-day window centred on today. Dropped `meal_plans` table and auto-generation of shopping lists (migration 0008). Plan page now renders a horizontally-scrollable rail of 17 day cards; today is always at index 2. Shopping list gets a "Add from planned recipes" modal that pre-ticks days whose entries are already in the list and calls `POST /api/shopping-lists/from-plan`. `source_recipe_id` added to `shopping_list_items` to support pre-tick matching. All unit tests (116 web, 59 server) and E2E tests (15) pass. Also fixed a pre-existing E2E crash where the Meal Planner parse mock used a numeric `qty` instead of a string, breaking `MetricControl`.
