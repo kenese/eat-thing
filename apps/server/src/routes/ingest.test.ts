@@ -1,4 +1,4 @@
-import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import express from 'express';
 import request from 'supertest';
 
@@ -13,6 +13,7 @@ vi.mock('../middleware/with-household.js', () => ({
 // Mock the lib modules
 vi.mock('../lib/recipe-extractor.js', () => ({
   extractFromUrl: vi.fn(),
+  resolveHeroImage: vi.fn(),
 }));
 
 vi.mock('../lib/photo-extractor.js', () => ({
@@ -32,7 +33,7 @@ vi.mock('../db/index.js', () => ({
   db: { select: vi.fn().mockReturnThis(), from: vi.fn().mockReturnThis(), where: vi.fn().mockResolvedValue([]) },
 }));
 
-const { extractFromUrl } = await import('../lib/recipe-extractor.js');
+const { extractFromUrl, resolveHeroImage } = await import('../lib/recipe-extractor.js');
 const { extractFromPhoto } = await import('../lib/photo-extractor.js');
 const { searchMealDb } = await import('../lib/themealdb.js');
 const { listMealPlannerRecipes, parseMealPlannerRecipe } = await import('../lib/meal-planner-importer.js');
@@ -176,6 +177,107 @@ describe('ingest router', () => {
       const res = await request(app).post('/api/ingest/meal-planner/parse').send({ id: 'mp-missing' });
       expect(res.status).toBe(422);
       expect(res.body.error).toMatch(/Meal Planner recipe not found/);
+    });
+  });
+
+  describe('POST /hero-image', () => {
+    const originalFetch = globalThis.fetch;
+    let fetchMock: ReturnType<typeof vi.fn>;
+
+    beforeEach(() => {
+      fetchMock = vi.fn();
+      globalThis.fetch = fetchMock as typeof fetch;
+    });
+
+    afterEach(() => {
+      globalThis.fetch = originalFetch;
+    });
+
+    it('returns 400 for missing url', async () => {
+      const res = await request(app).post('/api/ingest/hero-image').send({});
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBeDefined();
+    });
+
+    it('returns 400 for invalid (non-URL) url', async () => {
+      const res = await request(app).post('/api/ingest/hero-image').send({ url: 'not-a-url' });
+      expect(res.status).toBe(400);
+    });
+
+    it('proxies a direct image URL as base64', async () => {
+      // Use a dedicated ArrayBuffer to avoid Node.js Buffer pool sharing
+      const bytes = new TextEncoder().encode('fake-image-bytes');
+      const arrayBuf = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        headers: { get: (h: string) => h === 'content-type' ? 'image/jpeg' : null },
+        arrayBuffer: async () => arrayBuf,
+      } as unknown as Response);
+
+      const res = await request(app)
+        .post('/api/ingest/hero-image')
+        .send({ url: 'https://example.com/photo.jpg' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.base64).toBe(Buffer.from(arrayBuf).toString('base64'));
+      expect(res.body.mimeType).toBe('image/jpeg');
+    });
+
+    it('extracts og:image from an HTML page and returns it as base64', async () => {
+      const htmlContent = '<html><head><meta property="og:image" content="https://example.com/og.jpg" /></head></html>';
+      const bytes = new TextEncoder().encode('og-image-bytes');
+      const arrayBuf = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+
+      fetchMock
+        .mockResolvedValueOnce({
+          ok: true,
+          headers: { get: (h: string) => h === 'content-type' ? 'text/html' : null },
+          text: async () => htmlContent,
+        } as unknown as Response)
+        .mockResolvedValueOnce({
+          ok: true,
+          headers: { get: (h: string) => h === 'content-type' ? 'image/jpeg' : null },
+          arrayBuffer: async () => arrayBuf,
+        } as unknown as Response);
+
+      vi.mocked(resolveHeroImage).mockReturnValueOnce('https://example.com/og.jpg');
+
+      const res = await request(app)
+        .post('/api/ingest/hero-image')
+        .send({ url: 'https://example.com/recipe' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.base64).toBe(Buffer.from(arrayBuf).toString('base64'));
+      expect(res.body.mimeType).toBe('image/jpeg');
+      expect(vi.mocked(resolveHeroImage)).toHaveBeenCalledWith(htmlContent, 'https://example.com/recipe');
+    });
+
+    it('returns 422 when HTML page has no og:image', async () => {
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        headers: { get: (h: string) => h === 'content-type' ? 'text/html' : null },
+        text: async () => '<html><body>No image here</body></html>',
+      } as unknown as Response);
+
+      vi.mocked(resolveHeroImage).mockReturnValueOnce(null);
+
+      const res = await request(app)
+        .post('/api/ingest/hero-image')
+        .send({ url: 'https://example.com/recipe' });
+
+      expect(res.status).toBe(422);
+      expect(res.body.error).toBeDefined();
+    });
+
+    it('returns 422 when fetch fails', async () => {
+      fetchMock.mockRejectedValueOnce(new Error('Network error'));
+
+      const res = await request(app)
+        .post('/api/ingest/hero-image')
+        .send({ url: 'https://example.com/recipe' });
+
+      expect(res.status).toBe(422);
+      expect(res.body.error).toMatch(/Network error/);
     });
   });
 });
