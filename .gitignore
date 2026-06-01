@@ -25,3 +25,6 @@ playwright/.auth/
 coverage/
 *.lcov
 *.tsbuildinfo
+
+# Git worktrees
+.worktrees/
