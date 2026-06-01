@@ -327,3 +327,11 @@
   .plan-recipe-grid { grid-template-columns: repeat(2, 1fr); }
   .plan-add-to-list-btn { width: 100%; justify-content: center; }
 }
+
+/* Drag handle for moving entries between days */
+.day-col-drag-handle {
+  cursor: grab;
+}
+.day-col-drag-handle:active {
+  cursor: grabbing;
+}
