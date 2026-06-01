@@ -67,12 +67,18 @@ export function RecipeImagePicker({ photoBase64, photoMimeType, onChange }: Reci
     setMenuState('loading');
     setErrorMsg('');
     try {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const blob = await res.blob();
-      if (!blob.type.startsWith('image/')) throw new Error('URL did not return an image.');
-      const base64 = await blobToBase64(blob);
-      onChange(base64, blob.type);
+      const res = await fetch('/api/ingest/hero-image', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? `HTTP ${res.status}`);
+      }
+      const { base64, mimeType } = await res.json() as { base64: string; mimeType: string };
+      onChange(base64, mimeType);
       closeMenu();
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Failed to load image.');
@@ -123,7 +129,7 @@ export function RecipeImagePicker({ photoBase64, photoMimeType, onChange }: Reci
               <input
                 className="recipe-image-url-input"
                 type="url"
-                placeholder="https://example.com/image.jpg"
+                placeholder="recipe page URL or direct image URL"
                 value={urlInput}
                 onChange={e => setUrlInput(e.target.value)}
                 autoFocus
