@@ -196,6 +196,7 @@ test.describe('authenticated routes load', () => {
     await expect(page.getByText('Rice')).toBeVisible();
     await expect(page.getByText('750 g needed')).toBeVisible();
   });
+
   test('inventory item form only offers canonical storage units', async ({ page }) => {
     await page.goto('/inventory');
     await page.getByRole('button', { name: /add item/i }).click();
