@@ -15,7 +15,7 @@ const router: ExpressRouter = Router();
 
 function withWorkerAuth(req: Request, res: Response, next: NextFunction) {
   const key = process.env.SCRAPER_HMAC_SECRET;
-  if (!key) { res.status(500).json({ error: 'WORKER_HMAC_KEY not configured' }); return; }
+  if (!key) { res.status(500).json({ error: 'SCRAPER_HMAC_SECRET not configured' }); return; }
 
   const timestamp = req.headers['x-worker-timestamp'] as string;
   const signature = req.headers['x-worker-signature'] as string;
@@ -160,7 +160,7 @@ router.post('/jobs/:id/result', withWorkerAuth, async (req, res) => {
 
     if (ok && data) {
       if (job.type === 'compare_prices') {
-        await applyComparePricesResult(job.store, data);
+        await applyComparePricesResult(job.householdId, job.store, data);
       } else if (job.type === 'import_past_orders') {
         await applyImportPastOrdersResult(job.householdId, job.store, data);
       } else if (job.type === 'add_to_cart') {
@@ -191,12 +191,23 @@ interface ComparePricesItem {
   chosenSku: string | null;
 }
 
-async function applyComparePricesResult(store: string, data: Record<string, unknown>): Promise<void> {
+async function applyComparePricesResult(householdId: string, store: string, data: Record<string, unknown>): Promise<void> {
   const items = (data['items'] ?? []) as ComparePricesItem[];
   if (items.length === 0) return;
 
   await db.transaction(async tx => {
     for (const item of items) {
+      const [ownedItem] = await tx
+        .select({ id: shoppingListItems.id })
+        .from(shoppingListItems)
+        .where(and(
+          eq(shoppingListItems.id, item.shoppingListItemId),
+          eq(shoppingListItems.householdId, householdId),
+        ))
+        .limit(1);
+      if (!ownedItem) {
+        throw new Error(`Shopping list item ${item.shoppingListItemId} is not owned by scraper job household`);
+      }
       const chosen = item.chosenSku
         ? item.candidates.find(c => c.sku === item.chosenSku) ?? null
         : null;
@@ -204,6 +215,7 @@ async function applyComparePricesResult(store: string, data: Record<string, unkn
       await tx
         .insert(shoppingListPrices)
         .values({
+          householdId,
           shoppingListItemId: item.shoppingListItemId,
           store: store as 'new_world' | 'paknsave' | 'woolworths',
           sku: mirror?.sku ?? null,
@@ -218,6 +230,7 @@ async function applyComparePricesResult(store: string, data: Record<string, unkn
         .onConflictDoUpdate({
           target: [shoppingListPrices.shoppingListItemId, shoppingListPrices.store],
           set: {
+            householdId,
             sku: mirror?.sku ?? null,
             name: mirror?.name ?? null,
             price: mirror?.price !== undefined && mirror.price !== null ? String(mirror.price) : null,

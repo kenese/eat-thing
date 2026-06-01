@@ -4,7 +4,7 @@ Living plan for eat-thing. Tasks update as we go. New work appends; completed wo
 
 **Status legend:** `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` deferred / dropped
 
-**Currently on:** Phase 4 complete — execute architecture-audit remediation, starting with tenant isolation and scraper HMAC consistency
+**Currently on:** Architecture-audit remediation Slice A complete — continue with Slice B low-stock staples
 
 Execution order and acceptance criteria: [docs/superpowers/plans/2026-06-01-handoff-backlog-roadmap.md](./docs/superpowers/plans/2026-06-01-handoff-backlog-roadmap.md)
 
@@ -130,12 +130,9 @@ Audit artifact: [architecture-audit-recommendations.html](./architecture-audit-r
 
 Complete these before resuming the remaining handoff backlog. Each runtime slice must update relevant Vitest and Playwright coverage and pass `pnpm test` plus `pnpm test:e2e` before moving to Done.
 
-### Slice A — Tenant isolation + worker contract
+### Slice A — Tenant isolation + worker contract (complete — 2026-06-01)
 
-- [ ] Scope shopping-list price refresh, send-to-cart, price reads, and related joins by the authenticated `household_id`
-- [ ] Add `household_id` to `shopping_list_prices` with a migration; keep `canonical_foods` global and explicitly document global reference-table / Better-Auth-table exceptions
-- [ ] Standardize scraper worker auth on `SCRAPER_HMAC_SECRET` across server, worker SDK, tests, templates, and docs
-- [ ] Add shipped `add_to_cart` to the shared scraper-job type
+Moved to Done after `pnpm test` and `pnpm test:e2e` passed.
 
 ### Slice B — Low-stock staples
 
@@ -190,6 +187,7 @@ Detailed roadmap: [docs/superpowers/plans/2026-06-01-handoff-backlog-roadmap.md]
 
 ## Done
 
+- 2026-06-01 — Architecture-audit remediation Slice A: added tenant ownership to `shopping_list_prices` with migration 0012; enforced direct household filtering and owned-list checks across shopping-list price/cart reads, enqueueing, selection, and mutation; rejected cross-household scraper result upserts; standardized scraper signing on `SCRAPER_HMAC_SECRET`; added shared `add_to_cart`; documented global `canonical_foods` and Better-Auth table exceptions. Also repaired stale web test copy selectors uncovered by the required full-suite run. See D24.
 - 2026-05-18 — Phase 4: build-to-cart (New World only) shipped. compare_prices now returns top-N candidates with sole/preferred/manual resolutions; shopping list UI shows state badges + per-row candidate picker; new add_to_cart job diffs the live trolley (idempotent), applies via product detail pages, returns a per-item action breakdown + cart total; reconcile modal surfaces the result with an "Open New World trolley" link. See D23 and docs/superpowers/specs/2026-05-17-phase4-build-to-cart-design.md.
 - 2026-05-17 — Plan refactor: replaced fixed Monday–Sunday weekly meal plan with a rolling 17-day window centred on today. Dropped `meal_plans` table and auto-generation of shopping lists (migration 0008). Plan page now renders a horizontally-scrollable rail of 17 day cards; today is always at index 2. Shopping list gets a "Add from planned recipes" modal that pre-ticks days whose entries are already in the list and calls `POST /api/shopping-lists/from-plan`. `source_recipe_id` added to `shopping_list_items` to support pre-tick matching. All unit tests (116 web, 59 server) and E2E tests (15) pass. Also fixed a pre-existing E2E crash where the Meal Planner parse mock used a numeric `qty` instead of a string, breaking `MetricControl`.
 - 2026-05-16 — Removed OpenBrain sync integration entirely: `packages/openbrain` deleted, `sync_dirty` table dropped (migration 0007), `/api/sync` routes removed, `openbrain-worker` deleted, `synced` column dropped from `inventory_items`, OpenBrain tab removed from ImportModal, all fire-and-forget sync calls removed from recipe/inventory/meal-plan/cook-event routes. See D22.

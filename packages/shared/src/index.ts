@@ -343,7 +343,7 @@ export interface ProductCandidate {
 
 export type Store = 'new_world' | 'paknsave' | 'woolworths';
 
-export type ScraperJobType = 'import_past_orders' | 'compare_prices';
+export type ScraperJobType = 'import_past_orders' | 'compare_prices' | 'add_to_cart';
 export type ScraperJobStatus = 'pending' | 'in_progress' | 'done' | 'failed';
 
 export interface ScraperJob {

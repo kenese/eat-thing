@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   selectMany: vi.fn(),
   updateReturning: vi.fn(),
   getSession: vi.fn(),
+  txSelectLimit: vi.fn(),
 }));
 
 vi.mock('drizzle-orm', () => ({
@@ -49,7 +50,7 @@ vi.mock('../db/index.js', () => ({
           return { onConflictDoUpdate: () => Promise.resolve(), returning: () => Promise.resolve([]) };
         },
       }),
-      select: () => ({ from: () => ({ where: () => ({ limit: () => Promise.resolve([]) }) }) }),
+      select: () => ({ from: () => ({ where: () => ({ limit: mocks.txSelectLimit }) }) }),
     }),
   },
 }));
@@ -58,8 +59,8 @@ vi.mock('../db/schema/index.js', () => ({
   supermarketCredentials: { householdId: 'householdId', store: 'store' },
   supermarketProducts: { householdId: 'householdId', store: 'store', sku: 'sku' },
   scraperJobs: { id: 'id', status: 'status', attempts: 'attempts', createdAt: 'createdAt' },
-  shoppingListPrices: { shoppingListItemId: 'shoppingListItemId', store: 'store' },
-  shoppingListItems: {}, canonicalFoods: {},
+  shoppingListPrices: { householdId: 'priceHouseholdId', shoppingListItemId: 'shoppingListItemId', store: 'store' },
+  shoppingListItems: { id: 'shoppingListItemId', householdId: 'itemHouseholdId' }, canonicalFoods: {},
   memberships: { householdId: 'householdId', userId: 'userId' },
 }));
 
@@ -178,6 +179,7 @@ describe('scraper router — jobs', () => {
 
   it('writes candidates + chosenSku for each item when compare_prices completes', async () => {
     mocks.selectLimit.mockResolvedValueOnce([{ id: 'job-1', type: 'compare_prices', householdId: 'h', store: 'new_world' }]);
+    mocks.txSelectLimit.mockResolvedValueOnce([{ householdId: 'h' }]);
 
     const body = {
       ok: true,
@@ -205,11 +207,33 @@ describe('scraper router — jobs', () => {
       .type('json').send(bodyStr);
     expect(res.status).toBe(200);
     expect(mocks.insertValues).toHaveBeenCalledWith(expect.objectContaining({
+      householdId: 'h',
       shoppingListItemId: 'sli-1',
       sku: 'NW001',
       chosenSku: 'NW001',
       candidates: body.data.items[0]!.candidates,
     }));
+  });
+
+  it('rejects compare_prices results that reference another household item', async () => {
+    mocks.selectLimit.mockResolvedValueOnce([{ id: 'job-1', type: 'compare_prices', householdId: 'h', store: 'new_world' }]);
+    mocks.txSelectLimit.mockResolvedValueOnce([]);
+    const body = JSON.stringify({
+      ok: true,
+      data: {
+        items: [{
+          shoppingListItemId: 'foreign-sli',
+          candidates: [],
+          chosenSku: null,
+        }],
+      },
+    });
+    const res = await request(app)
+      .post('/api/scraper/jobs/job-1/result')
+      .set(sign('POST', '/api/scraper/jobs/job-1/result', body))
+      .type('json').send(body);
+    expect(res.status).toBe(500);
+    expect(mocks.insertValues).not.toHaveBeenCalled();
   });
 
   it('POST /import-past-orders returns 401 unauthenticated', async () => {

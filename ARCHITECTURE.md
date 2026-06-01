@@ -58,14 +58,14 @@ eat-thing/
 
 ## Data model
 
-Every domain table carries `household_id` and is filtered by request middleware. Primary keys are uuid.
+Household-scoped domain tables carry `household_id` and are filtered by request middleware. `canonical_foods` is the global curated reference table. Better-Auth-owned tables (`user`, `session`, `account`, `verification`) are also exceptions. Primary keys for household-scoped domain tables are uuid.
 
 | Table                      | Notes                                                                  |
 | -------------------------- | ---------------------------------------------------------------------- |
 | `households`               | One row per household                                                  |
 | `users`                    | Linked to Google identity by Better-Auth                               |
 | `memberships`              | n:m users ↔ households (with role: owner / member)                     |
-| `canonical_foods`          | id, name, default_unit, aliases[], density_g_per_ml?, **category** — taxonomy seeds; category is the source of inventory/aisle grouping |
+| `canonical_foods`          | Global curated reference table: id, name, default_unit, aliases[], density_g_per_ml?, **category** — taxonomy seeds; category is the source of inventory/aisle grouping |
 | `inventory_items`          | canonical_food_id, qty, unit, brand?, purchased_at, expires_at — **no `location` column** (the `inventory_location` enum was dropped 2026-05-15; grouping derives from `canonical_foods.category`) |
 | `recipes`                  | name, source_url?, source_image?, instructions, servings, **total_time_minutes?**, **tags[]** (migration 0009) |
 | `recipe_ingredients`       | recipe_id, canonical_food_id, qty, unit, optional, section?, metric_value? (display-only) |
@@ -76,7 +76,7 @@ Every domain table carries `household_id` and is filtered by request middleware.
 | `cook_events`              | meal_plan_entry_id, cooked_at, deductions JSONB, prompts_resolved      |
 | `supermarket_credentials`  | store, encrypted_session_blob, last_login_at                           |
 | `supermarket_products`     | store, sku, canonical_food_id, brand, last_seen_price, preferred       |
-| `shopping_list_prices`     | one row per (shopping_list_item, store): price, matched, in_stock, candidates JSONB, chosen_sku (Phase 4, D23) |
+| `shopping_list_prices`     | Household-scoped; one row per (shopping_list_item, store): price, matched, in_stock, candidates JSONB, chosen_sku (Phase 4, D23) |
 | `scraper_jobs`             | type, status (pending → in_progress → done / failed), payload, result JSONB |
 
 ## Key flows
@@ -109,7 +109,8 @@ Every domain table carries `household_id` and is filtered by request middleware.
 
 - Better-Auth with the Google provider; session cookies on the API origin.
 - Every request resolves an active `household_id` via the user's `memberships`. A user may belong to multiple households later; one exists today.
-- All API handlers go through a `withHousehold` middleware that injects `household_id` into queries. There is no domain table without it.
+- Household-scoped API handlers go through a `withHousehold` middleware that injects `household_id` into queries. Queries still filter directly on `household_id`; UUID obscurity and indirect joins are not tenancy controls.
+- Household-scoped domain tables carry `household_id`. `canonical_foods` stays global because it is a curated reference taxonomy. Better-Auth owns `user`, `session`, `account`, and `verification`, so those auth tables are also exceptions.
 
 ## Offline strategy
 
@@ -119,7 +120,7 @@ Every domain table carries `household_id` and is filtered by request middleware.
 ## Playwright worker (`apps/scraper`)
 
 - Runs on the home Mac mini (residential IP, always on).
-- Pulls jobs from the API over an authenticated channel (HMAC-signed requests).
+- Pulls jobs from the API over an authenticated channel (HMAC-signed requests using `SCRAPER_HMAC_SECRET`).
 - Per-store adapters live in `apps/scraper/src/stores/{newworld,paknsave,woolworths}.ts`. Only New World is wired for MVP (D21).
 - Sessions persisted as encrypted cookie blobs in `supermarket_credentials` (AES-256-GCM, key on the mini only — D17). First login per store is two-step: a headed `bootstrap:newworld` runs on the user's laptop and writes a plaintext `storageState`; the user copies it to the mini, where `bootstrap:ingest` encrypts and POSTs. Subsequent runs are headless and decrypt on the mini.
 - Job model: `scraper_jobs` (pending → in_progress → done | failed) with type-specific payloads. Types: `import_past_orders` (one-shot per store), `compare_prices` (per shopping list), `add_to_cart` (Phase 4, diffs the live trolley).
@@ -144,10 +145,10 @@ Every domain table carries `household_id` and is filtered by request middleware.
 - **Frontend + API:** Vercel (`apps/web` and `apps/server`).
 - **DB + storage:** Supabase free tier — Postgres for domain data, Storage for recipe / inventory photos. Rows hold storage paths; URLs are signed on read.
 - **Background workers:** `apps/scraper` on the home Mac mini, supervised by `launchd`. Polls the Vercel API outbound for pending jobs — no inbound port is exposed at home.
-- **Worker auth:** Mac mini holds a long-lived shared secret used to sign job-queue requests (HMAC).
+- **Worker auth:** Mac mini holds `SCRAPER_HMAC_SECRET`, a long-lived shared secret used to sign job-queue requests (HMAC).
 - **Secrets:**
-  - Vercel: OAuth client ID/secret, Supabase anon/service keys, HMAC key for worker auth.
-  - Mac mini: HMAC key, encryption key for supermarket session blobs (D17).
+  - Vercel: OAuth client ID/secret, Supabase anon/service keys, `SCRAPER_HMAC_SECRET`.
+  - Mac mini: `SCRAPER_HMAC_SECRET`, encryption key for supermarket session blobs (D17).
 
 ## Conventions specific to eat-thing
 

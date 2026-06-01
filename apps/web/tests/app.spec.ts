@@ -172,9 +172,9 @@ test.describe('authenticated routes load', () => {
     await importBtn.click();
     await expect(page.getByRole('heading', { name: /import recipe/i })).toBeVisible();
     await expect(page.getByRole('button', { name: 'URL', exact: true })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Photo', exact: true })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Search', exact: true })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Meal Planner', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'photo', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'search', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'meal planner', exact: true })).toBeVisible();
     // close modal
     await page.keyboard.press('Escape');
   });
@@ -256,10 +256,10 @@ test.describe('authenticated routes load', () => {
 
     await page.goto('/recipes');
     await page.getByRole('button', { name: /import/i }).click();
-    await page.getByRole('button', { name: 'Meal Planner', exact: true }).click();
+    await page.getByRole('button', { name: 'meal planner', exact: true }).click();
     await expect(page.getByText('Lemon Pasta')).toBeVisible();
 
-    await page.getByRole('button', { name: 'Import', exact: true }).click();
+    await page.getByRole('button', { name: 'import', exact: true }).click();
 
     await expect(page.getByRole('heading', { name: /review imported recipe/i })).toBeVisible();
     await expect(page.locator('#name')).toHaveValue('Lemon Pasta');

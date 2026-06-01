@@ -3,7 +3,7 @@ import { signedHeaders } from './sign.js';
 import type { JobResult, ScraperJob, SessionEnvelope, Store } from './types.js';
 
 const API_BASE = process.env.API_BASE_URL ?? 'http://localhost:3001';
-const SECRET = process.env.WORKER_HMAC_KEY ?? '';
+const SECRET = process.env.SCRAPER_HMAC_SECRET ?? '';
 
 async function workerFetch(method: string, path: string, body?: unknown): Promise<Response> {
   const bodyStr = body ? JSON.stringify(body) : '';

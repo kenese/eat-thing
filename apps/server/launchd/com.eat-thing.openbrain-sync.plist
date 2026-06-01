@@ -15,7 +15,7 @@
     <string>production</string>
     <key>API_BASE_URL</key>
     <string>https://your-app.vercel.app</string>
-    <key>WORKER_HMAC_KEY</key>
+    <key>SCRAPER_HMAC_SECRET</key>
     <string>REPLACE_ME</string>
     <key>OPENBRAIN_BASE_URL</key>
     <string>REPLACE_ME</string>

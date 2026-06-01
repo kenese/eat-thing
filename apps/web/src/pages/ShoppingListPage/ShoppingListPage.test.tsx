@@ -104,8 +104,8 @@ describe('ShoppingListPage prices', () => {
     hooks.usePricesForList.mockReturnValue({ data: { prices: [], job: null } });
     hooks.useRefreshPrices.mockReturnValue({ mutate: vi.fn(), isPending: false });
     renderPage();
-    expect(screen.getByText('Dairy & eggs')).toBeInTheDocument();
-    expect(screen.getByText('Pantry & dry goods')).toBeInTheDocument();
+    expect(screen.getByText('Dairy & cheese')).toBeInTheDocument();
+    expect(screen.getByText('Pantry & oils')).toBeInTheDocument();
   });
 
   it('renders matched price', () => {

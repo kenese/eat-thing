@@ -147,3 +147,9 @@ worker that wasn't running.
 - Detailed result JSON on `scraper_jobs` (no new audit table). Reconcile view reads it back via a dedicated endpoint.
 
 **Rationale:** Two-job pipeline is the simplest debuggable shape; each job has its own row + result JSON, and the user can resume work between steps. Per-100g/ml ranking matches how the user actually buys (cheapest per unit volume / weight, given a pack big enough to cover the recipe). Diff-against-trolley turns retries into no-ops, the safest property for a write that crosses an external service.
+
+## D24 — Architecture-audit correction: explicit tenant filters and one scraper HMAC secret
+**Date:** 2026-06-01
+**Context:** The architecture audit found shopping-list price/cart handlers that accepted a list UUID without first proving list ownership, and `shopping_list_prices` lacked its own `household_id`. The scraper server middleware and worker SDK also used different environment-variable names for the same HMAC secret.
+**Decision:** Household-scoped domain tables, including `shopping_list_prices`, carry `household_id`. Shopping-list price/cart handlers check list ownership and filter touched rows directly by the authenticated household. `canonical_foods` remains a global curated reference table; Better-Auth-owned tables remain auth-library exceptions. Scraper request signing uses `SCRAPER_HMAC_SECRET` everywhere.
+**Rationale:** UUIDs and indirect joins are not tenancy boundaries. A tenant column plus direct predicates makes isolation reviewable at each query. One environment-variable name prevents the server and Mac-mini worker from silently signing with different secrets.

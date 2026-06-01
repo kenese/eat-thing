@@ -66,12 +66,24 @@ const listCols = {
   finalizedAt: shoppingLists.finalizedAt,
 };
 
-async function itemsForList(listId: string) {
+async function findOwnedList(listId: string, householdId: string) {
+  const [list] = await db
+    .select({ id: shoppingLists.id })
+    .from(shoppingLists)
+    .where(and(eq(shoppingLists.id, listId), eq(shoppingLists.householdId, householdId)))
+    .limit(1);
+  return list;
+}
+
+async function itemsForList(listId: string, householdId: string) {
   const rows = await db
     .select(listItemCols)
     .from(shoppingListItems)
     .leftJoin(canonicalFoods, eq(canonicalFoods.id, shoppingListItems.canonicalFoodId))
-    .where(eq(shoppingListItems.shoppingListId, listId))
+    .where(and(
+      eq(shoppingListItems.shoppingListId, listId),
+      eq(shoppingListItems.householdId, householdId),
+    ))
     .orderBy(asc(shoppingListItems.source), asc(shoppingListItems.name));
   return rows.map(withCategory);
 }
@@ -224,6 +236,7 @@ router.post('/from-plan', withHousehold, async (req, res) => {
       // Delete only recipe-sourced items
       await tx.delete(shoppingListItems).where(and(
         eq(shoppingListItems.shoppingListId, id),
+        eq(shoppingListItems.householdId, hid),
         eq(shoppingListItems.source, 'recipe'),
       ));
 
@@ -237,8 +250,8 @@ router.post('/from-plan', withHousehold, async (req, res) => {
       return id;
     });
 
-    const [list] = await db.select(listCols).from(shoppingLists).where(eq(shoppingLists.id, listId));
-    const items = await itemsForList(listId);
+    const [list] = await db.select(listCols).from(shoppingLists).where(and(eq(shoppingLists.id, listId), eq(shoppingLists.householdId, hid)));
+    const items = await itemsForList(listId, hid);
     res.status(200).json({ ...list, items });
   } catch (err) {
     console.error(err);
@@ -256,7 +269,7 @@ router.get('/current', withHousehold, async (req, res) => {
       .orderBy(desc(shoppingLists.createdAt))
       .limit(1);
     if (!list) { res.status(404).json({ error: 'No shopping list found' }); return; }
-    const items = await itemsForList(list.id);
+    const items = await itemsForList(list.id, req.householdId);
     res.json({ ...list, items });
   } catch (err) {
     console.error(err);
@@ -278,10 +291,13 @@ router.put('/:listId/items/:itemId', withHousehold, async (req, res) => {
     const [existing] = await db
       .select({ householdId: shoppingListItems.householdId })
       .from(shoppingListItems)
-      .where(eq(shoppingListItems.id, itemId))
+      .where(and(
+        eq(shoppingListItems.id, itemId),
+        eq(shoppingListItems.shoppingListId, listId),
+        eq(shoppingListItems.householdId, req.householdId),
+      ))
       .limit(1);
     if (!existing) { res.status(404).json({ error: 'Item not found' }); return; }
-    if (existing.householdId !== req.householdId) { res.status(403).json({ error: 'Forbidden' }); return; }
 
     const d = parse.data;
     await db.update(shoppingListItems)
@@ -289,12 +305,16 @@ router.put('/:listId/items/:itemId', withHousehold, async (req, res) => {
         ...(d.checked !== undefined && { checked: d.checked }),
         ...(d.qty !== undefined && { qty: d.qty }),
       })
-      .where(eq(shoppingListItems.id, itemId));
+      .where(and(
+        eq(shoppingListItems.id, itemId),
+        eq(shoppingListItems.shoppingListId, listId),
+        eq(shoppingListItems.householdId, req.householdId),
+      ));
     const [full] = await db
       .select(listItemCols)
       .from(shoppingListItems)
       .leftJoin(canonicalFoods, eq(canonicalFoods.id, shoppingListItems.canonicalFoodId))
-      .where(eq(shoppingListItems.id, itemId));
+      .where(and(eq(shoppingListItems.id, itemId), eq(shoppingListItems.householdId, req.householdId)));
     res.json(full ? withCategory(full) : null);
   } catch (err) {
     console.error(err);
@@ -313,12 +333,11 @@ router.post('/:listId/items', withHousehold, async (req, res) => {
   if (!z.string().uuid().safeParse(listId).success) { res.status(404).json({ error: 'Not found' }); return; }
   try {
     const [list] = await db
-      .select({ householdId: shoppingLists.householdId })
+      .select({ id: shoppingLists.id })
       .from(shoppingLists)
-      .where(eq(shoppingLists.id, listId))
+      .where(and(eq(shoppingLists.id, listId), eq(shoppingLists.householdId, req.householdId)))
       .limit(1);
     if (!list) { res.status(404).json({ error: 'Shopping list not found' }); return; }
-    if (list.householdId !== req.householdId) { res.status(403).json({ error: 'Forbidden' }); return; }
 
     let foodId = parse.data.canonicalFoodId ?? null;
     if (!foodId) {
@@ -336,7 +355,7 @@ router.post('/:listId/items', withHousehold, async (req, res) => {
       .select(listItemCols)
       .from(shoppingListItems)
       .leftJoin(canonicalFoods, eq(canonicalFoods.id, shoppingListItems.canonicalFoodId))
-      .where(eq(shoppingListItems.id, id));
+      .where(and(eq(shoppingListItems.id, id), eq(shoppingListItems.householdId, req.householdId)));
     res.status(201).json(full ? withCategory(full) : null);
   } catch (err) {
     console.error(err);
@@ -353,11 +372,18 @@ router.delete('/:listId/items/:itemId', withHousehold, async (req, res) => {
     const [existing] = await db
       .select({ householdId: shoppingListItems.householdId })
       .from(shoppingListItems)
-      .where(eq(shoppingListItems.id, itemId))
+      .where(and(
+        eq(shoppingListItems.id, itemId),
+        eq(shoppingListItems.shoppingListId, listId),
+        eq(shoppingListItems.householdId, req.householdId),
+      ))
       .limit(1);
     if (!existing) { res.status(404).json({ error: 'Item not found' }); return; }
-    if (existing.householdId !== req.householdId) { res.status(403).json({ error: 'Forbidden' }); return; }
-    await db.delete(shoppingListItems).where(eq(shoppingListItems.id, itemId));
+    await db.delete(shoppingListItems).where(and(
+      eq(shoppingListItems.id, itemId),
+      eq(shoppingListItems.shoppingListId, listId),
+      eq(shoppingListItems.householdId, req.householdId),
+    ));
     res.json({ id: itemId });
   } catch (err) {
     console.error(err);
@@ -376,6 +402,8 @@ router.post('/:listId/items/purchase', withHousehold, async (req, res) => {
   if (!z.string().uuid().safeParse(listId).success) { res.status(404).json({ error: 'Not found' }); return; }
 
   try {
+    const list = await findOwnedList(listId, req.householdId);
+    if (!list) { res.status(404).json({ error: 'Shopping list not found' }); return; }
     const { itemIds } = parse.data;
     const items = await db
       .select({
@@ -386,11 +414,13 @@ router.post('/:listId/items/purchase', withHousehold, async (req, res) => {
         unit: shoppingListItems.unit,
       })
       .from(shoppingListItems)
-      .where(inArray(shoppingListItems.id, itemIds));
+      .where(and(
+        inArray(shoppingListItems.id, itemIds),
+        eq(shoppingListItems.shoppingListId, listId),
+        eq(shoppingListItems.householdId, req.householdId),
+      ));
 
-    if (items.some(i => i.householdId !== req.householdId)) {
-      res.status(403).json({ error: 'Forbidden' }); return;
-    }
+    if (items.length !== itemIds.length) { res.status(404).json({ error: 'Item not found' }); return; }
 
     await db.transaction(async tx => {
       const toInsert = items.filter(i => i.canonicalFoodId !== null);
@@ -406,12 +436,16 @@ router.post('/:listId/items/purchase', withHousehold, async (req, res) => {
           })),
         );
       }
-      await tx.delete(shoppingListItems).where(inArray(shoppingListItems.id, itemIds));
+      await tx.delete(shoppingListItems).where(and(
+        inArray(shoppingListItems.id, itemIds),
+        eq(shoppingListItems.shoppingListId, listId),
+        eq(shoppingListItems.householdId, req.householdId),
+      ));
     });
 
-    const [list] = await db.select(listCols).from(shoppingLists).where(eq(shoppingLists.id, listId));
-    const updatedItems = list ? await itemsForList(listId) : [];
-    res.json(list ? { ...list, items: updatedItems } : { items: [] });
+    const [updatedList] = await db.select(listCols).from(shoppingLists).where(and(eq(shoppingLists.id, listId), eq(shoppingLists.householdId, req.householdId)));
+    const updatedItems = updatedList ? await itemsForList(listId, req.householdId) : [];
+    res.json(updatedList ? { ...updatedList, items: updatedItems } : { items: [] });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });
@@ -429,21 +463,29 @@ router.post('/:listId/items/batch-delete', withHousehold, async (req, res) => {
   if (!z.string().uuid().safeParse(listId).success) { res.status(404).json({ error: 'Not found' }); return; }
 
   try {
+    const list = await findOwnedList(listId, req.householdId);
+    if (!list) { res.status(404).json({ error: 'Shopping list not found' }); return; }
     const { itemIds } = parse.data;
     const items = await db
       .select({ householdId: shoppingListItems.householdId })
       .from(shoppingListItems)
-      .where(inArray(shoppingListItems.id, itemIds));
+      .where(and(
+        inArray(shoppingListItems.id, itemIds),
+        eq(shoppingListItems.shoppingListId, listId),
+        eq(shoppingListItems.householdId, req.householdId),
+      ));
 
-    if (items.some(i => i.householdId !== req.householdId)) {
-      res.status(403).json({ error: 'Forbidden' }); return;
-    }
+    if (items.length !== itemIds.length) { res.status(404).json({ error: 'Item not found' }); return; }
 
-    await db.delete(shoppingListItems).where(inArray(shoppingListItems.id, itemIds));
+    await db.delete(shoppingListItems).where(and(
+      inArray(shoppingListItems.id, itemIds),
+      eq(shoppingListItems.shoppingListId, listId),
+      eq(shoppingListItems.householdId, req.householdId),
+    ));
 
-    const [list] = await db.select(listCols).from(shoppingLists).where(eq(shoppingLists.id, listId));
-    const updatedItems = list ? await itemsForList(listId) : [];
-    res.json(list ? { ...list, items: updatedItems } : { items: [] });
+    const [updatedList] = await db.select(listCols).from(shoppingLists).where(and(eq(shoppingLists.id, listId), eq(shoppingLists.householdId, req.householdId)));
+    const updatedItems = updatedList ? await itemsForList(listId, req.householdId) : [];
+    res.json(updatedList ? { ...updatedList, items: updatedItems } : { items: [] });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });
@@ -456,6 +498,8 @@ router.post('/:id/refresh-prices', withHousehold, async (req, res) => {
   const listId = req.params['id'] as string;
   if (!z.string().uuid().safeParse(listId).success) { res.status(404).json({ error: 'Not found' }); return; }
   try {
+    const list = await findOwnedList(listId, req.householdId);
+    if (!list) { res.status(404).json({ error: 'Shopping list not found' }); return; }
     const itemRows = await db
       .select({
         id: shoppingListItems.id,
@@ -465,7 +509,10 @@ router.post('/:id/refresh-prices', withHousehold, async (req, res) => {
         unit: shoppingListItems.unit,
       })
       .from(shoppingListItems)
-      .where(eq(shoppingListItems.shoppingListId, listId));
+      .where(and(
+        eq(shoppingListItems.shoppingListId, listId),
+        eq(shoppingListItems.householdId, req.householdId),
+      ));
 
     const preferredRows = await db
       .select({ canonicalFoodId: supermarketProducts.canonicalFoodId, brand: supermarketProducts.brand })
@@ -521,6 +568,7 @@ router.patch('/items/:itemId/chosen-sku', withHousehold, async (req, res) => {
       .where(and(
         eq(shoppingListPrices.shoppingListItemId, itemId),
         eq(shoppingListPrices.store, 'new_world'),
+        eq(shoppingListPrices.householdId, req.householdId),
         eq(shoppingListItems.householdId, req.householdId),
       ));
     const row = rows[0];
@@ -543,6 +591,7 @@ router.patch('/items/:itemId/chosen-sku', withHousehold, async (req, res) => {
       .where(and(
         eq(shoppingListPrices.shoppingListItemId, itemId),
         eq(shoppingListPrices.store, 'new_world'),
+        eq(shoppingListPrices.householdId, req.householdId),
       ));
 
     res.json({ ok: true, chosenSku: chosen.sku });
@@ -556,6 +605,8 @@ router.post('/:id/send-to-cart', withHousehold, async (req, res) => {
   const listId = req.params['id'] as string;
   if (!z.string().uuid().safeParse(listId).success) { res.status(404).json({ error: 'Not found' }); return; }
   try {
+    const list = await findOwnedList(listId, req.householdId);
+    if (!list) { res.status(404).json({ error: 'Shopping list not found' }); return; }
     const rows = await db
       .select({
         shoppingListItemId: shoppingListPrices.shoppingListItemId,
@@ -566,6 +617,8 @@ router.post('/:id/send-to-cart', withHousehold, async (req, res) => {
       .innerJoin(shoppingListItems, eq(shoppingListPrices.shoppingListItemId, shoppingListItems.id))
       .where(and(
         eq(shoppingListItems.shoppingListId, listId),
+        eq(shoppingListItems.householdId, req.householdId),
+        eq(shoppingListPrices.householdId, req.householdId),
         eq(shoppingListPrices.store, 'new_world'),
       ));
 
@@ -602,6 +655,8 @@ router.get('/:id/cart-result', withHousehold, async (req, res) => {
   const listId = req.params['id'] as string;
   if (!z.string().uuid().safeParse(listId).success) { res.json({ result: null }); return; }
   try {
+    const list = await findOwnedList(listId, req.householdId);
+    if (!list) { res.status(404).json({ error: 'Shopping list not found' }); return; }
     const rows = await db
       .select({ id: scraperJobs.id, status: scraperJobs.status, result: scraperJobs.result, error: scraperJobs.error, payload: scraperJobs.payload })
       .from(scraperJobs)
@@ -611,7 +666,7 @@ router.get('/:id/cart-result', withHousehold, async (req, res) => {
     const job = rows.find(r => {
       const p = r.payload as Record<string, unknown> | undefined;
       return p && p['shoppingListId'] === listId;
-    }) ?? rows[0] ?? null;
+    }) ?? null;
     res.json({
       job: job ? { id: job.id, status: job.status, error: job.error } : null,
       result: job?.result ?? null,
@@ -626,6 +681,8 @@ router.get('/:id/prices', withHousehold, async (req, res) => {
   const listId = req.params['id'] as string;
   if (!z.string().uuid().safeParse(listId).success) { res.json({ prices: [], job: null }); return; }
   try {
+    const list = await findOwnedList(listId, req.householdId);
+    if (!list) { res.status(404).json({ error: 'Shopping list not found' }); return; }
     const priceRows = await db
       .select({
         id: shoppingListPrices.id,
@@ -642,7 +699,11 @@ router.get('/:id/prices', withHousehold, async (req, res) => {
       })
       .from(shoppingListPrices)
       .innerJoin(shoppingListItems, eq(shoppingListPrices.shoppingListItemId, shoppingListItems.id))
-      .where(eq(shoppingListItems.shoppingListId, listId));
+      .where(and(
+        eq(shoppingListItems.shoppingListId, listId),
+        eq(shoppingListItems.householdId, req.householdId),
+        eq(shoppingListPrices.householdId, req.householdId),
+      ));
 
     const jobRows = await db
       .select({ id: scraperJobs.id, status: scraperJobs.status, error: scraperJobs.error, payload: scraperJobs.payload })

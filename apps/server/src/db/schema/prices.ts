@@ -1,9 +1,11 @@
 import { pgTable, uuid, text, timestamp, numeric, boolean, unique, jsonb } from 'drizzle-orm/pg-core';
+import { households } from './households.js';
 import { shoppingListItems } from './shopping.js';
 import { storeEnum } from './enums.js';
 
 export const shoppingListPrices = pgTable('shopping_list_prices', {
   id: uuid('id').primaryKey().defaultRandom(),
+  householdId: uuid('household_id').notNull().references(() => households.id, { onDelete: 'cascade' }),
   shoppingListItemId: uuid('shopping_list_item_id').notNull().references(() => shoppingListItems.id, { onDelete: 'cascade' }),
   store: storeEnum('store').notNull(),
   sku: text('sku'),
