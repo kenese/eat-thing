@@ -152,7 +152,7 @@ Household-scoped domain tables carry `household_id` and are filtered by request 
 
 - Inventory rows are mutable balance rows. Storage units are canonical (`g`, `ml`, `count`), and recipe/list calculations convert into that model.
 - Cook events are append-only cooking audit records. They do not fully derive inventory today; instead they capture what happened during cooking and preserve ambiguous-unit prompt answers for later review/refinement.
-- `canonical_foods` is a curated global taxonomy. An explicit confirm-new-food review step is planned; until that lands, avoid adding more silent insert paths.
+- `canonical_foods` is a curated global taxonomy. Inventory and manual shopping-list flows do not silently insert into it; they return `taxonomy_review_required` and require an explicit confirm-new-food step or reuse of an existing canonical food.
 
 ## Commands (Root)
 

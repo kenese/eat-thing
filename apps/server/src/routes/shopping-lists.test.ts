@@ -13,6 +13,12 @@ const mocks = vi.hoisted(() => ({
   insertValues: vi.fn(),
 }));
 
+vi.mock('../lib/find-or-create-food.js', () => ({
+  findExistingFoodOrRequireReview: vi.fn(),
+}));
+
+const { findExistingFoodOrRequireReview } = await import('../lib/find-or-create-food.js');
+
 vi.mock('../auth.js', () => ({ auth: { api: { getSession: mocks.getSession } } }));
 vi.mock('better-auth/node', () => ({ fromNodeHeaders: (h: unknown) => h }));
 vi.mock('drizzle-orm', () => ({
@@ -198,6 +204,26 @@ describe('shopping-lists router', () => {
       .post('/api/shopping-lists/list-id/items')
       .send({ name: 'Dish soap', qty: 1, unit: 'count' });
     expect(res.status).toBe(400);
+  });
+
+  it('POST manual item returns taxonomy review required for a new food', async () => {
+    mocks.getSession.mockResolvedValue({ user: { id: 'u1' } });
+    mocks.membershipLimit.mockResolvedValue([{ householdId: 'hh-1' }]);
+    mocks.selectFrom.mockResolvedValueOnce([{ id: 'list-1' }]);
+    vi.mocked(findExistingFoodOrRequireReview).mockResolvedValue({
+      kind: 'review',
+      proposed: { name: 'Dish Soap', category: 'other', defaultUnit: 'count' },
+      matches: [],
+    });
+
+    const res = await request(app)
+      .post('/api/shopping-lists/550e8400-e29b-41d4-a716-446655440001/items')
+      .send({ name: 'Dish Soap', qty: 1, unit: 'count', category: 'other' });
+
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe('taxonomy_review_required');
+    expect(res.body.proposed).toEqual({ name: 'Dish Soap', category: 'other', defaultUnit: 'count' });
+    expect(res.body.matches).toEqual([]);
   });
 
   it('rejects from-plan POST with missing entryIds', async () => {

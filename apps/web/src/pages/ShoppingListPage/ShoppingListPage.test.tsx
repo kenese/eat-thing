@@ -16,6 +16,7 @@ const hooks = vi.hoisted(() => ({
   useSendToCart: vi.fn(),
   useCartResult: vi.fn(),
   useFoodSearch: vi.fn(),
+  useCreateFood: vi.fn(),
 }));
 
 vi.mock('../../hooks/useShoppingList', () => ({
@@ -43,6 +44,7 @@ vi.mock('../../hooks/usePricesForList', () => ({
 }));
 vi.mock('../../hooks/useFoodSearch', () => ({
   useFoodSearch: hooks.useFoodSearch,
+  useCreateFood: hooks.useCreateFood,
 }));
 
 function renderPage() {
@@ -72,6 +74,7 @@ describe('ShoppingListPage prices', () => {
     hooks.useSendToCart.mockReturnValue({ mutate: vi.fn(), isPending: false });
     hooks.useCartResult.mockReturnValue({ data: undefined });
     hooks.useFoodSearch.mockReturnValue({ data: [] });
+    hooks.useCreateFood.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
   });
 
   it('shows recipe name on recipe-sourced items', () => {
@@ -171,6 +174,40 @@ describe('ShoppingListPage prices', () => {
     const sendBtn = screen.getByRole('button', { name: /send to/i });
     expect(sendBtn).toBeDisabled();
   });
+
+  it('shows taxonomy review actions when adding a brand-new manual item', async () => {
+    const mutateAsync = vi.fn()
+      .mockRejectedValueOnce(Object.assign(new Error('Taxonomy review required'), {
+        status: 409,
+        code: 'taxonomy_review_required',
+        body: {
+          code: 'taxonomy_review_required',
+          error: 'Taxonomy review required',
+          proposed: { name: 'Dish Soap', category: 'other', defaultUnit: 'count' },
+          matches: [{ id: 'food-1', name: 'Dish soap', category: 'other', defaultUnit: 'count' }],
+        },
+      }))
+      .mockResolvedValueOnce({});
+    hooks.useAddShoppingListItem.mockReturnValue({ mutateAsync, isPending: false });
+    hooks.usePricesForList.mockReturnValue({ data: { prices: [], job: null } });
+    hooks.useRefreshPrices.mockReturnValue({ mutate: vi.fn(), isPending: false });
+
+    renderPage();
+
+    fireEvent.change(screen.getByPlaceholderText(/food name or search/i), { target: { value: 'Dish Soap' } });
+    fireEvent.change(screen.getByPlaceholderText(/qty/i), { target: { value: '1' } });
+    fireEvent.click(screen.getByRole('button', { name: /\+ add/i }));
+
+    await screen.findByText(/review this new canonical food before adding it/i);
+    fireEvent.click(screen.getByRole('button', { name: /use existing: dish soap/i }));
+
+    await waitFor(() => expect(mutateAsync).toHaveBeenLastCalledWith(expect.objectContaining({
+      canonicalFoodId: 'food-1',
+      name: 'Dish Soap',
+      qty: 1,
+      unit: 'count',
+    })));
+  });
 });
 
 describe('ShoppingListPage multi-select', () => {
@@ -186,6 +223,7 @@ describe('ShoppingListPage multi-select', () => {
     hooks.useSendToCart.mockReturnValue({ mutate: vi.fn(), isPending: false });
     hooks.useCartResult.mockReturnValue({ data: undefined });
     hooks.useFoodSearch.mockReturnValue({ data: [] });
+    hooks.useCreateFood.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
   });
 
   it('action bar is hidden when nothing is selected', () => {
@@ -298,6 +336,7 @@ describe('ShoppingListPage — phase 4 candidate review', () => {
     hooks.useSendToCart.mockReturnValue({ mutate: vi.fn(), isPending: false });
     hooks.useCartResult.mockReturnValue({ data: undefined });
     hooks.useFoodSearch.mockReturnValue({ data: [] });
+    hooks.useCreateFood.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
   });
 
   it('shows "Sole match" badge for sole-resolution items', async () => {
@@ -441,6 +480,7 @@ describe('ShoppingListPage — send to cart', () => {
     hooks.useRefreshPrices.mockReturnValue({ mutate: vi.fn(), isPending: false });
     hooks.useChooseSku.mockReturnValue({ mutate: vi.fn(), isPending: false });
     hooks.useFoodSearch.mockReturnValue({ data: [] });
+    hooks.useCreateFood.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
   });
 
   it('Send to cart button is disabled while a manual pick is outstanding', async () => {
