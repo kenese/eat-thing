@@ -1,3 +1,4 @@
+import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { DatePickerModal } from './DatePickerModal';
@@ -62,5 +63,61 @@ describe('DatePickerModal', () => {
 
     expect(onClose).toHaveBeenCalledOnce();
     expect(onConfirm).not.toHaveBeenCalled();
+  });
+
+  it('closes on Escape', () => {
+    const onClose = vi.fn();
+
+    render(
+      <DatePickerModal initialDate="2026-06-03" onConfirm={vi.fn()} onClose={onClose} />,
+    );
+
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Wednesday 3 June 2026' }), { key: 'Escape' });
+
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it('focuses the selected day, traps tab navigation, and returns focus to the trigger', () => {
+    function Wrapper() {
+      const [open, setOpen] = React.useState(false);
+
+      return (
+        <>
+          <button type="button" onClick={() => setOpen(true)}>
+            Open picker
+          </button>
+          {open ? (
+            <DatePickerModal
+              initialDate="2026-06-03"
+              onConfirm={vi.fn()}
+              onClose={() => setOpen(false)}
+            />
+          ) : null}
+        </>
+      );
+    }
+
+    render(<Wrapper />);
+
+    const trigger = screen.getByRole('button', { name: 'Open picker' });
+    trigger.focus();
+    fireEvent.click(trigger);
+
+    const selectedDay = screen.getByRole('button', { name: 'Wednesday 3 June 2026' });
+    expect(selectedDay).toHaveFocus();
+
+    const closeButton = screen.getByRole('button', { name: 'Close' });
+    const confirmButton = screen.getByRole('button', { name: 'choose wednesday 3 june 2026' });
+
+    closeButton.focus();
+    fireEvent.keyDown(closeButton, { key: 'Tab', shiftKey: true });
+    expect(confirmButton).toHaveFocus();
+
+    confirmButton.focus();
+    fireEvent.keyDown(confirmButton, { key: 'Tab' });
+    expect(closeButton).toHaveFocus();
+
+    fireEvent.keyDown(closeButton, { key: 'Escape' });
+    expect(trigger).toHaveFocus();
   });
 });

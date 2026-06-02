@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { addDays, toIsoDate } from '../lib/dateUtils';
 import './DatePickerModal.css';
 
@@ -39,6 +39,9 @@ function formatDayLabel(date: Date): string {
 export function DatePickerModal({ initialDate, onConfirm, onClose }: DatePickerModalProps) {
   const [selectedDate, setSelectedDate] = useState(initialDate);
   const [displayMonth, setDisplayMonth] = useState(() => startOfMonth(parseIsoDate(initialDate)));
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const selectedDayRef = useRef<HTMLButtonElement | null>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
 
   const dayCells = useMemo(() => {
     const gridStart = monthGridStart(displayMonth);
@@ -56,9 +59,61 @@ export function DatePickerModal({ initialDate, onConfirm, onClose }: DatePickerM
 
   const selectedLabel = useMemo(() => formatDayLabel(parseIsoDate(selectedDate)), [selectedDate]);
 
+  useEffect(() => {
+    previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    selectedDayRef.current?.focus();
+
+    return () => {
+      previousFocusRef.current?.focus();
+    };
+  }, []);
+
+  function getFocusableElements() {
+    if (!panelRef.current) return [] as HTMLElement[];
+    return Array.from(
+      panelRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ),
+    );
+  }
+
+  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      onClose();
+      return;
+    }
+
+    if (event.key !== 'Tab') return;
+
+    const focusable = getFocusableElements();
+    if (focusable.length === 0) return;
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const active = document.activeElement;
+
+    if (event.shiftKey && active === first) {
+      event.preventDefault();
+      last?.focus();
+      return;
+    }
+
+    if (!event.shiftKey && active === last) {
+      event.preventDefault();
+      first?.focus();
+    }
+  }
+
   return (
-    <div className="date-picker-overlay" role="dialog" aria-modal="true" aria-label="Choose a date">
-      <div className="date-picker-panel">
+    <div
+      className="date-picker-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Choose a date"
+      onKeyDown={handleKeyDown}
+    >
+      <div className="date-picker-panel" ref={panelRef}>
         <div className="date-picker-header">
           <div>
             <p className="date-picker-eyebrow">load date</p>
@@ -107,6 +162,7 @@ export function DatePickerModal({ initialDate, onConfirm, onClose }: DatePickerM
           {dayCells.map((day) => (
             <button
               key={day.iso}
+              ref={day.iso === selectedDate ? selectedDayRef : undefined}
               className={[
                 'date-picker-day',
                 day.iso === selectedDate && 'date-picker-day--selected',

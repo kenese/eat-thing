@@ -24,8 +24,52 @@ const DRAG_TYPE = 'application/x-eat-recipe-id';
 const DRAG_ENTRY_TYPE = 'application/x-eat-entry-id';
 const DRAG_ENTRY_DATE_TYPE = 'application/x-eat-entry-date';
 const MAX_ENTRIES_PER_DAY = 4;
+const defaultNowProvider = () => new Date();
 
 type DayKind = 'cook' | 'shop' | 'leftover' | 'open';
+
+function startOfLocalDay(date: Date): Date {
+  const next = new Date(date);
+  next.setHours(0, 0, 0, 0);
+  return next;
+}
+
+export function msUntilNextLocalDay(now: Date): number {
+  const nextMidnight = new Date(now);
+  nextMidnight.setHours(24, 0, 0, 0);
+  return Math.max(nextMidnight.getTime() - now.getTime(), 1);
+}
+
+export function useCurrentLocalDay(nowProvider: () => Date = defaultNowProvider): Date {
+  const [today, setToday] = useState(() => startOfLocalDay(nowProvider()));
+
+  useEffect(() => {
+    let timeoutId: number | null = null;
+    let cancelled = false;
+
+    function schedule(from: Date) {
+      timeoutId = window.setTimeout(() => {
+        if (cancelled) return;
+        const nextToday = startOfLocalDay(nowProvider());
+        setToday(nextToday);
+        schedule(nowProvider());
+      }, msUntilNextLocalDay(from));
+    }
+
+    schedule(nowProvider());
+
+    return () => {
+      cancelled = true;
+      if (timeoutId !== null) clearTimeout(timeoutId);
+    };
+  }, [nowProvider]);
+
+  return today;
+}
+
+export function resolveAnchorAfterTodayChange(anchor: Date, previousToday: Date, nextToday: Date): Date {
+  return toIsoDate(anchor) === toIsoDate(previousToday) ? nextToday : anchor;
+}
 
 interface DayEntry {
   entry: MealPlanEntry;
@@ -252,12 +296,13 @@ function DayCard({
 
 export function PlanPage() {
   const navigate = useNavigate();
-  const today = useMemo(() => new Date(), []);
-  const [anchor, setAnchor] = useState(today);
+  const today = useCurrentLocalDay();
+  const [anchor, setAnchor] = useState(() => today);
   const [isDatePickerOpen, setDatePickerOpen] = useState(false);
   const [pendingScrollIso, setPendingScrollIso] = useState<string | null>(() => toIsoDate(anchor));
   const { from, to } = useMemo(() => planWindow(anchor), [anchor]);
   const days = useMemo(() => planWindowDays(anchor, today), [anchor, today]);
+  const previousTodayRef = useRef(today);
 
   const { data: entriesResp, isLoading: planLoading } = useMealPlanEntries(from, to);
   const { data: recipes = [] } = useRecipes();
@@ -357,6 +402,19 @@ export function PlanPage() {
       setPendingScrollIso(null);
     }
   }, [pendingScrollIso, planLoading]);
+
+  useEffect(() => {
+    const previousToday = previousTodayRef.current;
+    if (toIsoDate(previousToday) === toIsoDate(today)) return;
+
+    const nextAnchor = resolveAnchorAfterTodayChange(anchor, previousToday, today);
+    if (toIsoDate(nextAnchor) !== toIsoDate(anchor)) {
+      setAnchor(nextAnchor);
+      setPendingScrollIso(toIsoDate(nextAnchor));
+    }
+
+    previousTodayRef.current = today;
+  }, [anchor, today]);
 
   function scrollByColumn(dir: -1 | 1) {
     if (!weekRef.current) return;
