@@ -63,6 +63,8 @@ function recipe(id: string, ingredients: { name: string; canonicalFoodId: string
     sourceUrl: null,
     sourceImage: null,
     instructions: null,
+    totalTimeMinutes: null,
+    tags: [],
     ingredients: ingredients.map((ing, i) => ({
       id: `${id}-ing-${i}`,
       recipeId: id,

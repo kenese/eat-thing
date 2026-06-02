@@ -62,6 +62,8 @@ function recipe(
     sourceUrl: null,
     sourceImage: null,
     instructions: null,
+    totalTimeMinutes: null,
+    tags: [],
     ingredients: ingredients.map((ingredient, index) => ({
       id: `${id}-ingredient-${index + 1}`,
       recipeId: id,
