@@ -78,7 +78,7 @@ export async function generateGeminiJson<T>(prompt: string, options: GeminiOptio
     throw err;
   }
 
-  const json = await res.json() as GeminiResponse;
+  const json = await res!.json() as GeminiResponse;
   if (json?.usageMetadata?.totalTokenCount && json.usageMetadata.totalTokenCount >= 8192) {
     console.log('LIKELY JSON NOT COMPLETE', json?.usageMetadata)
   }
