@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { withHousehold } from '../middleware/with-household.js';
 import { db } from '../db/index.js';
 import { inventoryItems, canonicalFoods } from '../db/schema/index.js';
-import { findOrCreateFood, type FoodCategory } from '../lib/find-or-create-food.js';
+import { findExistingFoodOrRequireReview, type FoodCategory } from '../lib/find-or-create-food.js';
 
 const router: ExpressRouter = Router();
 
@@ -92,7 +92,21 @@ router.post('/', withHousehold, async (req, res) => {
   try {
     let foodId = parse.data.canonicalFoodId;
     if (!foodId) {
-      foodId = await findOrCreateFood(parse.data.foodName!, parse.data.category as FoodCategory, parse.data.unit);
+      const result = await findExistingFoodOrRequireReview(
+        parse.data.foodName!,
+        parse.data.category as FoodCategory,
+        parse.data.unit,
+      );
+      if (result.kind === 'review') {
+        res.status(409).json({
+          error: 'Taxonomy review required',
+          code: 'taxonomy_review_required',
+          proposed: result.proposed,
+          matches: result.matches,
+        });
+        return;
+      }
+      foodId = result.id;
     }
 
     const { qty, unit, brand, purchasedAt, expiresAt } = parse.data;

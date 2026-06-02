@@ -4,7 +4,7 @@ import { and, eq, asc, desc, sql, inArray } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { withHousehold } from '../middleware/with-household.js';
 import { db } from '../db/index.js';
-import { findOrCreateFood, type FoodCategory } from '../lib/find-or-create-food.js';
+import { findExistingFoodOrRequireReview, type FoodCategory } from '../lib/find-or-create-food.js';
 import { normalizeRecipeAmount } from '../lib/recipe-quantities.js';
 import { amountInUnit } from '../lib/food-amounts.js';
 import { listLowStockStaples } from '../lib/low-stock-staples.js';
@@ -354,7 +354,21 @@ router.post('/:listId/items', withHousehold, async (req, res) => {
 
     let foodId = parse.data.canonicalFoodId ?? null;
     if (!foodId) {
-      foodId = await findOrCreateFood(parse.data.name, parse.data.category as FoodCategory, parse.data.unit);
+      const result = await findExistingFoodOrRequireReview(
+        parse.data.name,
+        parse.data.category as FoodCategory,
+        parse.data.unit,
+      );
+      if (result.kind === 'review') {
+        res.status(409).json({
+          error: 'Taxonomy review required',
+          code: 'taxonomy_review_required',
+          proposed: result.proposed,
+          matches: result.matches,
+        });
+        return;
+      }
+      foodId = result.id;
     }
 
     const id = uuidv4();

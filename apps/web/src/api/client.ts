@@ -1,8 +1,47 @@
 import { getDevMockResponse } from '../dev/mockApi';
 import { isDevSessionEnabled } from '../hooks/useSession';
+import type { TaxonomyReviewRequiredResponse } from '@eat/shared';
 
-interface ApiError extends Error {
+export class ApiError extends Error {
   status: number;
+  body: unknown;
+  code?: string;
+
+  constructor(status: number, message: string, body: unknown) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.body = body;
+    this.code = typeof body === 'object' && body !== null && 'code' in body
+      ? String((body as { code?: unknown }).code)
+      : undefined;
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+export function getApiErrorCode(err: unknown): string | undefined {
+  if (err instanceof ApiError) return err.code;
+  if (isRecord(err) && 'code' in err && typeof err.code === 'string') return err.code;
+  return undefined;
+}
+
+export function getTaxonomyReviewRequiredResponse(err: unknown): TaxonomyReviewRequiredResponse | null {
+  if (getApiErrorCode(err) !== 'taxonomy_review_required') return null;
+
+  const body = err instanceof ApiError
+    ? err.body
+    : isRecord(err) && 'body' in err
+      ? err.body
+      : null;
+
+  if (!isRecord(body)) return null;
+  if (body.code !== 'taxonomy_review_required') return null;
+  if (!isRecord(body.proposed) || !Array.isArray(body.matches) || typeof body.error !== 'string') return null;
+
+  return body as unknown as TaxonomyReviewRequiredResponse;
 }
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
@@ -23,8 +62,16 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
       console.log('client error json fail', e);
       return e;
     });
-    console.log('ApiFetch failed: ', body?.message);
-    throw new Error('ApiFetch failed with error: ' + body?.message);
+    const message =
+      (typeof body === 'object' && body !== null && 'message' in body && typeof (body as { message?: unknown }).message === 'string'
+        ? (body as { message: string }).message
+        : undefined)
+      ?? (typeof body === 'object' && body !== null && 'error' in body && typeof (body as { error?: unknown }).error === 'string'
+        ? (body as { error: string }).error
+        : undefined)
+      ?? `Request failed (${res.status})`;
+    console.log('ApiFetch failed: ', message);
+    throw new ApiError(res.status, message, body);
   }
 
   if (res.status === 204) return undefined as T;

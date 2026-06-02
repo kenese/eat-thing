@@ -47,8 +47,10 @@ vi.mock('../db/schema/index.js', () => ({
 }));
 
 vi.mock('../lib/find-or-create-food.js', () => ({
-  findOrCreateFood: vi.fn(),
+  findExistingFoodOrRequireReview: vi.fn(),
 }));
+
+const { findExistingFoodOrRequireReview } = await import('../lib/find-or-create-food.js');
 
 const { default: inventoryRouter } = await import('./inventory');
 
@@ -96,5 +98,29 @@ describe('inventory router', () => {
       .send({ unit: 'oz' });
 
     expect(res.status).toBe(400);
+  });
+
+  it('returns taxonomy review required for a brand-new manual food', async () => {
+    mocks.getSession.mockResolvedValue({ user: { id: 'user-1' } });
+    mocks.membershipLimit.mockResolvedValue([{ householdId: 'hh-1' }]);
+    vi.mocked(findExistingFoodOrRequireReview).mockResolvedValue({
+      kind: 'review',
+      proposed: { name: 'Dish Soap', category: 'other', defaultUnit: 'count' },
+      matches: [{ id: 'food-1', name: 'Dish soap', category: 'other', defaultUnit: 'count' }],
+    });
+
+    const res = await request(app)
+      .post('/api/inventory')
+      .send({
+        foodName: 'Dish Soap',
+        category: 'other',
+        qty: 1,
+        unit: 'count',
+      });
+
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe('taxonomy_review_required');
+    expect(res.body.proposed).toEqual({ name: 'Dish Soap', category: 'other', defaultUnit: 'count' });
+    expect(res.body.matches).toHaveLength(1);
   });
 });

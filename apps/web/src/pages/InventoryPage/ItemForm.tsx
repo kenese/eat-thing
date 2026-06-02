@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useId } from 'react';
 import { useFoodSearch } from '../../hooks/useFoodSearch';
 import { useAddInventoryItem, useUpdateInventoryItem } from '../../hooks/useInventory';
-import type { InventoryRow, CanonicalFood } from '@eat/shared';
+import { useCreateFood } from '../../hooks/useFoodSearch';
+import { getTaxonomyReviewRequiredResponse } from '../../api/client';
+import type { InventoryRow, CanonicalFood, TaxonomyReviewRequiredResponse } from '@eat/shared';
 import { CATEGORY_ORDER, CATEGORY_LABEL } from '@eat/taxonomy';
 import type { Category } from '@eat/taxonomy';
 import './ItemForm.css';
@@ -34,6 +36,7 @@ function FoodCombobox({ value, displayName, onChange, onTextChange }: FoodCombob
   const [open, setOpen] = useState(false);
   const { data: results = [] } = useFoodSearch(input);
   const ref = useRef<HTMLDivElement>(null);
+  const inputId = useId();
 
   useEffect(() => { setInput(displayName); }, [displayName]);
 
@@ -47,8 +50,9 @@ function FoodCombobox({ value, displayName, onChange, onTextChange }: FoodCombob
 
   return (
     <div className="food-combobox" ref={ref}>
-      <label className="form-label">Food *</label>
+      <label className="form-label" htmlFor={inputId}>Food *</label>
       <input
+        id={inputId}
         className="form-input"
         type="text"
         placeholder="Search or type a new food name…"
@@ -100,8 +104,10 @@ export function ItemForm({ mode, item, onClose }: ItemFormProps) {
   });
 
   const [error, setError] = useState('');
+  const [review, setReview] = useState<TaxonomyReviewRequiredResponse | null>(null);
   const addMutation = useAddInventoryItem();
   const updateMutation = useUpdateInventoryItem(item?.id ?? '');
+  const createFood = useCreateFood();
   const isPending = addMutation.isPending || updateMutation.isPending;
 
   const isNewFood = mode === 'add' && !form.canonicalFoodId;
@@ -110,9 +116,39 @@ export function ItemForm({ mode, item, onClose }: ItemFormProps) {
     setForm(f => ({ ...f, [k]: v }));
   }
 
+  function inventoryPayload(qty: number, canonicalFoodId?: string) {
+    if (canonicalFoodId) {
+      return {
+        canonicalFoodId,
+        qty,
+        unit: form.unit,
+        brand: form.brand.trim() || null,
+        purchasedAt: form.purchasedAt || null,
+        expiresAt: form.expiresAt || null,
+      };
+    }
+    return {
+      foodName: form.foodName.trim(),
+      category: form.category,
+      qty,
+      unit: form.unit,
+      brand: form.brand.trim() || null,
+      purchasedAt: form.purchasedAt || null,
+      expiresAt: form.expiresAt || null,
+    };
+  }
+
+  async function submitReviewedFood(canonicalFoodId: string) {
+    const qty = parseFloat(form.qty);
+    await addMutation.mutateAsync(inventoryPayload(qty, canonicalFoodId));
+    setReview(null);
+    onClose();
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
+    setReview(null);
 
     if (!form.foodName.trim()) { setError('Please enter or select a food.'); return; }
     if (isNewFood && !form.category) { setError('Please select a category.'); return; }
@@ -122,26 +158,7 @@ export function ItemForm({ mode, item, onClose }: ItemFormProps) {
 
     try {
       if (mode === 'add') {
-        if (form.canonicalFoodId) {
-          await addMutation.mutateAsync({
-            canonicalFoodId: form.canonicalFoodId,
-            qty,
-            unit: form.unit,
-            brand: form.brand.trim() || null,
-            purchasedAt: form.purchasedAt || null,
-            expiresAt: form.expiresAt || null,
-          });
-        } else {
-          await addMutation.mutateAsync({
-            foodName: form.foodName.trim(),
-            category: form.category,
-            qty,
-            unit: form.unit,
-            brand: form.brand.trim() || null,
-            purchasedAt: form.purchasedAt || null,
-            expiresAt: form.expiresAt || null,
-          });
-        }
+        await addMutation.mutateAsync(inventoryPayload(qty, form.canonicalFoodId || undefined));
       } else {
         await updateMutation.mutateAsync({
           qty,
@@ -153,6 +170,11 @@ export function ItemForm({ mode, item, onClose }: ItemFormProps) {
       }
       onClose();
     } catch (err: unknown) {
+      const taxonomyReview = getTaxonomyReviewRequiredResponse(err);
+      if (taxonomyReview) {
+        setReview(taxonomyReview);
+        return;
+      }
       setError(err instanceof Error ? err.message : 'Something went wrong.');
     }
   }
@@ -199,7 +221,10 @@ export function ItemForm({ mode, item, onClose }: ItemFormProps) {
                 id="category"
                 className="form-select"
                 value={form.category}
-                onChange={e => set('category', e.target.value as Category)}
+                onChange={e => {
+                  setReview(null);
+                  set('category', e.target.value as Category);
+                }}
               >
                 {CATEGORY_ORDER.map(cat => (
                   <option key={cat} value={cat}>{CATEGORY_LABEL[cat]}</option>
@@ -272,6 +297,42 @@ export function ItemForm({ mode, item, onClose }: ItemFormProps) {
               />
             </div>
           </div>
+
+          {review && (
+            <div className="form-field">
+              <p className="form-error" role="alert">Review this new canonical food before saving.</p>
+              {review.matches.length > 0 && (
+                <div className="form-field">
+                  {review.matches.map(match => (
+                    <button
+                      key={match.id}
+                      type="button"
+                      className="btn-secondary"
+                      onClick={() => submitReviewedFood(match.id)}
+                      disabled={isPending || createFood.isPending}
+                    >
+                      Use existing: {match.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={isPending || createFood.isPending}
+                onClick={async () => {
+                  try {
+                    const created = await createFood.mutateAsync(review.proposed);
+                    await submitReviewedFood(created.id);
+                  } catch (err: unknown) {
+                    setError(err instanceof Error ? err.message : 'Something went wrong.');
+                  }
+                }}
+              >
+                {createFood.isPending ? 'Creating…' : `Create canonical food: ${review.proposed.name}`}
+              </button>
+            </div>
+          )}
 
           {error && <p className="form-error" role="alert">{error}</p>}
 
