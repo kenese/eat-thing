@@ -9,6 +9,7 @@ import {
   useDeleteMealPlanEntry,
 } from '../../hooks/useMealPlan';
 import { CookModal } from './CookModal';
+import { RecipeForm } from '../RecipesPage/RecipeForm';
 import { PageTitle } from '../../components/PageTitle';
 import { StatusChip } from '../../components/StatusChip';
 import type { MealPlanEntry, Recipe } from '@eat/shared';
@@ -39,17 +40,19 @@ function MealRow({
   isPast,
   onMarkCooked,
   onDelete,
+  onOpenRecipe,
 }: {
   de: DayEntry;
   dark: boolean;
   isPast: boolean;
   onMarkCooked: () => void;
   onDelete: () => void;
+  onOpenRecipe: () => void;
 }) {
   return (
     <div className="day-col-extra">
       <div className="day-col-extra-body">
-        <span className={`day-col-extra-name${isPast ? ' day-col-name--past' : ''}`}>{de.entry.recipeName}</span>
+        <button className={`day-col-extra-name day-col-recipe-link${isPast ? ' day-col-name--past' : ''}`} onClick={onOpenRecipe}>{de.entry.recipeName}</button>
         {de.missingNames.length > 0 ? (
           <span className="day-col-need" style={{ color: dark ? 'rgba(243,245,242,0.7)' : undefined }}>
             need {de.missingNames[0]}{de.missingNames.length > 1 ? ` & ${de.missingNames.length - 1} more` : ''}
@@ -82,6 +85,7 @@ function DayCard({
   onDeleteEntry,
   onMarkCookedEntry,
   onMoveEntry,
+  onOpenRecipe,
 }: {
   iso: string;
   label: string;
@@ -93,6 +97,7 @@ function DayCard({
   onDeleteEntry: (id: string) => void;
   onMarkCookedEntry: (id: string) => void;
   onMoveEntry: (entryId: string) => void;
+  onOpenRecipe: (recipeId: string) => void;
 }) {
   const [dragOver, setDragOver] = useState(false);
   const atCapacity = entries.length >= MAX_ENTRIES_PER_DAY;
@@ -151,7 +156,7 @@ function DayCard({
                 <svg width="16" height="16" viewBox="0 0 12 12" fill="none" style={{ flexShrink: 0, marginTop: 2 }}>
                   <path d="M2 6.5L4.5 9L10 3.5" stroke="var(--fresh)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
-                <span className="day-col-name day-col-name--past">{first.entry.recipeName}</span>
+                <button className="day-col-name day-col-name--past day-col-recipe-link" onClick={() => onOpenRecipe(first.entry.recipeId)}>{first.entry.recipeName}</button>
               </div>
               <div style={{ flex: 1 }} />
               <div className="day-col-cooked-label">
@@ -175,7 +180,7 @@ function DayCard({
                     ? <img src={first.sourceImage} alt="" />
                     : <span className="day-col-image-fallback">{first.entry.recipeName}</span>}
                 </div>
-                <div className="day-col-name">{first.entry.recipeName}</div>
+                <button className="day-col-name day-col-recipe-link" onClick={(e) => { e.stopPropagation(); onOpenRecipe(first.entry.recipeId); }}>{first.entry.recipeName}</button>
               </div>
 
               {first.missingNames.length > 0 && (
@@ -193,6 +198,7 @@ function DayCard({
                   isPast={false}
                   onMarkCooked={() => onMarkCookedEntry(fu.entry.id)}
                   onDelete={() => onDeleteEntry(fu.entry.id)}
+                  onOpenRecipe={() => onOpenRecipe(fu.entry.recipeId)}
                 />
               ))}
 
@@ -258,6 +264,7 @@ export function PlanPage() {
   const deleteEntry = useDeleteMealPlanEntry();
 
   const [cookingEntryId, setCookingEntryId] = useState<string | null>(null);
+  const [viewRecipeId, setViewRecipeId] = useState<string | null>(null);
   const cookingEntry = cookingEntryId
     ? (entriesResp?.entries ?? []).find((e) => e.id === cookingEntryId) ?? null
     : null;
@@ -479,6 +486,7 @@ export function PlanPage() {
               onDeleteEntry={(id) => deleteEntry.mutate(id)}
               onMarkCookedEntry={(id) => setCookingEntryId(id)}
               onMoveEntry={(entryId) => handleMoveEntry(entryId, d.iso)}
+              onOpenRecipe={(recipeId) => setViewRecipeId(recipeId)}
             />
           ))}
         </div>
@@ -501,7 +509,7 @@ export function PlanPage() {
                 e.dataTransfer.effectAllowed = 'copy';
               }}
             >
-              <span className="plan-recipe-name">{r.name}</span>
+              <button className="plan-recipe-name day-col-recipe-link" onClick={() => setViewRecipeId(r.id)}>{r.name}</button>
               <span className="plan-recipe-meta">{r.servings} serv</span>
             </div>
           ))}
@@ -513,6 +521,14 @@ export function PlanPage() {
           mealPlanEntryId={cookingEntry.id}
           recipeName={cookingEntry.recipeName}
           onClose={() => setCookingEntryId(null)}
+        />
+      )}
+
+      {viewRecipeId && (
+        <RecipeForm
+          mode="edit"
+          recipeId={viewRecipeId}
+          onClose={() => setViewRecipeId(null)}
         />
       )}
     </div>

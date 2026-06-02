@@ -5,6 +5,12 @@
   max-width: 760px;
 }
 
+@media (min-width: 600px) {
+  .modal-panel.modal-panel--recipe {
+    max-width: min(92vw, 1100px);
+  }
+}
+
 /* ── Form shell ──────────────────────────────────────────── */
 
 .recipe-form {
