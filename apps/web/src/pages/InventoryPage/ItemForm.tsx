@@ -322,7 +322,12 @@ export function ItemForm({ mode, item, onClose }: ItemFormProps) {
                 disabled={isPending || createFood.isPending}
                 onClick={async () => {
                   try {
-                    const created = await createFood.mutateAsync(review.proposed);
+                    const created = await createFood.mutateAsync({
+                      ...review.proposed,
+                      defaultUnit: ['g', 'ml', 'count'].includes(review.proposed.defaultUnit)
+                        ? review.proposed.defaultUnit as 'g' | 'ml' | 'count'
+                        : 'g',
+                    });
                     await submitReviewedFood(created.id);
                   } catch (err: unknown) {
                     setError(err instanceof Error ? err.message : 'Something went wrong.');
