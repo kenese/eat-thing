@@ -52,15 +52,15 @@ export interface PlanWindowDay {
   isPast: boolean;
 }
 
-export function planWindow(now: Date = new Date()): { from: string; to: string } {
-  const start = addDays(now, -TODAY_INDEX);
-  const end = addDays(now, WINDOW_SIZE - TODAY_INDEX - 1);
+export function planWindow(anchor: Date = new Date()): { from: string; to: string } {
+  const start = addDays(anchor, -TODAY_INDEX);
+  const end = addDays(anchor, WINDOW_SIZE - TODAY_INDEX - 1);
   return { from: toIsoDate(start), to: toIsoDate(end) };
 }
 
-export function planWindowDays(now: Date = new Date()): PlanWindowDay[] {
-  const todayIso = toIsoDate(now);
-  const start = addDays(now, -TODAY_INDEX);
+export function planWindowDays(anchor: Date = new Date(), today: Date = anchor): PlanWindowDay[] {
+  const todayIso = toIsoDate(today);
+  const start = addDays(anchor, -TODAY_INDEX);
   const labels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   return Array.from({ length: WINDOW_SIZE }, (_, i) => {
     const d = addDays(start, i);

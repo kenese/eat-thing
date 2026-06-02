@@ -1,6 +1,17 @@
 import { test, expect, type Page } from '@playwright/test';
 
 function isoDate(d: Date) { return d.toISOString().slice(0, 10); }
+function localIsoDate(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function fullDayLabel(d: Date) {
+  const weekday = d.toLocaleDateString(undefined, { weekday: 'long' });
+  const month = d.toLocaleDateString(undefined, { month: 'long' });
+  return `${weekday} ${d.getDate()} ${month} ${d.getFullYear()}`;
+}
+function shortDayLabel(d: Date) {
+  return d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+}
 const tomorrow = isoDate(new Date(Date.now() + 86400000));
 
 const FAKE_SESSION = {
@@ -320,6 +331,57 @@ test.describe('authenticated routes load', () => {
     await expect(page.getByText('max 4 recipes')).toBeVisible();
   });
 
+  test('plan load date recenters the 17-day rail around a distant date', async ({ page }) => {
+    const selectedDate = new Date();
+    selectedDate.setMonth(selectedDate.getMonth() + 1, 15);
+    selectedDate.setHours(0, 0, 0, 0);
+    const selectedIso = localIsoDate(selectedDate);
+    const expectedFrom = localIsoDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate() - 2));
+    const expectedTo = localIsoDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate() + 14));
+
+    await page.unroute('**/api/meal-plans/entries*');
+    await page.route('**/api/meal-plans/entries*', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ entries: [] }),
+      });
+    });
+
+    await page.goto('/plan');
+    await page.getByRole('button', { name: 'Load date' }).click();
+    await page.getByRole('button', { name: 'Next month' }).click();
+    await page.getByRole('button', { name: fullDayLabel(selectedDate) }).click();
+    const recenteredRequest = page.waitForRequest((request) => {
+      const url = new URL(request.url());
+      return (
+        url.pathname === '/api/meal-plans/entries' &&
+        url.searchParams.get('from') === expectedFrom &&
+        url.searchParams.get('to') === expectedTo
+      );
+    });
+    await page.getByRole('button', { name: `choose ${fullDayLabel(selectedDate).toLowerCase()}` }).click();
+    await recenteredRequest;
+
+    await expect(page.locator(`.day-col[data-iso="${selectedIso}"]`)).toBeVisible();
+    const metrics = await page.locator('.plan-week-scroll').evaluate((node, iso) => {
+      const rail = node as HTMLDivElement;
+      const target = rail.querySelector(`.day-col[data-iso="${iso}"]`) as HTMLDivElement | null;
+      if (!target) return null;
+      return {
+        scrollLeft: rail.scrollLeft,
+        clientWidth: rail.clientWidth,
+        targetLeft: target.offsetLeft,
+        targetRight: target.offsetLeft + target.offsetWidth,
+      };
+    }, selectedIso);
+
+    expect(metrics).not.toBeNull();
+    expect(metrics?.scrollLeft ?? 0).toBeGreaterThan(0);
+    expect((metrics?.targetLeft ?? 0) >= (metrics?.scrollLeft ?? 0)).toBe(true);
+    expect((metrics?.targetRight ?? 0) <= ((metrics?.scrollLeft ?? 0) + (metrics?.clientWidth ?? 0))).toBe(true);
+  });
+
   test('recipes page shows Import button that opens import modal', async ({ page }) => {
     await page.goto('/recipes');
     const importBtn = page.getByRole('button', { name: /import/i });
@@ -332,6 +394,102 @@ test.describe('authenticated routes load', () => {
     await expect(page.getByRole('button', { name: 'meal planner', exact: true })).toBeVisible();
     // close modal
     await page.keyboard.press('Escape');
+  });
+
+  test('recipes hero adds the featured recipe to the next empty day without opening a picker', async ({ page }) => {
+    let mealPlanPostBody: unknown;
+
+    await page.unroute('**/api/recipes*');
+    await page.route('**/api/recipes/recipe-hero', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          {
+            id: 'recipe-hero',
+            householdId: 'h-1',
+            name: 'Herby Pasta',
+            servings: 3,
+            sourceUrl: null,
+            sourceImage: null,
+            totalTimeMinutes: 25,
+            tags: [],
+            instructions: null,
+            ingredients: [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+        ][0]),
+      }),
+    );
+    await page.route('**/api/recipes', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          {
+            id: 'recipe-hero',
+            householdId: 'h-1',
+            name: 'Herby Pasta',
+            servings: 3,
+            sourceUrl: null,
+            sourceImage: null,
+            ingredientCount: 4,
+            totalTimeMinutes: 25,
+            tags: [],
+            canonicalFoodIds: [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+        ]),
+      }),
+    );
+    await page.unroute('**/api/meal-plans/entries*');
+    await page.route('**/api/meal-plans/entries*', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ entries: [] }),
+      }),
+    );
+    await page.route('**/api/meal-plans/entries', async (route) => {
+      if (route.request().method() !== 'POST') return route.fallback();
+      mealPlanPostBody = route.request().postDataJSON();
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'entry-new',
+          date: todayIso,
+          recipeId: 'recipe-hero',
+          recipeName: 'Herby Pasta',
+          servings: 3,
+          status: 'planned',
+        }),
+      });
+    });
+
+    await page.goto('/recipes');
+    await page.waitForResponse((response) => response.url().includes('/api/recipes/recipe-hero') && response.ok());
+    const [todayIso, addedLabel] = await page.evaluate(() => {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const localIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      return [
+        localIso,
+        today.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' }),
+      ];
+    });
+    await page.getByRole('button', { name: 'add to next open day' }).click();
+
+    await expect.poll(() => mealPlanPostBody).not.toBeUndefined();
+    expect(mealPlanPostBody).toMatchObject({
+      date: todayIso,
+      recipeId: 'recipe-hero',
+      servings: 3,
+    });
+    await expect(page.getByRole('button', { name: `added to ${addedLabel}` })).toBeVisible();
+    await expect(page.getByRole('dialog', { name: 'Choose a date' })).toHaveCount(0);
   });
 
   test('recipes page imports duplicate sectioned ingredients into the confirmation form', async ({ page }) => {

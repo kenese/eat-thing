@@ -15,8 +15,9 @@ import { StatusChip } from '../../components/StatusChip';
 import type { MealPlanEntry, Recipe } from '@eat/shared';
 import { computeMissing } from '../../lib/recipeMatch';
 import { api } from '../../api/client';
-import { planWindow, planWindowDays, TODAY_INDEX } from '../../lib/dateUtils';
+import { planWindow, planWindowDays, TODAY_INDEX, toIsoDate } from '../../lib/dateUtils';
 import { useNavigate } from 'react-router-dom';
+import { DatePickerModal } from '../../components/DatePickerModal';
 import './PlanPage.css';
 
 const DRAG_TYPE = 'application/x-eat-recipe-id';
@@ -251,9 +252,12 @@ function DayCard({
 
 export function PlanPage() {
   const navigate = useNavigate();
-  const now = useMemo(() => new Date(), []);
-  const { from, to } = useMemo(() => planWindow(now), [now]);
-  const days = useMemo(() => planWindowDays(now), [now]);
+  const today = useMemo(() => new Date(), []);
+  const [anchor, setAnchor] = useState(today);
+  const [isDatePickerOpen, setDatePickerOpen] = useState(false);
+  const [pendingScrollIso, setPendingScrollIso] = useState<string | null>(() => toIsoDate(anchor));
+  const { from, to } = useMemo(() => planWindow(anchor), [anchor]);
+  const days = useMemo(() => planWindowDays(anchor, today), [anchor, today]);
 
   const { data: entriesResp, isLoading: planLoading } = useMealPlanEntries(from, to);
   const { data: recipes = [] } = useRecipes();
@@ -313,8 +317,7 @@ export function PlanPage() {
   }, [entriesResp, recipeById, fullRecipeById, inventory]);
 
   // Summary counts for the next 7 days only (per spec "next 7 days" caption)
-  const todayIdx = days.findIndex((d) => d.isToday);
-  const next7 = days.slice(todayIdx, todayIdx + 7);
+  const next7 = days.slice(TODAY_INDEX, TODAY_INDEX + 7);
 
   const shopCount = next7.filter((d) =>
     (entriesByDay[d.iso] ?? []).some((de) => de.kind === 'shop'),
@@ -338,20 +341,22 @@ export function PlanPage() {
   const weekRef = useRef<HTMLDivElement | null>(null);
   const horizonRef = useRef<HTMLDivElement | null>(null);
 
-  function scrollToToday() {
+  function scrollToAnchor(iso: string) {
     if (!weekRef.current) return;
-    const cols = weekRef.current.querySelectorAll<HTMLDivElement>('.day-col');
-    const todayCol = cols[TODAY_INDEX];
-    if (todayCol) {
+    const target = weekRef.current.querySelector<HTMLDivElement>(`.day-col[data-iso="${iso}"]`);
+    if (target) {
       const parentLeft = weekRef.current.getBoundingClientRect().left;
-      const todayLeft = todayCol.getBoundingClientRect().left;
-      weekRef.current.scrollLeft += todayLeft - parentLeft;
+      const targetLeft = target.getBoundingClientRect().left;
+      weekRef.current.scrollLeft += targetLeft - parentLeft;
     }
   }
 
   useEffect(() => {
-    if (!planLoading) scrollToToday();
-  }, [planLoading]);
+    if (!planLoading && pendingScrollIso) {
+      scrollToAnchor(pendingScrollIso);
+      setPendingScrollIso(null);
+    }
+  }, [pendingScrollIso, planLoading]);
 
   function scrollByColumn(dir: -1 | 1) {
     if (!weekRef.current) return;
@@ -359,7 +364,12 @@ export function PlanPage() {
     if (col) weekRef.current.scrollLeft += dir * (col.offsetWidth + 12);
   }
 
-  const monthLabel = now.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }).toLowerCase();
+  const monthLabel = anchor.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }).toLowerCase();
+
+  function parseLocalIsoDate(iso: string) {
+    const [year, month, day] = iso.split('-').map(Number);
+    return new Date(year, (month ?? 1) - 1, day ?? 1);
+  }
 
   return (
     <div className="plan-page">
@@ -381,10 +391,22 @@ export function PlanPage() {
           <div className="plan-title-controls">
             <div className="plan-scroll-btns">
               <button className="plan-scroll-btn" onClick={() => scrollByColumn(-1)} aria-label="Scroll left">←</button>
-              <button className="plan-scroll-btn" onClick={scrollToToday}>today</button>
+              <button
+                className="plan-scroll-btn"
+                onClick={() => {
+                  setAnchor(today);
+                  setPendingScrollIso(toIsoDate(today));
+                }}
+              >
+                today
+              </button>
               <button className="plan-scroll-btn" onClick={() => scrollByColumn(1)} aria-label="Scroll right">→</button>
-              {/* HANDOFF: load-date picker — calendar icon button is a stub; no date picker modal yet */}
-              <button className="plan-scroll-btn plan-scroll-btn--stub" disabled title="Load a specific date (coming soon)">
+              <button
+                className="plan-scroll-btn"
+                type="button"
+                onClick={() => setDatePickerOpen(true)}
+                aria-label="Load date"
+              >
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
                   <rect x="1" y="2" width="12" height="11" rx="2" stroke="currentColor" strokeWidth="1.5"/>
                   <path d="M1 5.5h12M4.5 1v2M9.5 1v2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
@@ -529,6 +551,18 @@ export function PlanPage() {
           mode="edit"
           recipeId={viewRecipeId}
           onClose={() => setViewRecipeId(null)}
+        />
+      )}
+
+      {isDatePickerOpen && (
+        <DatePickerModal
+          initialDate={toIsoDate(anchor)}
+          onClose={() => setDatePickerOpen(false)}
+          onConfirm={(iso) => {
+            setAnchor(parseLocalIsoDate(iso));
+            setPendingScrollIso(iso);
+            setDatePickerOpen(false);
+          }}
         />
       )}
     </div>

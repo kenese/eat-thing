@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { RecipeCard } from './RecipesPage';
+import { HeroPlanButton } from './RecipesPage';
 
 const recipe = {
   id: 'r1',
@@ -138,5 +139,59 @@ describe('Library bucket removal', () => {
     render(<RecipeCard recipe={recipe} match={libraryMatch} onOpen={vi.fn()} />);
     // Library-bucketed recipe shows the shop chip (missingCount > 0), not a separate label
     expect(screen.queryByText(/library/i)).not.toBeInTheDocument();
+  });
+});
+
+describe('HeroPlanButton', () => {
+  it('shows the default label before adding', () => {
+    render(
+      <HeroPlanButton onAdd={vi.fn().mockResolvedValue({ addedTo: [], skipped: [] })} />,
+    );
+
+    expect(screen.getByRole('button', { name: 'add to next open day' })).toBeInTheDocument();
+  });
+
+  it('shows pending and success states around an add', async () => {
+    let resolveAdd: ((value: { addedTo: string[]; skipped: string[] }) => void) | undefined;
+    const onAdd = vi.fn(
+      () =>
+        new Promise<{ addedTo: string[]; skipped: string[] }>((resolve) => {
+          resolveAdd = resolve;
+        }),
+    );
+
+    render(<HeroPlanButton onAdd={onAdd} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'add to next open day' }));
+
+    expect(screen.getByRole('button', { name: 'adding...' })).toBeDisabled();
+
+    resolveAdd?.({ addedTo: ['Wed, 3 Jun'], skipped: [] });
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'added to Wed, 3 Jun' })).toBeInTheDocument(),
+    );
+  });
+
+  it('shows retry state after failure and retries on click', async () => {
+    const onAdd = vi
+      .fn<() => Promise<{ addedTo: string[]; skipped: string[] }>>()
+      .mockRejectedValueOnce(new Error('nope'))
+      .mockResolvedValueOnce({ addedTo: ['Thu, 4 Jun'], skipped: [] });
+
+    render(<HeroPlanButton onAdd={onAdd} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'add to next open day' }));
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'retry add to plan' })).toBeInTheDocument(),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'retry add to plan' }));
+
+    await waitFor(() => expect(onAdd).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'added to Thu, 4 Jun' })).toBeInTheDocument(),
+    );
   });
 });

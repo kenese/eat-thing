@@ -32,8 +32,6 @@
   gap: var(--space-1);
 }
 .plan-scroll-btn:hover { background: var(--cream); color: var(--ink); }
-.plan-scroll-btn--stub { opacity: 0.4; cursor: not-allowed; }
-.plan-scroll-btn--stub:hover { background: transparent; color: var(--ink2); }
 
 .plan-add-to-list-btn {
   display: inline-flex;

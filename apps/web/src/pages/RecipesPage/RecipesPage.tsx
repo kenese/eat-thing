@@ -19,6 +19,45 @@ interface MatchInfo {
   missing: string[];
 }
 
+export function HeroPlanButton({
+  onAdd,
+}: {
+  onAdd: () => Promise<{ addedTo: string[]; skipped: string[] }>;
+}) {
+  const [state, setState] = useState<
+    { kind: 'idle' } | { kind: 'pending' } | { kind: 'success'; dateLabel: string } | { kind: 'error' }
+  >({ kind: 'idle' });
+
+  async function handleClick() {
+    setState({ kind: 'pending' });
+    try {
+      const { addedTo } = await onAdd();
+      setState({ kind: 'success', dateLabel: addedTo[0] ?? 'plan' });
+    } catch {
+      setState({ kind: 'error' });
+    }
+  }
+
+  const label = state.kind === 'pending'
+    ? 'adding...'
+    : state.kind === 'success'
+      ? `added to ${state.dateLabel}`
+      : state.kind === 'error'
+        ? 'retry add to plan'
+        : 'add to next open day';
+
+  return (
+    <button
+      className="btn-outline--on-dark"
+      onClick={handleClick}
+      disabled={state.kind === 'pending'}
+      type="button"
+    >
+      {label}
+    </button>
+  );
+}
+
 export function RecipeCard({
   recipe,
   match,
@@ -120,7 +159,7 @@ function EditorialHero({
   featureExpiring: string[];
   featureTime: number | null;
   onOpen: (id: string) => void;
-  onAddFeatureToNextDay: () => void;
+  onAddFeatureToNextDay: () => Promise<{ addedTo: string[]; skipped: string[] }>;
 }) {
   const expiringCount = featureExpiring.length;
   return (
@@ -154,10 +193,7 @@ function EditorialHero({
             <button className="btn-primary" onClick={() => onOpen(feature.id)}>
               open recipe <span style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: 17 }}>→</span>
             </button>
-            {/* HANDOFF: day picker — replace label + handler when day-picker exists */}
-            <button className="btn-outline--on-dark" onClick={onAddFeatureToNextDay}>
-              add to next open day
-            </button>
+            <HeroPlanButton onAdd={onAddFeatureToNextDay} />
             <span style={{ fontSize: 11, color: 'rgba(243,245,242,0.5)', letterSpacing: '0.04em' }}>
               serves {feature.servings} · {feature.ingredients.length} ingredients
             </span>
@@ -421,8 +457,8 @@ export function RecipesPage() {
   }, [tab, sortedByMatch, cookable, shoppable, sortOrder]);
 
   function handleAddFeatureToNextDay() {
-    if (!feature) return;
-    addToNextEmptyDays.mutate([{ recipeId: feature.id, servings: feature.servings }]);
+    if (!feature) return Promise.resolve({ addedTo: [], skipped: [] });
+    return addToNextEmptyDays.mutateAsync([{ recipeId: feature.id, servings: feature.servings }]);
   }
 
   return (

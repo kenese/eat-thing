@@ -90,4 +90,15 @@ describe('plan window', () => {
     expect(days[2].isToday).toBe(true);
     expect(days[3].isPast).toBe(false); // future
   });
+
+  it('planWindowDays uses a separate anchor and actual today', () => {
+    const anchor = new Date('2026-07-15T10:00:00');
+    const today = new Date('2026-06-02T10:00:00');
+    const days = planWindowDays(anchor, today);
+
+    expect(days[0].iso).toBe('2026-07-13');
+    expect(days[2].iso).toBe('2026-07-15');
+    expect(days.some((day) => day.isToday)).toBe(false);
+    expect(days.every((day) => !day.isPast)).toBe(true);
+  });
 });
