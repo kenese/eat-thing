@@ -222,6 +222,7 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  width: 100%;
   text-align: left;
   cursor: pointer;
   font: inherit;
