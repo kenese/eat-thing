@@ -102,17 +102,19 @@ function renderInstructions(text: string): React.ReactNode {
 interface MetricControlProps {
   draft: IngredientDraft;
   onChange: (next: IngredientDraft) => void;
+  hasError?: boolean;
 }
 
-function MetricControl({ draft, onChange }: MetricControlProps) {
+function MetricControl({ draft, onChange, hasError }: MetricControlProps) {
   const auto = computeMetric(draft.qty, draft.unit);
   if (auto) {
     return <span className="ingredient-metric">≈ {auto}</span>;
   }
+  const metricError = hasError && (!draft.metricQty || !draft.metricUnit);
   return (
     <>
       <input
-        className="form-input ingredient-metric-qty"
+        className={`form-input ingredient-metric-qty${metricError ? ' ingredient-input--error' : ''}`}
         type="number"
         step="any"
         min="0"
@@ -122,7 +124,7 @@ function MetricControl({ draft, onChange }: MetricControlProps) {
         aria-label="Metric quantity"
       />
       <select
-        className="form-select ingredient-metric-unit"
+        className={`form-select ingredient-metric-unit${metricError ? ' ingredient-input--error' : ''}`}
         value={draft.metricUnit ?? ''}
         onChange={e => onChange({ ...draft, metricUnit: e.target.value as 'g' | 'ml' | 'count' })}
         aria-label="Metric unit"
@@ -140,9 +142,10 @@ interface IngredientRowProps {
   draft: IngredientDraft;
   onChange: (next: IngredientDraft) => void;
   onRemove: () => void;
+  hasError?: boolean;
 }
 
-function UnresolvedIngredientRow({ draft, onChange, onRemove }: IngredientRowProps) {
+function UnresolvedIngredientRow({ draft, onChange, onRemove, hasError }: IngredientRowProps) {
   const [searchInput, setSearchInput] = useState(draft.rawText);
   const [open, setOpen] = useState(false);
   const [pendingCanonical, setPendingCanonical] = useState<{ id: string; name: string; defaultUnit: string } | null>(null);
@@ -223,7 +226,7 @@ function UnresolvedIngredientRow({ draft, onChange, onRemove }: IngredientRowPro
       </div>
       <div className="ingredient-controls">
         <input
-          className="form-input ingredient-qty"
+          className={`form-input ingredient-qty${hasError && !draft.qty.trim() ? ' ingredient-input--error' : ''}`}
           type="text"
           value={draft.qty || ''}
           onChange={e => onChange({ ...draft, qty: e.target.value })}
@@ -236,16 +239,16 @@ function UnresolvedIngredientRow({ draft, onChange, onRemove }: IngredientRowPro
           onChange={e => onChange({ ...draft, unit: e.target.value })}
           aria-label="Unit"
         />
-        <MetricControl draft={draft} onChange={onChange} />
+        <MetricControl draft={draft} onChange={onChange} hasError={hasError} />
         <button type="button" className="ingredient-remove" onClick={onRemove} aria-label="Remove ingredient">✕</button>
       </div>
     </li>
   );
 }
 
-function IngredientRow({ draft, onChange, onRemove }: IngredientRowProps) {
+function IngredientRow({ draft, onChange, onRemove, hasError }: IngredientRowProps) {
   if (draft.lowConfidence || !draft.canonicalFoodId) {
-    return <UnresolvedIngredientRow draft={draft} onChange={onChange} onRemove={onRemove} />;
+    return <UnresolvedIngredientRow draft={draft} onChange={onChange} onRemove={onRemove} hasError={hasError} />;
   }
   return (
     <li className="ingredient-row">
@@ -254,7 +257,7 @@ function IngredientRow({ draft, onChange, onRemove }: IngredientRowProps) {
       </span>
       <div className="ingredient-controls">
         <input
-          className="form-input ingredient-qty"
+          className={`form-input ingredient-qty${hasError && !draft.qty.trim() ? ' ingredient-input--error' : ''}`}
           type="text"
           value={draft.qty || ''}
           onChange={e => onChange({ ...draft, qty: e.target.value })}
@@ -267,7 +270,7 @@ function IngredientRow({ draft, onChange, onRemove }: IngredientRowProps) {
           onChange={e => onChange({ ...draft, unit: e.target.value })}
           aria-label="Unit"
         />
-        <MetricControl draft={draft} onChange={onChange} />
+        <MetricControl draft={draft} onChange={onChange} hasError={hasError} />
         <button type="button" className="ingredient-remove" onClick={onRemove} aria-label="Remove ingredient">✕</button>
       </div>
     </li>
@@ -358,6 +361,7 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose,
       : [],
   );
   const [error, setError] = useState('');
+  const [ingredientErrors, setIngredientErrors] = useState<Set<string>>(new Set());
   const [hydrated, setHydrated] = useState(mode === 'add' || !!initialData);
   const [photoBase64, setPhotoBase64] = useState<string | null>(pendingPhoto?.base64 ?? null);
   const [photoMimeType, setPhotoMimeType] = useState<string | null>(pendingPhoto?.mimeType ?? null);
@@ -365,6 +369,7 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose,
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [addToPlanStatus, setAddToPlanStatus] = useState<'idle' | 'pending' | 'success' | 'error'>('idle');
   const [addToPlanLabel, setAddToPlanLabel] = useState('add to plan');
+  const hasUnsavedChanges = useRef(false);
   const deleteRecipe = useDeleteRecipe();
 
   useEffect(() => {
@@ -397,7 +402,15 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose,
     return [...new Set(value.split(',').map(tag => tag.trim().toLowerCase()).filter(Boolean))];
   }
 
+  function attemptClose() {
+    if (!readOnly && hasUnsavedChanges.current) {
+      if (!window.confirm('Discard unsaved changes?')) return;
+    }
+    onClose();
+  }
+
   function addIngredient(food: CanonicalFood) {
+    hasUnsavedChanges.current = true;
     setIngredients(prev => [...prev, {
       clientId: createIngredientDraftId(),
       canonicalFoodId: food.id,
@@ -411,10 +424,12 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose,
   }
 
   function updateIngredient(idx: number, next: IngredientDraft) {
+    hasUnsavedChanges.current = true;
     setIngredients(prev => prev.map((i, n) => n === idx ? next : i));
   }
 
   function removeIngredient(idx: number) {
+    hasUnsavedChanges.current = true;
     setIngredients(prev => prev.filter((_, n) => n !== idx));
   }
 
@@ -434,14 +449,19 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose,
     }
 
     if (ingredients.length === 0) { setError('Add at least one ingredient.'); return; }
-    if (ingredients.some(i => !i.canonicalFoodId)) { setError('Please resolve all unmatched ingredients (shown in amber) before saving.'); return; }
-    if (ingredients.some(i => !i.qty.trim())) { setError('Every ingredient needs a quantity.'); return; }
 
-    const needsManualMetric = ingredients.filter(i => !computeMetric(i.qty, i.unit));
-    if (needsManualMetric.some(i => !i.metricQty || !i.metricUnit)) {
-      setError('Some ingredients need a metric amount (g / ml / count) — fill in the fields shown in the ingredient row.');
+    const newIngredientErrors = new Set<string>();
+    for (const i of ingredients) {
+      if (!i.canonicalFoodId || !i.qty.trim() || (!computeMetric(i.qty, i.unit) && (!i.metricQty || !i.metricUnit))) {
+        newIngredientErrors.add(i.clientId);
+      }
+    }
+    if (newIngredientErrors.size > 0) {
+      setIngredientErrors(newIngredientErrors);
+      setError(`${newIngredientErrors.size} ingredient${newIngredientErrors.size > 1 ? 's need' : ' needs'} attention — check the highlighted rows above.`);
       return;
     }
+    setIngredientErrors(new Set());
 
     const payload = {
       name: name.trim(),
@@ -487,12 +507,12 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose,
   return (
     <div
       className="modal-overlay"
-      onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}
+      onMouseDown={e => { if (e.target === e.currentTarget) attemptClose(); }}
     >
       <div className="modal-panel modal-panel--recipe" role="dialog" aria-modal="true">
         <div className="modal-header">
           <h2>{initialData ? 'Review imported recipe' : mode === 'add' ? 'Add recipe' : name || 'Recipe'}</h2>
-          <button className="modal-close" onClick={onClose} aria-label="Close">✕</button>
+          <button className="modal-close" onClick={attemptClose} aria-label="Close">✕</button>
         </div>
 
         {mode === 'edit' && isLoadingExisting ? (
@@ -623,7 +643,7 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose,
                     className="form-input"
                     type="text"
                     value={name}
-                    onChange={e => setName(e.target.value)}
+                    onChange={e => { setName(e.target.value); hasUnsavedChanges.current = true; }}
                     placeholder="e.g. Spaghetti bolognese"
                     required
                   />
@@ -638,7 +658,7 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose,
                       step="any"
                       min="0"
                       value={servings}
-                      onChange={e => setServings(e.target.value)}
+                      onChange={e => { setServings(e.target.value); hasUnsavedChanges.current = true; }}
                       required
                     />
                   </div>
@@ -652,7 +672,7 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose,
                       step="1"
                       placeholder="Optional"
                       value={totalTimeMinutes}
-                      onChange={e => setTotalTimeMinutes(e.target.value)}
+                      onChange={e => { setTotalTimeMinutes(e.target.value); hasUnsavedChanges.current = true; }}
                     />
                   </div>
                   <div className="form-field">
@@ -663,7 +683,7 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose,
                       type="url"
                       placeholder="Optional"
                       value={sourceUrl}
-                      onChange={e => setSourceUrl(e.target.value)}
+                      onChange={e => { setSourceUrl(e.target.value); hasUnsavedChanges.current = true; }}
                     />
                   </div>
                 </div>
@@ -675,14 +695,14 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose,
                     type="text"
                     placeholder="Comma-separated, e.g. quick, pasta"
                     value={tags}
-                    onChange={e => setTags(e.target.value)}
+                    onChange={e => { setTags(e.target.value); hasUnsavedChanges.current = true; }}
                   />
                 </div>
               </div>
               <RecipeImagePicker
                 photoBase64={photoBase64}
                 photoMimeType={photoMimeType}
-                onChange={(base64, mimeType) => { setPhotoBase64(base64); setPhotoMimeType(mimeType); }}
+                onChange={(base64, mimeType) => { setPhotoBase64(base64); setPhotoMimeType(mimeType); hasUnsavedChanges.current = true; }}
               />
             </div>
 
@@ -706,6 +726,7 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose,
                         draft={ing}
                         onChange={next => updateIngredient(idx, next)}
                         onRemove={() => removeIngredient(idx)}
+                        hasError={ingredientErrors.has(ing.clientId)}
                       />
                     ))}
                   </ul>
@@ -720,7 +741,7 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose,
                 id="instructions"
                 className="form-textarea"
                 value={instructions}
-                onChange={e => setInstructions(e.target.value)}
+                onChange={e => { setInstructions(e.target.value); hasUnsavedChanges.current = true; }}
                 placeholder="Optional. Step-by-step or free-form."
               />
             </div>
@@ -728,7 +749,7 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose,
             {error && <p className="form-error" role="alert">{error}</p>}
 
             <div className="form-actions">
-              <button type="button" className="btn-secondary" onClick={() => mode === 'edit' ? setReadOnly(true) : onClose()}>
+              <button type="button" className="btn-secondary" onClick={() => mode === 'edit' ? setReadOnly(true) : attemptClose()}>
                 cancel
               </button>
               <button type="submit" className="btn-primary" disabled={isPending}>
