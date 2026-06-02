@@ -133,7 +133,7 @@ Household-scoped domain tables carry `household_id` and are filtered by request 
 - **Design system: "Crisp + Persimmon"** (landed 2026-05-11/12; full tokens in `design_handoff_eat_thing/README.md`):
   - **Type:** Schibsted Grotesk (UI, 400/600/700/800) + Lora (display + italic accents). Recurring move: page/section titles end with a persimmon period.
   - **Color:** paper `#f3f5f2`, ink `#0d1714`, persimmon accent `#d96e2e` (CTAs, "needs shop"), fresh green `#5aa758` ("cook now"), workhorse green `#1f5d33`.
-  - **Chrome:** ink TopNav on desktop (hidden ≤768px), floating blurred BottomTabBar on mobile.
+  - **Chrome:** ink TopNav at every width; icon-only compact header with shortened `Eat` wordmark at phone widths (≤480px).
   - Emoji-free; unicode glyphs + inline SVG only.
 - Vitest + React Testing Library for components; Playwright for app-level E2E (separate from the scraper Playwright).
 - Storybook for the component library.

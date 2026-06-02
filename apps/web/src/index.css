@@ -70,12 +70,6 @@ body {
   .page {
     padding: 16px var(--gutter-mobile) 24px;
   }
-  .topnav {
-    display: none;
-  }
-  .app-body {
-    padding-bottom: 72px;
-  }
 }
 
 /* Utility: italic-serif "why" caption — reuse on any explanatory caption */

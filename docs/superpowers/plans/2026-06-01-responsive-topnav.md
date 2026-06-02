@@ -104,7 +104,7 @@ test('tablet keeps the text header layout', async ({ page }) => {
 Run:
 
 ```bash
-pnpm --filter @eat/web test:e2e -- --grep "phone keeps compact navigation|tablet keeps the text header"
+pnpm --filter @eat/web exec playwright test --grep "phone keeps compact navigation|tablet keeps the text header"
 ```
 
 Expected: FAIL because phone currently hides `.topnav`, renders `.bottom-tab-bar`, and has no compact header hooks.
@@ -244,7 +244,7 @@ Expected: PASS.
 Run:
 
 ```bash
-pnpm --filter @eat/web test:e2e -- --grep "phone keeps compact navigation|tablet keeps the text header"
+pnpm --filter @eat/web exec playwright test --grep "phone keeps compact navigation|tablet keeps the text header"
 ```
 
 Expected: PASS.

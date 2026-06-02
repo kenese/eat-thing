@@ -109,6 +109,11 @@ describe('ingest router', () => {
       vi.mocked(extractFromPhoto).mockResolvedValueOnce({
         name: 'Photo Recipe',
         servings: 2,
+        sourceUrl: null,
+        sourceImage: null,
+        heroImageUrl: null,
+        totalTimeMinutes: null,
+        tags: [],
         instructions: null,
         ingredients: [],
       });

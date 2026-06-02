@@ -452,6 +452,30 @@ test.describe('authenticated routes load', () => {
     await page.getByRole('link', { name: 'inventory' }).click();
     await expect(page).toHaveURL(/\/inventory$/);
   });
+
+  test('phone keeps compact navigation in the header without a footer bar', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/');
+
+    await expect(page.locator('.topnav')).toBeVisible();
+    await expect(page.locator('.topnav-phone-brand')).toBeVisible();
+    await expect(page.getByLabel('Eat thing')).toBeHidden();
+    await expect(page.locator('.topnav-icon')).toHaveCount(5);
+    await expect(page.getByText('shops', { exact: true })).toBeHidden();
+    await expect(page.locator('.bottom-tab-bar')).toHaveCount(0);
+  });
+
+  test('tablet keeps the text header layout', async ({ page }) => {
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await page.goto('/');
+
+    await expect(page.locator('.topnav')).toBeVisible();
+    await expect(page.getByLabel('Eat thing')).toBeVisible();
+    await expect(page.locator('.topnav-phone-brand')).toBeHidden();
+    await expect(page.getByRole('link', { name: 'inventory' })).toContainText('inventory');
+    await expect(page.getByText('shops', { exact: true })).toBeVisible();
+    await expect(page.locator('.bottom-tab-bar')).toHaveCount(0);
+  });
 });
 
 // ─── Shopping list: find products + manual pick + send to cart ─────────────────
