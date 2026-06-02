@@ -212,6 +212,9 @@
   font-size: 15px;
   color: var(--ink);
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ingredient-row--unmatched .ingredient-name {
@@ -303,6 +306,7 @@
   align-items: center;
   gap: 4px;
   flex-shrink: 0;
+  min-width: 0;
 }
 
 .ingredient-qty {
@@ -315,6 +319,30 @@
   width: 72px;
   padding: 6px 8px !important;
   font-size: 13px !important;
+}
+
+.ingredient-metric {
+  font-size: 13px;
+  color: var(--ink2);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.ingredient-metric-qty {
+  width: 52px !important;
+  padding: 6px 8px !important;
+  font-size: 13px !important;
+}
+
+.ingredient-metric-unit {
+  width: 70px !important;
+  padding: 5px 6px !important;
+  font-size: 13px !important;
+}
+
+.ingredient-input--error {
+  border-color: var(--warn) !important;
+  background: color-mix(in srgb, var(--warn) 5%, var(--paper)) !important;
 }
 
 .ingredient-remove {
