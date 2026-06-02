@@ -382,5 +382,59 @@ async function extractFromUrl(url: string): Promise<ExtractedRecipe> {
     }
 }
 
+export async function extractFromText(rawText: string): Promise<ExtractedRecipe> {
+    // Try Schema.org first in case the user pasted raw HTML
+    const schemaRaw = parseSchemaOrg(rawText);
+
+    let raw = schemaRaw;
+    if (!raw?.instructions) {
+        // For plain text / formatted text, clean if it looks like HTML
+        const looksLikeHtml = /<[a-z][\s\S]*>/i.test(rawText);
+        const cleanText = looksLikeHtml
+            ? cleanHtmlWithReadability(rawText)
+            : rawText.slice(0, 12000);
+
+        const gemini = await extractWithGemini(cleanText);
+        if (schemaRaw) {
+            raw = {...schemaRaw, instructions: gemini?.instructions ?? null};
+        } else {
+            raw = gemini;
+        }
+    }
+
+    if (!raw) throw new Error('Could not extract a recipe from the provided text');
+
+    const annotated = annotateMetric(raw.ingredients);
+    const matched = await matchIngredients(annotated.map(i => i.name));
+
+    const ingredients: ImportedIngredient[] = annotated.map((ing, idx) => {
+        const m = matched[idx];
+        return {
+            rawText: ing.name,
+            canonicalFoodId: m.canonicalFoodId,
+            foodName: m.foodName,
+            canonicalDefaultUnit: m.canonicalDefaultUnit,
+            qty: ing.qty,
+            unit: ing.unit,
+            section: ing.section ?? null,
+            metric: ing.metric,
+            optional: false,
+            confidence: m.confidence,
+        };
+    });
+
+    return {
+        name: raw.name,
+        servings: raw.servings,
+        sourceUrl: '',
+        sourceImage: null,
+        heroImageUrl: null,
+        totalTimeMinutes: raw.totalTimeMinutes,
+        tags: raw.tags,
+        instructions: raw.instructions,
+        ingredients,
+    };
+}
+
 // Exported for testing only
 export {parseSchemaOrg, annotateMetric, resolveHeroImage, extractFromUrl};
