@@ -10,14 +10,14 @@ Household food management app. Inventory ↔ recipes ↔ meal plans ↔ shopping
 ## How to work in this repo
 - Any new architectural decision goes in DECISIONS.md as a new numbered entry. Don't silently change ARCHITECTURE.md without a corresponding decision.
 - All domain data is scoped by `household_id`. Every query and migration must respect this.
-- Inventory is a derived running balance from append-only `cook_events`. Don't edit cook events; emit new ones.
-- `packages/meal-planning` is a sync target only. No app logic should depend on reading from MealPlanning.
-- `canonical_foods` is curated. New foods go through a taxonomy-review prompt rather than silent insert.
+- Inventory is stored as mutable balance rows; `cook_events` are append-only cooking audit records. Don't edit cook events; emit new ones.
+- `packages/meal-planning` is the Meal Planner import adapter only. Keep runtime ownership in eat-thing; don't make core app logic depend on Meal Planner as a source of truth.
+- `canonical_foods` is curated. Inventory and manual shopping-list flows must go through the explicit taxonomy-review prompt; don't add new silent insert paths.
 
 ## Stack at a glance
 - Turborepo monorepo: `apps/web` (PWA) · `apps/server` (Express + Better-Auth + Drizzle) · `apps/scraper` (Playwright on home Mac mini) · `packages/shared` · `packages/taxonomy` · `packages/meal-planning`.
 - Postgres on Supabase. Photos on Supabase Storage.
-- Frontend + API on Vercel. Background workers (scraper, MealPlanning sync) on the home Mac mini, supervised by `launchd`. Workers poll the Vercel API outbound — no inbound port at home.
+- Frontend + API on Vercel. `apps/scraper` runs on the home Mac mini, with `launchd` supervision still planned until the scraper plist lands. Meal Planner import runs from the server via HTTP MCP when configured, with local stdio fallback. Workers poll the Vercel API outbound — no inbound port at home.
 - Auth: Better-Auth with Google OAuth.
 - Storage units canonical (g / ml / count); display layer converts.
 

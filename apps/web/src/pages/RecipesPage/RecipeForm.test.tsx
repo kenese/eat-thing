@@ -1,4 +1,5 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
@@ -13,6 +14,8 @@ vi.mock('../../hooks/useRecipes', () => ({
       servings: 4,
       sourceUrl: null,
       sourceImage: null,
+      totalTimeMinutes: null,
+      tags: [],
       instructions: null,
       ingredients: [
         { id: 'i1', canonicalFoodId: 'f1', foodName: 'Flour', qty: '200', unit: 'g', optional: false, sortOrder: 0 },
@@ -85,6 +88,8 @@ describe('RecipeForm ingredient line identity', () => {
           sourceUrl: null,
           sourceImage: null,
           heroImageUrl: null,
+          totalTimeMinutes: null,
+          tags: [],
           instructions: null,
           ingredients: [
             { rawText: '1 lemon', canonicalFoodId: 'f-lemon', foodName: 'Lemon', canonicalDefaultUnit: 'count', qty: '1', unit: '', section: 'Pasta', metric: '1 count', optional: false, confidence: 'high' },
@@ -117,6 +122,8 @@ describe('RecipeForm ingredient line identity', () => {
           sourceUrl: null,
           sourceImage: null,
           heroImageUrl: null,
+          totalTimeMinutes: null,
+          tags: [],
           instructions: null,
           ingredients: [
             { rawText: '1 lemon', canonicalFoodId: 'f-lemon', foodName: 'Lemon', canonicalDefaultUnit: 'count', qty: '1', unit: 'count', section: 'Pasta', metric: '1 count', optional: false, confidence: 'high' },
@@ -137,6 +144,44 @@ describe('RecipeForm ingredient line identity', () => {
       ],
     }));
   });
+
+  it('preserves imported blank units and submits total time and tags', async () => {
+    const user = userEvent.setup();
+    const mutateAsync = vi.fn().mockResolvedValue({});
+    vi.mocked(useAddRecipe).mockReturnValue({ mutateAsync, isPending: false } as unknown as ReturnType<typeof useAddRecipe>);
+
+    render(
+      <RecipeForm
+        mode="add"
+        onClose={vi.fn()}
+        initialData={{
+          name: 'Lemon pasta',
+          servings: 2,
+          sourceUrl: null,
+          sourceImage: null,
+          heroImageUrl: null,
+          totalTimeMinutes: 25,
+          tags: ['quick', 'pasta'],
+          instructions: null,
+          ingredients: [
+            { rawText: '1 lemon', canonicalFoodId: 'f-lemon', foodName: 'Lemon', canonicalDefaultUnit: 'count', qty: '1', unit: '', section: null, metric: '1 count', optional: false, confidence: 'high' },
+          ],
+        }}
+      />,
+      { wrapper },
+    );
+
+    await user.click(screen.getByRole('button', { name: /save imported recipe/i }));
+
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
+    expect(mutateAsync).toHaveBeenCalledWith(expect.objectContaining({
+      totalTimeMinutes: 25,
+      tags: ['quick', 'pasta'],
+      ingredients: [
+        expect.objectContaining({ canonicalFoodId: 'f-lemon', qty: '1', unit: '' }),
+      ],
+    }));
+  });
 });
 
 describe('RecipeForm delete', () => {
@@ -151,6 +196,8 @@ describe('RecipeForm delete', () => {
         servings: 4,
         sourceUrl: null,
         sourceImage: null,
+        totalTimeMinutes: null,
+        tags: [],
         instructions: 'Step 1\n\n## Sauce\nStep 2',
         ingredients: [
           { id: 'i1', recipeId: 'r1', canonicalFoodId: 'f1', foodName: 'Flour',
@@ -176,6 +223,8 @@ describe('RecipeForm delete', () => {
         servings: 4,
         sourceUrl: null,
         sourceImage: null,
+        totalTimeMinutes: null,
+        tags: [],
         instructions: 'Step 1\n\n## Sauce\nStep 2',
         ingredients: [
           { id: 'i1', recipeId: 'r1', canonicalFoodId: 'f1', foodName: 'Flour',
@@ -202,6 +251,8 @@ describe('RecipeForm delete', () => {
         servings: 4,
         sourceUrl: null,
         sourceImage: null,
+        totalTimeMinutes: null,
+        tags: [],
         instructions: 'Step 1',
         ingredients: [],
         createdAt: '2026-01-01T00:00:00Z',
@@ -231,6 +282,8 @@ describe('RecipeForm delete', () => {
         servings: 4,
         sourceUrl: null,
         sourceImage: null,
+        totalTimeMinutes: null,
+        tags: [],
         instructions: 'Step 1',
         ingredients: [],
         createdAt: '2026-01-01T00:00:00Z',
@@ -257,6 +310,8 @@ describe('RecipeForm sections rendering', () => {
         servings: 4,
         sourceUrl: null,
         sourceImage: null,
+        totalTimeMinutes: null,
+        tags: [],
         instructions: 'Step 1',
         ingredients: [
           { id: 'i2', recipeId: 'r1', canonicalFoodId: 'f2', foodName: 'Eggs',
@@ -281,6 +336,8 @@ describe('RecipeForm sections rendering', () => {
         servings: 4,
         sourceUrl: null,
         sourceImage: null,
+        totalTimeMinutes: null,
+        tags: [],
         instructions: 'Step 1\n\n## Sauce\nStep 2',
         ingredients: [],
         createdAt: '2026-01-01T00:00:00Z',
@@ -302,6 +359,8 @@ describe('RecipeForm sections rendering', () => {
         servings: 4,
         sourceUrl: null,
         sourceImage: null,
+        totalTimeMinutes: null,
+        tags: [],
         instructions: 'Step 1\n\n## Sauce\nStep 2',
         ingredients: [],
         createdAt: '2026-01-01T00:00:00Z',

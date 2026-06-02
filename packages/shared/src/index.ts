@@ -19,6 +19,24 @@ export interface CreateFoodInput {
   category?: Category;
 }
 
+export interface TaxonomyReviewMatch {
+  id: string;
+  name: string;
+  category: Category;
+  defaultUnit: string;
+}
+
+export interface TaxonomyReviewRequiredResponse {
+  code: 'taxonomy_review_required';
+  error: string;
+  proposed: {
+    name: string;
+    category: Category;
+    defaultUnit: string;
+  };
+  matches: TaxonomyReviewMatch[];
+}
+
 // ─── Inventory ────────────────────────────────────────────────────────────────
 
 export interface InventoryRow {
@@ -92,6 +110,8 @@ export interface Recipe {
   sourceUrl: string | null;
   sourceImage: string | null;
   instructions: string | null;
+  totalTimeMinutes: number | null;
+  tags: string[];
   ingredients: RecipeIngredient[];
   createdAt: string;
   updatedAt: string;
@@ -112,6 +132,8 @@ export interface CreateRecipeInput {
   sourceUrl?: string | null;
   sourceImage?: string | null;
   instructions?: string | null;
+  totalTimeMinutes?: number | null;
+  tags?: string[];
   ingredients: RecipeIngredientInput[];
   photoBase64?: string;
   photoMimeType?: string;
@@ -123,6 +145,8 @@ export interface UpdateRecipeInput {
   sourceUrl?: string | null;
   sourceImage?: string | null;
   instructions?: string | null;
+  totalTimeMinutes?: number | null;
+  tags?: string[];
   ingredients?: RecipeIngredientInput[];
   photoBase64?: string;
   photoMimeType?: string;
@@ -149,6 +173,8 @@ export interface ImportedRecipe {
   sourceUrl: string | null;
   sourceImage: string | null;
   heroImageUrl: string | null;
+  totalTimeMinutes: number | null;
+  tags: string[];
   instructions: string | null;
   ingredients: ImportedIngredient[];
 }

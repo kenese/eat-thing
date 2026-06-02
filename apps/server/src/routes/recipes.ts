@@ -29,6 +29,9 @@ const ingredientSchema = z.object({
   optional: z.boolean().optional(),
 });
 
+const tagsSchema = z.array(z.string().trim().min(1).max(40)).max(20).default([]);
+const totalTimeSchema = z.number().int().min(1).max(24 * 60).nullable().optional();
+
 const createSchema = z.object({
   name: z.string().trim().min(1).max(200),
   servings: z.number().positive().max(100),
@@ -36,6 +39,8 @@ const createSchema = z.object({
   sourceImage: z.string().nullable().optional(),
   heroImageUrl: z.string().url().nullable().optional(),
   instructions: z.string().nullable().optional(),
+  totalTimeMinutes: totalTimeSchema,
+  tags: tagsSchema.optional(),
   ingredients: z.array(ingredientSchema).min(1),
   photoBase64: z.string().optional(),
   photoMimeType: z.string().optional(),
@@ -48,6 +53,8 @@ const updateSchema = z.object({
   sourceImage: z.string().nullable().optional(),
   heroImageUrl: z.string().url().nullable().optional(),
   instructions: z.string().nullable().optional(),
+  totalTimeMinutes: totalTimeSchema,
+  tags: tagsSchema.optional(),
   ingredients: z.array(ingredientSchema).min(1).optional(),
   photoBase64: z.string().optional(),
   photoMimeType: z.string().optional(),
@@ -143,7 +150,19 @@ router.post('/', withHousehold, async (req, res) => {
     return;
   }
 
-  const { name, servings, sourceUrl, sourceImage, heroImageUrl, instructions, ingredients, photoBase64, photoMimeType } = parse.data;
+  const {
+    name,
+    servings,
+    sourceUrl,
+    sourceImage,
+    heroImageUrl,
+    instructions,
+    totalTimeMinutes,
+    tags,
+    ingredients,
+    photoBase64,
+    photoMimeType,
+  } = parse.data;
   const recipeId = uuidv4();
 
   let resolvedImage: string | null = sourceImage ?? null;
@@ -186,6 +205,8 @@ router.post('/', withHousehold, async (req, res) => {
         sourceUrl: sourceUrl ?? null,
         sourceImage: resolvedImage,
         instructions: instructions ?? null,
+        totalTimeMinutes: totalTimeMinutes ?? null,
+        tags: tags ?? [],
       });
 
       await tx.insert(recipeIngredients).values(
@@ -255,6 +276,8 @@ router.put('/:id', withHousehold, async (req, res) => {
           ...(d.servings !== undefined && { servings: d.servings }),
           ...('sourceUrl' in d && { sourceUrl: d.sourceUrl ?? null }),
           ...('instructions' in d && { instructions: d.instructions ?? null }),
+          ...('totalTimeMinutes' in d && { totalTimeMinutes: d.totalTimeMinutes ?? null }),
+          ...('tags' in d && { tags: d.tags ?? [] }),
           ...(resolvedImage !== undefined && { sourceImage: resolvedImage }),
           updatedAt: new Date(),
         })

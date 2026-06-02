@@ -7,6 +7,7 @@ interface MealDbMeal {
   strInstructions: string;
   strMealThumb: string;
   strSource?: string;
+  strTags?: string;
   [key: string]: string | undefined;
 }
 
@@ -50,6 +51,10 @@ async function mealToImportedRecipe(meal: MealDbMeal): Promise<ImportedRecipe> {
     sourceUrl: meal.strSource || `https://www.themealdb.com/meal/${meal.idMeal}`,
     sourceImage: null,
     heroImageUrl: null,
+    totalTimeMinutes: null,
+    tags: meal.strTags
+      ? meal.strTags.split(',').map(tag => tag.trim()).filter(Boolean)
+      : [],
     instructions: meal.strInstructions || null,
     ingredients,
   };

@@ -5,18 +5,20 @@ import { v4 as uuidv4 } from 'uuid';
 import { withHousehold } from '../middleware/with-household.js';
 import { db } from '../db/index.js';
 import { inventoryItems, canonicalFoods } from '../db/schema/index.js';
-import { findOrCreateFood, type FoodCategory } from '../lib/find-or-create-food.js';
+import { findExistingFoodOrRequireReview, type FoodCategory } from '../lib/find-or-create-food.js';
 
 const router: ExpressRouter = Router();
 
 const CATEGORIES = ['produce', 'meat', 'dairy', 'pantry', 'frozen', 'drinks', 'other'] as const;
+const CANONICAL_UNITS = ['g', 'ml', 'count'] as const;
+const canonicalUnitSchema = z.enum(CANONICAL_UNITS);
 
 const createSchema = z.object({
   canonicalFoodId: z.string().uuid().optional(),
   foodName: z.string().trim().min(1).max(200).optional(),
   category: z.enum(CATEGORIES).optional(),
   qty: z.number().positive(),
-  unit: z.string().trim().min(1).max(40),
+  unit: canonicalUnitSchema,
   brand: z.string().trim().max(100).nullable().optional(),
   purchasedAt: z.string().nullable().optional(),
   expiresAt: z.string().nullable().optional(),
@@ -26,7 +28,7 @@ const createSchema = z.object({
 
 const updateSchema = z.object({
   qty: z.number().positive().optional(),
-  unit: z.string().trim().min(1).max(40).optional(),
+  unit: canonicalUnitSchema.optional(),
   brand: z.string().trim().max(100).nullable().optional(),
   purchasedAt: z.string().nullable().optional(),
   expiresAt: z.string().nullable().optional(),
@@ -90,7 +92,21 @@ router.post('/', withHousehold, async (req, res) => {
   try {
     let foodId = parse.data.canonicalFoodId;
     if (!foodId) {
-      foodId = await findOrCreateFood(parse.data.foodName!, parse.data.category as FoodCategory, parse.data.unit);
+      const result = await findExistingFoodOrRequireReview(
+        parse.data.foodName!,
+        parse.data.category as FoodCategory,
+        parse.data.unit,
+      );
+      if (result.kind === 'review') {
+        res.status(409).json({
+          error: 'Taxonomy review required',
+          code: 'taxonomy_review_required',
+          proposed: result.proposed,
+          matches: result.matches,
+        });
+        return;
+      }
+      foodId = result.id;
     }
 
     const { qty, unit, brand, purchasedAt, expiresAt } = parse.data;

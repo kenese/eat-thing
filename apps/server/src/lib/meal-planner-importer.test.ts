@@ -43,6 +43,9 @@ describe('meal planner importer', () => {
         id: 'mp-1',
         name: 'Lemon Pasta',
         servings: 4,
+        prep_time_minutes: 10,
+        cook_time_minutes: 15,
+        tags: ['pasta', 'quick'],
         instructions: ['Boil pasta.', 'Toss with lemon.'],
         ingredients: [
           { name: 'spaghetti', quantity: '400', unit: 'g' },
@@ -74,6 +77,8 @@ describe('meal planner importer', () => {
       servings: 4,
       sourceUrl: null,
       sourceImage: null,
+      totalTimeMinutes: 25,
+      tags: ['pasta', 'quick'],
       instructions: 'Boil pasta.\nToss with lemon.',
       ingredients: [
         {

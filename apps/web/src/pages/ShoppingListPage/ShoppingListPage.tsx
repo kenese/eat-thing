@@ -5,6 +5,8 @@ import {
   usePurchaseShoppingListItems, useBatchDeleteShoppingListItems,
 } from '../../hooks/useShoppingList';
 import { useFoodSearch } from '../../hooks/useFoodSearch';
+import { useCreateFood } from '../../hooks/useFoodSearch';
+import { getTaxonomyReviewRequiredResponse } from '../../api/client';
 import { usePricesForList, useRefreshPrices, useChooseSku, useSendToCart, useCartResult } from '../../hooks/usePricesForList';
 import { ReconcileModal } from './ReconcileModal';
 import { StaplesModal } from './StaplesModal';
@@ -15,6 +17,7 @@ import { FilterStrip } from '../../components/FilterStrip';
 import { AgentStatusCard, type AgentState } from '../../components/AgentStatusCard';
 import type {
   ShoppingList, ShoppingListItem, ShoppingListPrice, Category, ShoppingSource, CanonicalFood,
+  TaxonomyReviewRequiredResponse,
 } from '@eat/shared';
 import { AISLE_LABEL, CATEGORY_LABEL, CATEGORY_ORDER } from '@eat/taxonomy';
 import type { Category as TaxCategory } from '@eat/taxonomy';
@@ -240,29 +243,57 @@ function FoodCombobox({
 
 function AddItemForm({ listId }: { listId: string }) {
   const addItem = useAddShoppingListItem(listId);
+  const createFood = useCreateFood();
   const [canonicalFoodId, setCanonicalFoodId] = useState('');
   const [name, setName] = useState('');
   const [qty, setQty] = useState('');
   const [unit, setUnit] = useState('count');
   const [category, setCategory] = useState<TaxCategory>('other');
+  const [error, setError] = useState('');
+  const [review, setReview] = useState<TaxonomyReviewRequiredResponse | null>(null);
 
   const isNewFood = !canonicalFoodId && name.trim().length > 0;
 
-  async function submit() {
-    const parsedQty = parseFloat(qty);
-    if (!name.trim() || isNaN(parsedQty) || parsedQty <= 0) return;
-    if (isNewFood && !category) return;
-
-    const payload = canonicalFoodId
-      ? { canonicalFoodId, name: name.trim(), qty: parsedQty, unit }
-      : { name: name.trim(), qty: parsedQty, unit, category };
-
-    await addItem.mutateAsync(payload);
+  function resetForm() {
     setCanonicalFoodId('');
     setName('');
     setQty('');
     setUnit('count');
     setCategory('other');
+    setError('');
+    setReview(null);
+  }
+
+  function payload(parsedQty: number, canonicalId?: string) {
+    return canonicalId
+      ? { canonicalFoodId: canonicalId, name: name.trim(), qty: parsedQty, unit }
+      : { name: name.trim(), qty: parsedQty, unit, category };
+  }
+
+  async function submitWithCanonicalFood(canonicalId: string) {
+    const parsedQty = parseFloat(qty);
+    await addItem.mutateAsync(payload(parsedQty, canonicalId));
+    resetForm();
+  }
+
+  async function submit() {
+    setError('');
+    setReview(null);
+    const parsedQty = parseFloat(qty);
+    if (!name.trim() || isNaN(parsedQty) || parsedQty <= 0) return;
+    if (isNewFood && !category) return;
+
+    try {
+      await addItem.mutateAsync(payload(parsedQty, canonicalFoodId || undefined));
+      resetForm();
+    } catch (err: unknown) {
+      const taxonomyReview = getTaxonomyReviewRequiredResponse(err);
+      if (taxonomyReview) {
+        setReview(taxonomyReview);
+        return;
+      }
+      setError(err instanceof Error ? err.message : 'Something went wrong.');
+    }
   }
 
   return (
@@ -271,17 +302,19 @@ function AddItemForm({ listId }: { listId: string }) {
         value={canonicalFoodId}
         displayName={name}
         onChange={food => {
+          setReview(null);
           setCanonicalFoodId(food.id);
           setName(food.name);
           setUnit(food.defaultUnit);
         }}
         onTextChange={text => {
+          setReview(null);
           setName(text);
           setCanonicalFoodId('');
         }}
       />
       {isNewFood && (
-        <select className="form-select" value={category} onChange={e => setCategory(e.target.value as TaxCategory)} aria-label="Category">
+        <select className="form-select" value={category} onChange={e => { setReview(null); setCategory(e.target.value as TaxCategory); }} aria-label="Category">
           {CATEGORY_ORDER.map(cat => (
             <option key={cat} value={cat}>{CATEGORY_LABEL[cat]}</option>
           ))}
@@ -294,6 +327,43 @@ function AddItemForm({ listId }: { listId: string }) {
         <option value="count">count</option>
       </select>
       <button type="button" onClick={submit} disabled={addItem.isPending || !name.trim()} className="sl-add-btn">+ Add</button>
+      {review && (
+        <div className="form-error" role="alert">
+          Review this new canonical food before adding it.
+          {review.matches.map(match => (
+            <button
+              key={match.id}
+              type="button"
+              className="btn-secondary"
+              onClick={() => submitWithCanonicalFood(match.id)}
+              disabled={addItem.isPending || createFood.isPending}
+            >
+              Use existing: {match.name}
+            </button>
+          ))}
+          <button
+            type="button"
+            className="btn-primary"
+            disabled={addItem.isPending || createFood.isPending}
+            onClick={async () => {
+              try {
+                const created = await createFood.mutateAsync({
+                  ...review.proposed,
+                  defaultUnit: ['g', 'ml', 'count'].includes(review.proposed.defaultUnit)
+                    ? review.proposed.defaultUnit as 'g' | 'ml' | 'count'
+                    : 'g',
+                });
+                await submitWithCanonicalFood(created.id);
+              } catch (err: unknown) {
+                setError(err instanceof Error ? err.message : 'Something went wrong.');
+              }
+            }}
+          >
+            {createFood.isPending ? 'Creating…' : `Create canonical food: ${review.proposed.name}`}
+          </button>
+        </div>
+      )}
+      {error && <p className="form-error" role="alert">{error}</p>}
     </div>
   );
 }

@@ -25,14 +25,11 @@ For per-decision rationale see [DECISIONS.md](./DECISIONS.md). For the rolling t
                                           └──────────────────────┘
 
 ┌────────────────────────────────────────────────┐
-│  Home Mac mini (always-on, launchd-supervised) │
+│  Home Mac mini (always-on, launchd planned)    │
 │                                                │
 │  apps/scraper ────────▶ New World NZ (V3/V4)   │
 │   (Playwright,           Pak'nSave / Woolworths│
 │    residential IP)        adapters deferred,D21)│
-│                                                │
-│  Meal Planner import ─────▶ Meal Planner MCP   │
-│   (one-off structured recipe import)           │
 └──────────┬─────────────────────────────────────┘
            │ outbound HTTPS poll for pending jobs
            │ (no inbound port at home)
@@ -63,14 +60,14 @@ Household-scoped domain tables carry `household_id` and are filtered by request 
 | Table                      | Notes                                                                  |
 | -------------------------- | ---------------------------------------------------------------------- |
 | `households`               | One row per household                                                  |
-| `users`                    | Linked to Google identity by Better-Auth                               |
+| `user` / `session` / `account` / `verification` | Better-Auth-owned auth tables; global exceptions to household scoping |
 | `memberships`              | n:m users ↔ households (with role: owner / member)                     |
 | `canonical_foods`          | Global curated reference table: id, name, default_unit, aliases[], density_g_per_ml?, **category** — taxonomy seeds; category is the source of inventory/aisle grouping |
-| `inventory_items`          | canonical_food_id, qty, unit, brand?, purchased_at, expires_at — **no `location` column** (the `inventory_location` enum was dropped 2026-05-15; grouping derives from `canonical_foods.category`) |
-| `recipes`                  | name, source_url?, source_image?, instructions, servings, **total_time_minutes?**, **tags[]** (migration 0009) |
-| `recipe_ingredients`       | recipe_id, canonical_food_id, qty, unit, optional, section?, metric_value? (display-only) |
-| `meal_plan_entries`        | date, recipe_id, servings, status (planned / cooked / skipped) — **date-keyed directly**; the `meal_plans` (week_start) parent table was dropped in migration 0008 (rolling 17-day window, 2026-05-17) |
-| `shopping_lists`           | one current list per household; built from planned recipes via `POST /api/shopping-lists/from-plan` (auto-generation from a meal-plan id was removed) |
+| `inventory_items`          | canonical_food_id, qty, unit (`g` / `ml` / `count` only), brand?, purchased_at, expires_at — **no `location` column** (the `inventory_location` enum was dropped 2026-05-15; grouping derives from `canonical_foods.category`) |
+| `recipes`                  | name, source_url?, source_image? (public URL), instructions, servings, **total_time_minutes?**, **tags[]** (migration 0009) |
+| `recipe_ingredients`       | recipe_id, canonical_food_id, original `qty` + `unit` text, optional, section?, `metric_value?` for normalized calculation/display help |
+| `meal_plan_entries`        | date, recipe_id, servings, status (planned / cooked / skipped) — **date-keyed directly**; the `meal_plans` (week_start) parent table was dropped in migration 0008 (rolling 17-day window, 2026-05-17); API enforces max 4 recipes per day |
+| `shopping_lists`           | one current editable list per household; built from planned recipes via `POST /api/shopping-lists/from-plan` (auto-generation from a meal-plan id was removed; `finalized_at` is currently unused) |
 | `shopping_list_items`      | canonical_food_id, qty, unit, source (recipe / staple / manual), **source_recipe_id?**, source_recipe_names? |
 | `staples`                  | canonical_food_id, threshold_qty, threshold_unit                       |
 | `cook_events`              | meal_plan_entry_id, cooked_at, deductions JSONB, prompts_resolved      |
@@ -83,13 +80,13 @@ Household-scoped domain tables carry `household_id` and are filtered by request 
 
 ### Add recipe
 1. User submits (manual / URL / photo / search / Meal Planner import)
-2. Server normalizes ingredients → `canonical_foods` (asks user to disambiguate any unmatched item)
+2. Server preserves original ingredient text for display, stores normalized metric annotations when available, and maps matched ingredients to `canonical_foods`
 3. Recipe saved
 
 ### Plan + generate shopping list
 1. User places recipes on dates in the rolling plan view (any date holds up to 4 recipes)
 2. User adds planned recipes to the list via the "Add from planned recipes" modal → `POST /api/shopping-lists/from-plan` (pre-ticks days whose entries are already on the list)
-3. List = Σ recipe ingredients − current inventory + staples below threshold; editable before finalizing
+3. List = Σ recipe ingredients − current inventory + low-stock staples below threshold; recipe-derived and staple-derived rows refresh, manual rows stay in place
 
 ### Compare prices + build to cart (New World only — D21)
 1. Server enqueues a `compare_prices` job; Mac-mini scraper picks it up
@@ -102,13 +99,13 @@ Household-scoped domain tables carry `household_id` and are filtered by request 
 ### Cook a meal
 1. User marks a meal-plan entry cooked
 2. Server proposes deductions from inventory based on recipe ingredients
-3. UI prompts only on ambiguous units ("how many garlic bulbs are left?") — recorded as `cook_event.prompts_resolved`, refining future deductions
+3. UI prompts only on ambiguous units ("how many garlic bulbs are left?") — recorded as `cook_event.prompts_resolved` for audit and future refinement
 4. Inventory is updated
 
 ## Auth & multi-tenancy
 
 - Better-Auth with the Google provider; session cookies on the API origin.
-- Every request resolves an active `household_id` via the user's `memberships`. A user may belong to multiple households later; one exists today.
+- Every request resolves an active `household_id` via the user's `memberships`. The current middleware takes the first membership row it finds; that is acceptable only while the app remains single-household-first in practice.
 - Household-scoped API handlers go through a `withHousehold` middleware that injects `household_id` into queries. Queries still filter directly on `household_id`; UUID obscurity and indirect joins are not tenancy controls.
 - Household-scoped domain tables carry `household_id`. `canonical_foods` stays global because it is a curated reference taxonomy. Better-Auth owns `user`, `session`, `account`, and `verification`, so those auth tables are also exceptions.
 
@@ -143,8 +140,9 @@ Household-scoped domain tables carry `household_id` and are filtered by request 
 ## Hosting & ops
 
 - **Frontend + API:** Vercel (`apps/web` and `apps/server`).
-- **DB + storage:** Supabase free tier — Postgres for domain data, Storage for recipe / inventory photos. Rows hold storage paths; URLs are signed on read.
-- **Background workers:** `apps/scraper` on the home Mac mini, supervised by `launchd`. Polls the Vercel API outbound for pending jobs — no inbound port is exposed at home.
+- **DB + storage:** Supabase free tier — Postgres for domain data, Storage for recipe photos. Recipe rows currently store public image URLs. Inventory photos are not implemented.
+- **Meal Planner import:** the server prefers HTTP MCP when `MEAL_PLANNING_BASE_URL` is configured and falls back to local stdio transport via `@eat/meal-planning` in development/local setups.
+- **Background workers:** `apps/scraper` runs on the home Mac mini. `launchd` supervision is still the planned deployment shape, but the scraper plist is pending the handoff Slice 2 ops work. The worker polls the Vercel API outbound for pending jobs — no inbound port is exposed at home.
 - **Worker auth:** Mac mini holds `SCRAPER_HMAC_SECRET`, a long-lived shared secret used to sign job-queue requests (HMAC).
 - **Secrets:**
   - Vercel: OAuth client ID/secret, Supabase anon/service keys, `SCRAPER_HMAC_SECRET`.
@@ -152,9 +150,9 @@ Household-scoped domain tables carry `household_id` and are filtered by request 
 
 ## Conventions specific to eat-thing
 
-- All units are normalized to canonical units in storage (g for mass, ml for volume, count for count). The display layer converts back to the user's preferred unit.
-- Cook events are append-only and the source of truth for "what happened". Inventory is a derived running balance — if it ever disagrees with reality, the fix is a new event, not an edit.
-- `canonical_foods` grows organically. New items added through the app should always go to taxonomy review, not silent inserts, so the canonical list stays curated.
+- Inventory rows are mutable balance rows. Storage units are canonical (`g`, `ml`, `count`), and recipe/list calculations convert into that model.
+- Cook events are append-only cooking audit records. They do not fully derive inventory today; instead they capture what happened during cooking and preserve ambiguous-unit prompt answers for later review/refinement.
+- `canonical_foods` is a curated global taxonomy. Inventory and manual shopping-list flows do not silently insert into it; they return `taxonomy_review_required` and require an explicit confirm-new-food step or reuse of an existing canonical food.
 
 ## Commands (Root)
 

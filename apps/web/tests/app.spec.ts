@@ -38,6 +38,8 @@ async function stubAuthedShell(page: Page) {
           servings: 4,
           sourceUrl: null,
           sourceImage: null,
+          totalTimeMinutes: null,
+          tags: [],
           instructions: null,
           ingredients: [],
           createdAt: new Date().toISOString(),
@@ -75,7 +77,13 @@ async function stubAuthedShell(page: Page) {
   await page.route('**/api/shopping-lists*', (route) =>
     route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ error: 'No shopping list found' }) }),
   );
-  await page.route('**/api/staples*', (route) =>
+  await page.route('**/api/staples*', (route) => {
+    if (route.request().url().includes('/api/staples/low-stock')) {
+      return route.fallback();
+    }
+    return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+  });
+  await page.route('**/api/foods*', (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }),
   );
 }
@@ -138,6 +146,133 @@ test.describe('authenticated routes load', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Inventory' })).toBeVisible();
   });
 
+  test('inventory route shows low-stock staples from the server', async ({ page }) => {
+    await page.unroute('**/api/inventory*');
+    await page.unroute('**/api/staples*');
+    await page.route('**/api/inventory*', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          {
+            id: 'inv-1',
+            householdId: 'h-1',
+            canonicalFoodId: 'food-apples',
+            foodName: 'Apples',
+            brand: null,
+            qty: 3,
+            unit: 'count',
+            category: 'produce',
+            purchasedAt: new Date().toISOString(),
+            expiresAt: null,
+          },
+        ]),
+      }),
+    );
+    await page.route('**/api/staples/low-stock*', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          {
+            id: 'staple-rice',
+            householdId: 'h-1',
+            canonicalFoodId: 'food-rice',
+            foodName: 'Rice',
+            thresholdQty: 1000,
+            thresholdUnit: 'g',
+            currentQty: 250,
+            neededQty: 750,
+          },
+        ]),
+      }),
+    );
+    await page.route('**/api/staples*', (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }),
+    );
+
+    await Promise.all([
+      page.waitForResponse((response) => response.url().includes('/api/staples/low-stock') && response.ok()),
+      page.goto('/inventory'),
+    ]);
+    await expect(page.getByText('Low staples')).toBeVisible();
+    await expect(page.getByText('Rice')).toBeVisible();
+    await expect(page.getByText('750 g needed')).toBeVisible();
+  });
+
+  test('inventory item form only offers canonical storage units', async ({ page }) => {
+    await page.goto('/inventory');
+    await page.getByRole('button', { name: /add item/i }).click();
+    const unitSelect = page.locator('#unit');
+    await expect(unitSelect).toBeVisible();
+    await expect(unitSelect.locator('option')).toHaveText(['g', 'ml', 'count']);
+  });
+
+  test('inventory add prompts for taxonomy review before reusing an existing canonical food', async ({ page }) => {
+    let finalInventoryBody: unknown;
+
+    await page.route('**/api/inventory*', async (route) => {
+      const { method } = route.request();
+      if (method === 'GET') {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+        return;
+      }
+
+      const body = route.request().postDataJSON() as { canonicalFoodId?: string } | null;
+      if (!body || body.canonicalFoodId !== 'food-1') {
+        await route.fulfill({
+          status: 409,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            code: 'taxonomy_review_required',
+            error: 'Taxonomy review required',
+            proposed: { name: 'Dish Soap', category: 'other', defaultUnit: 'count' },
+            matches: [{ id: 'food-1', name: 'Dish soap', category: 'other', defaultUnit: 'count' }],
+          }),
+        });
+        return;
+      }
+
+      finalInventoryBody = body;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'inv-2',
+          householdId: 'h-1',
+          canonicalFoodId: 'food-1',
+          foodName: 'Dish Soap',
+          brand: null,
+          qty: 1,
+          unit: 'count',
+          category: 'other',
+          purchasedAt: null,
+          expiresAt: null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }),
+      });
+    });
+
+    await page.goto('/inventory');
+    await page.getByRole('button', { name: /add item/i }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByLabel('Food *').fill('Dish Soap');
+    await dialog.getByLabel(/quantity/i).fill('1');
+    await dialog.getByLabel(/unit/i).selectOption('count');
+    await dialog.getByRole('button', { name: /^add item$/i }).click();
+
+    await expect(page.getByRole('button', { name: /use existing: dish soap/i })).toBeVisible();
+    await page.getByRole('button', { name: /use existing: dish soap/i }).click();
+
+    await expect.poll(() => finalInventoryBody).not.toBeNull();
+    expect(finalInventoryBody).toMatchObject({
+      canonicalFoodId: 'food-1',
+      qty: 1,
+      unit: 'count',
+    });
+  });
+
   test('recipes route loads', async ({ page }) => {
     await page.goto('/recipes');
     await expect(page.getByRole('heading', { level: 1, name: 'Recipes' })).toBeVisible();
@@ -163,6 +298,26 @@ test.describe('authenticated routes load', () => {
     await page.getByTitle('Mark cooked').first().click();
     await expect(page.getByRole('heading', { name: /mark.*cooked/i })).toBeVisible();
     await expect(page.getByText('Will deduct from inventory')).toBeVisible();
+  });
+
+  test('plan page labels full days with the 4-recipe cap', async ({ page }) => {
+    await page.route('**/api/meal-plans/entries*', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          entries: [
+            { id: 'entry-1', date: tomorrow, recipeId: 'recipe-1', recipeName: 'Pasta', servings: 4, status: 'planned' },
+            { id: 'entry-2', date: tomorrow, recipeId: 'recipe-1', recipeName: 'Pasta', servings: 4, status: 'planned' },
+            { id: 'entry-3', date: tomorrow, recipeId: 'recipe-1', recipeName: 'Pasta', servings: 4, status: 'planned' },
+            { id: 'entry-4', date: tomorrow, recipeId: 'recipe-1', recipeName: 'Pasta', servings: 4, status: 'planned' },
+          ],
+        }),
+      }),
+    );
+
+    await page.goto('/plan');
+    await expect(page.getByText('max 4 recipes')).toBeVisible();
   });
 
   test('recipes page shows Import button that opens import modal', async ({ page }) => {
@@ -206,6 +361,8 @@ test.describe('authenticated routes load', () => {
           sourceUrl: null,
           sourceImage: null,
           heroImageUrl: null,
+          totalTimeMinutes: 25,
+          tags: ['quick', 'pasta'],
           instructions: 'Toss pasta with lemon.',
           ingredients: [
             {
@@ -214,7 +371,7 @@ test.describe('authenticated routes load', () => {
               foodName: 'lemon',
               canonicalDefaultUnit: 'count',
               qty: '1',
-              unit: 'count',
+              unit: '',
               section: 'Pasta',
               optional: false,
               confidence: 'high',
@@ -246,6 +403,8 @@ test.describe('authenticated routes load', () => {
           servings: 3,
           sourceUrl: null,
           sourceImage: null,
+          totalTimeMinutes: 25,
+          tags: ['quick', 'pasta'],
           instructions: 'Toss pasta with lemon.',
           ingredients: [],
           createdAt: new Date().toISOString(),
@@ -266,13 +425,18 @@ test.describe('authenticated routes load', () => {
     await expect(page.locator('#servings')).toHaveValue('3');
     await expect(page.locator('.ingredients-grid .ingredient-name', { hasText: 'lemon' })).toHaveCount(2);
 
+    await expect(page.locator('#totalTimeMinutes')).toHaveValue('25');
+    await expect(page.locator('#tags')).toHaveValue('quick, pasta');
+    await expect(page.locator('.ingredient-unit').first()).toHaveValue('');
+    await expect(page.locator('.ingredient-unit').nth(1)).toHaveValue('count');
+
     const recipeCreate = page.waitForRequest((request) =>
       request.url().endsWith('/api/recipes') && request.method() === 'POST',
     );
     await page.getByRole('button', { name: /save imported recipe/i }).click();
     const payload = (await recipeCreate).postDataJSON();
     expect(payload.ingredients).toMatchObject([
-      { canonicalFoodId: '00000000-0000-0000-0000-000000000001', section: 'Pasta' },
+      { canonicalFoodId: '00000000-0000-0000-0000-000000000001', section: 'Pasta', unit: '' },
       { canonicalFoodId: '00000000-0000-0000-0000-000000000001', section: 'Sauce' },
     ]);
   });
@@ -610,5 +774,84 @@ test.describe('shopping list — find products + manual pick + send to cart', ()
     await expect(modal.getByText('Added', { exact: true })).toBeVisible();
     // Trolley link
     await expect(modal.getByRole('link', { name: /Open New World trolley/i })).toBeVisible();
+  });
+
+  test('manual shopping-list add prompts for taxonomy review before creating a canonical food', async ({ page }) => {
+    let addItemPostCount = 0;
+    let createFoodBody: unknown;
+    let finalItemBody: unknown;
+
+    await page.route(`**/api/shopping-lists/${LIST_ID}/items`, async (route) => {
+      addItemPostCount += 1;
+      const body = route.request().postDataJSON();
+      if (addItemPostCount === 1) {
+        await route.fulfill({
+          status: 409,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            code: 'taxonomy_review_required',
+            error: 'Taxonomy review required',
+            proposed: { name: 'Dish Soap', category: 'other', defaultUnit: 'count' },
+            matches: [],
+          }),
+        });
+        return;
+      }
+
+      finalItemBody = body;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'sli-new',
+          shoppingListId: LIST_ID,
+          canonicalFoodId: 'food-new',
+          name: 'Dish Soap',
+          qty: 1,
+          unit: 'count',
+          source: 'manual',
+          checked: false,
+          category: 'other',
+          sourceRecipeNames: null,
+          sourceRecipeId: null,
+        }),
+      });
+    });
+    await page.route('**/api/foods', async (route) => {
+      createFoodBody = route.request().postDataJSON();
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'food-new',
+          name: 'Dish Soap',
+          defaultUnit: 'count',
+          aliases: [],
+          densityGPerMl: null,
+          countToGrams: null,
+        }),
+      });
+    });
+
+    await page.goto('/list');
+    await page.getByPlaceholder('Food name or search…').fill('Dish Soap');
+    await page.getByRole('spinbutton').fill('1');
+    await page.getByRole('button', { name: /\+ add/i }).click();
+
+    await expect(page.getByText('Review this new canonical food before adding it.')).toBeVisible();
+    await page.getByRole('button', { name: /create canonical food: dish soap/i }).click();
+
+    await expect.poll(() => addItemPostCount).toBe(2);
+    expect(createFoodBody).toMatchObject({
+      name: 'Dish Soap',
+      category: 'other',
+      defaultUnit: 'count',
+    });
+    expect(finalItemBody).toMatchObject({
+      canonicalFoodId: 'food-new',
+      name: 'Dish Soap',
+      qty: 1,
+      unit: 'count',
+    });
   });
 });

@@ -320,6 +320,20 @@
   white-space: nowrap;
 }
 
+.inv-sidebar-low-meta {
+  font-size: 12px;
+  color: var(--mute);
+  font-variant-numeric: tabular-nums;
+}
+
+.inv-sidebar-note {
+  margin: 0;
+  font-size: 13px;
+  color: var(--mute);
+  font-family: var(--font-serif);
+  font-style: italic;
+}
+
 @media (max-width: 1024px) {
   .inv-body { grid-template-columns: 1fr; }
   .inv-sidebar { position: static; }

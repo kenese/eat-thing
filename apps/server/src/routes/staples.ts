@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { withHousehold } from '../middleware/with-household.js';
 import { db } from '../db/index.js';
 import { staples, canonicalFoods } from '../db/schema/index.js';
+import { listLowStockStaples } from '../lib/low-stock-staples.js';
 
 const router: ExpressRouter = Router();
 
@@ -42,6 +43,17 @@ router.get('/', withHousehold, async (req, res) => {
       .innerJoin(canonicalFoods, joinOn)
       .where(eq(staples.householdId, req.householdId))
       .orderBy(asc(canonicalFoods.name));
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/staples/low-stock
+router.get('/low-stock', withHousehold, async (req, res) => {
+  try {
+    const rows = await listLowStockStaples(req.householdId);
     res.json(rows);
   } catch (err) {
     console.error(err);

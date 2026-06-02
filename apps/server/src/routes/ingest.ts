@@ -2,7 +2,7 @@ import {Router, type Router as ExpressRouter} from 'express';
 import {z} from 'zod';
 import {eq} from 'drizzle-orm';
 import {withHousehold} from '../middleware/with-household.js';
-import {extractFromUrl, resolveHeroImage} from '../lib/recipe-extractor.js';
+import {extractFromUrl, extractFromText, resolveHeroImage} from '../lib/recipe-extractor.js';
 import {extractFromPhoto} from '../lib/photo-extractor.js';
 import {searchMealDb} from '../lib/themealdb.js';
 import {listMealPlannerRecipes, parseMealPlannerRecipe} from '../lib/meal-planner-importer.js';
@@ -60,6 +60,24 @@ router.post('/photo', withHousehold, async (req, res) => {
     } catch (err) {
         const msg = err instanceof Error ? err.message : 'Photo extraction failed';
         console.error('[ingest/photo]', err);
+        res.status(422).json({error: msg});
+    }
+});
+
+// POST /api/ingest/text
+router.post('/text', withHousehold, async (req, res) => {
+    const parse = z.object({text: z.string().min(1)}).safeParse(req.body);
+    if (!parse.success) {
+        res.status(400).json({error: 'text is required'});
+        return;
+    }
+
+    try {
+        const recipe = await extractFromText(parse.data.text);
+        res.json(recipe);
+    } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Text extraction failed';
+        console.error('[ingest/text]', err);
         res.status(422).json({error: msg});
     }
 });

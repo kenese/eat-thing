@@ -336,6 +336,10 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose,
 
   const [name, setName] = useState(initialData?.name ?? '');
   const [servings, setServings] = useState(initialData ? String(initialData.servings) : '4');
+  const [totalTimeMinutes, setTotalTimeMinutes] = useState(
+    initialData?.totalTimeMinutes != null ? String(initialData.totalTimeMinutes) : '',
+  );
+  const [tags, setTags] = useState(initialData?.tags.join(', ') ?? '');
   const [sourceUrl, setSourceUrl] = useState(initialData?.sourceUrl ?? '');
   const [instructions, setInstructions] = useState(initialData?.instructions ?? '');
   const [ingredients, setIngredients] = useState<IngredientDraft[]>(
@@ -346,7 +350,7 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose,
           foodName: i.foodName,
           rawText: i.rawText,
           qty: i.qty,
-          unit: i.unit || (i.canonicalDefaultUnit ?? ''),
+          unit: i.unit,
           section: i.section,
           optional: i.optional,
           lowConfidence: i.confidence === 'low' || !i.canonicalFoodId,
@@ -367,6 +371,8 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose,
     if (mode === 'edit' && existing && !hydrated) {
       setName(existing.name);
       setServings(String(existing.servings));
+      setTotalTimeMinutes(existing.totalTimeMinutes != null ? String(existing.totalTimeMinutes) : '');
+      setTags(existing.tags.join(', '));
       setSourceUrl(existing.sourceUrl ?? '');
       setInstructions(existing.instructions ?? '');
       setIngredients(existing.ingredients.map(i => ({
@@ -386,6 +392,10 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose,
   const addMutation = useAddRecipe();
   const updateMutation = useUpdateRecipe(recipeId ?? '');
   const isPending = addMutation.isPending || updateMutation.isPending;
+
+  function parseTagsInput(value: string) {
+    return [...new Set(value.split(',').map(tag => tag.trim().toLowerCase()).filter(Boolean))];
+  }
 
   function addIngredient(food: CanonicalFood) {
     setIngredients(prev => [...prev, {
@@ -417,6 +427,12 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose,
     const servingsNum = parseFloat(servings);
     if (isNaN(servingsNum) || servingsNum <= 0) { setError('Servings must be a positive number.'); return; }
 
+    const totalTimeNum = totalTimeMinutes.trim() ? Number(totalTimeMinutes) : null;
+    if (totalTimeNum !== null && (!Number.isInteger(totalTimeNum) || totalTimeNum <= 0)) {
+      setError('Total time must be a whole number of minutes.');
+      return;
+    }
+
     if (ingredients.length === 0) { setError('Add at least one ingredient.'); return; }
     if (ingredients.some(i => !i.canonicalFoodId)) { setError('Please resolve all unmatched ingredients (shown in amber) before saving.'); return; }
     if (ingredients.some(i => !i.qty.trim())) { setError('Every ingredient needs a quantity.'); return; }
@@ -430,6 +446,8 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose,
     const payload = {
       name: name.trim(),
       servings: servingsNum,
+      totalTimeMinutes: totalTimeNum,
+      tags: parseTagsInput(tags),
       sourceUrl: sourceUrl.trim() || null,
       instructions: instructions.trim() || null,
       ingredients: ingredients.map(({ clientId: _id, foodName: _fn, lowConfidence: _lc, rawText: _rt, metricQty, metricUnit, ...rest }) => ({
@@ -489,12 +507,18 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose,
             <div className="recipe-view-body">
               <div className="recipe-view-meta">
                 <span className="recipe-view-servings">{servings} servings</span>
+                {totalTimeMinutes && <span className="recipe-view-time">{totalTimeMinutes} min</span>}
                 {sourceUrl && (
                   <a className="recipe-view-source" href={sourceUrl} target="_blank" rel="noopener noreferrer">
                     Source ↗
                   </a>
                 )}
               </div>
+              {parseTagsInput(tags).length > 0 && (
+                <div className="recipe-view-tags">
+                  {parseTagsInput(tags).map(tag => <span key={tag} className="recipe-view-tag">{tag}</span>)}
+                </div>
+              )}
 
               {ingredients.length > 0 && (
                 <div className="recipe-view-section">
@@ -605,10 +629,10 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose,
                   />
                 </div>
                 <div className="form-row">
-                  <div className="form-field">
-                    <label className="form-label" htmlFor="servings">Servings *</label>
-                    <input
-                      id="servings"
+                <div className="form-field">
+                  <label className="form-label" htmlFor="servings">Servings *</label>
+                  <input
+                    id="servings"
                       className="form-input"
                       type="number"
                       step="any"
@@ -616,6 +640,19 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose,
                       value={servings}
                       onChange={e => setServings(e.target.value)}
                       required
+                    />
+                  </div>
+                  <div className="form-field">
+                    <label className="form-label" htmlFor="totalTimeMinutes">Total time (min)</label>
+                    <input
+                      id="totalTimeMinutes"
+                      className="form-input"
+                      type="number"
+                      min="1"
+                      step="1"
+                      placeholder="Optional"
+                      value={totalTimeMinutes}
+                      onChange={e => setTotalTimeMinutes(e.target.value)}
                     />
                   </div>
                   <div className="form-field">
@@ -629,6 +666,17 @@ export function RecipeForm({ mode, recipeId, initialData, pendingPhoto, onClose,
                       onChange={e => setSourceUrl(e.target.value)}
                     />
                   </div>
+                </div>
+                <div className="form-field">
+                  <label className="form-label" htmlFor="tags">Tags</label>
+                  <input
+                    id="tags"
+                    className="form-input"
+                    type="text"
+                    placeholder="Comma-separated, e.g. quick, pasta"
+                    value={tags}
+                    onChange={e => setTags(e.target.value)}
+                  />
                 </div>
               </div>
               <RecipeImagePicker

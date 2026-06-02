@@ -5,13 +5,14 @@ import {
   useIngestSearch,
   useIngestMealPlannerList,
   useIngestMealPlannerParse,
+  useIngestText,
 } from '../../hooks/useIngest';
 import { RecipeForm } from './RecipeForm';
 import type { ImportedRecipe } from '@eat/shared';
 import { prepareRecipePhotoUpload } from '../../lib/recipePhotoUpload';
 import './ImportModal.css';
 
-type Tab = 'url' | 'photo' | 'search' | 'mealPlanner';
+type Tab = 'url' | 'photo' | 'text' | 'search' | 'mealPlanner';
 const API_ERROR = 'Recipe could not be loaded, try again.';
 interface ImportModalProps {
   onClose: () => void;
@@ -24,6 +25,7 @@ export function ImportModal({ onClose }: ImportModalProps) {
 
   const urlMutation = useIngestUrl();
   const photoMutation = useIngestPhoto();
+  const textMutation = useIngestText();
   const searchMutation = useIngestSearch();
   const mealPlannerList = useIngestMealPlannerList(tab === 'mealPlanner');
   const mealPlannerParse = useIngestMealPlannerParse();
@@ -62,6 +64,16 @@ export function ImportModal({ onClose }: ImportModalProps) {
     setImported(result);
   }
 
+  // ─── Text tab ─────────────────────────────────────────────────────────────
+
+  const [textInput, setTextInput] = useState('');
+
+  async function handleTextExtract(e: React.FormEvent) {
+    e.preventDefault();
+    const result = await textMutation.mutateAsync(textInput.trim());
+    setImported(result);
+  }
+
   // ─── Search tab ───────────────────────────────────────────────────────────
 
   const [searchInput, setSearchInput] = useState('');
@@ -89,11 +101,13 @@ export function ImportModal({ onClose }: ImportModalProps) {
   const isLoading =
     urlMutation.isPending ||
     photoMutation.isPending ||
+    textMutation.isPending ||
     searchMutation.isPending ||
     mealPlannerParse.isPending;
   const error =
     (urlMutation.error as Error | null)?.message ||
     (photoMutation.error as Error | null)?.message ||
+    (textMutation.error as Error | null)?.message ||
     (searchMutation.error as Error | null)?.message ||
     (mealPlannerParse.error as Error | null)?.message ||
     null;
@@ -107,7 +121,7 @@ export function ImportModal({ onClose }: ImportModalProps) {
         </div>
 
         <div className="import-tabs">
-          {(['url', 'photo', 'search', 'mealPlanner'] as Tab[]).map(t => (
+          {(['url', 'photo', 'text', 'search', 'mealPlanner'] as Tab[]).map(t => (
             <button
               key={t}
               className={`import-tab${tab === t ? ' active' : ''}`}
@@ -117,9 +131,11 @@ export function ImportModal({ onClose }: ImportModalProps) {
                 ? 'URL'
                 : t === 'photo'
                   ? 'photo'
-                  : t === 'search'
-                    ? 'search'
-                    : 'meal planner'}
+                  : t === 'text'
+                    ? 'text'
+                    : t === 'search'
+                      ? 'search'
+                      : 'meal planner'}
             </button>
           ))}
         </div>
@@ -167,6 +183,24 @@ export function ImportModal({ onClose }: ImportModalProps) {
             <input ref={fileRef} type="file" accept="image/*" onChange={handleFilePick} hidden />
             {error && <p className="form-error">{API_ERROR}</p>}
             <button className="btn-primary" type="submit" disabled={isLoading || !photoFile}>
+              {isLoading ? 'extracting…' : 'extract recipe'}
+            </button>
+          </form>
+        )}
+
+        {tab === 'text' && (
+          <form className="import-form" onSubmit={handleTextExtract}>
+            <p className="import-hint">Paste a recipe in any format — website HTML, JSON-LD schema, or plain text. We'll extract the recipe automatically.</p>
+            <textarea
+              className="form-input text-import-area"
+              placeholder="Paste HTML, schema markup, or formatted recipe text here…"
+              value={textInput}
+              onChange={e => setTextInput(e.target.value)}
+              rows={10}
+              required
+            />
+            {error && <p className="form-error">{API_ERROR}</p>}
+            <button className="btn-primary" type="submit" disabled={isLoading || !textInput.trim()}>
               {isLoading ? 'extracting…' : 'extract recipe'}
             </button>
           </form>

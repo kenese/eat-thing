@@ -15,8 +15,32 @@ interface SchemaRecipeIngredient {
 interface RawExtracted {
     name: string;
     servings: number;
+    totalTimeMinutes: number | null;
+    tags: string[];
     instructions: string | null;
     ingredients: SchemaRecipeIngredient[];
+}
+
+function parseDurationMinutes(value: unknown): number | null {
+    if (typeof value !== 'string') return null;
+    const match = value.match(/^P(?:\d+Y)?(?:\d+M)?(?:\d+W)?(?:\d+D)?(?:T(?:(\d+)H)?(?:(\d+)M)?)?$/i);
+    if (!match) return null;
+    const hours = match[1] ? Number.parseInt(match[1], 10) : 0;
+    const minutes = match[2] ? Number.parseInt(match[2], 10) : 0;
+    const total = hours * 60 + minutes;
+    return total > 0 ? total : null;
+}
+
+function normalizeTags(...sources: unknown[]): string[] {
+    const tags = sources.flatMap(source => {
+        if (Array.isArray(source)) return source;
+        if (typeof source === 'string') return source.split(',');
+        return [];
+    })
+        .map(tag => typeof tag === 'string' ? tag.trim().toLowerCase() : '')
+        .filter(Boolean);
+
+    return [...new Set(tags)];
 }
 
 // ─── Schema.org parser ───────────────────────────────────────────────────────
@@ -59,6 +83,17 @@ function extractSchemaNode(node: Record<string, unknown>): RawExtracted | null {
         servings = yieldRaw;
     }
 
+    const totalTimeMinutes =
+        parseDurationMinutes(node['totalTime']) ??
+        (() => {
+            const prep = parseDurationMinutes(node['prepTime']) ?? 0;
+            const cook = parseDurationMinutes(node['cookTime']) ?? 0;
+            const total = prep + cook;
+            return total > 0 ? total : null;
+        })();
+
+    const tags = normalizeTags(node['keywords'], node['recipeCategory']);
+
     const rawInstructions = node['recipeInstructions'];
     let instructions: string | null = null;
     if (typeof rawInstructions === 'string') {
@@ -98,7 +133,7 @@ function extractSchemaNode(node: Record<string, unknown>): RawExtracted | null {
 
     const ingredients = ingredientStrings.map(s => parseIngredientString(s));
 
-    return {name, servings, instructions, ingredients};
+    return {name, servings, totalTimeMinutes, tags, instructions, ingredients};
 }
 
 const INGREDIENT_UNITS = ['g', 'gram', 'grams', 'gr', 'ml', 'milliliter', 'milliliters', 'kg', 'kilogram', 'kilograms', 'l', 'liter', 'liters', 'litre', 'litres', 'cup', 'cups', 'tbsp', 'tablespoon', 'tablespoons', 'tsp', 'teaspoon', 'teaspoons', 'oz', 'ounce', 'ounces', 'lb', 'pound', 'pounds'];
@@ -155,16 +190,20 @@ interface GeminiSection {
 interface GeminiResponse {
     name: string;
     servings: number;
+    totalTimeMinutes?: number | null;
+    tags?: string[];
     sections: GeminiSection[];
 }
 
 async function extractWithGemini(cleanText: string): Promise<RawExtracted | null> {
     const prompt = `Extract the recipe from this webpage text. Return ONLY valid JSON with this exact shape:
-{"name":"string","servings":4,"sections":[{"name":"string or null","ingredients":[{"name":"string","qty":"string","unit":"string"}],"instructions":"string or null"}]}
+{"name":"string","servings":4,"totalTimeMinutes":30,"tags":["quick"],"sections":[{"name":"string or null","ingredients":[{"name":"string","qty":"string","unit":"string"}],"instructions":"string or null"}]}
 
 Rules:
 - Preserve all original quantities and units exactly as written. Do not convert measurements.
 - Do not paraphrase ingredients or instructions — keep the original wording.
+- Include totalTimeMinutes when it is stated or clearly inferable, otherwise use null.
+- Include short lowercase tags when they are obvious from the recipe, otherwise use [].
 - A recipe with no named sections should return a single section with name: null.
 - Multiple components (e.g. "For the sauce", "For the pasta") should be separate sections.
 
@@ -192,6 +231,8 @@ ${cleanText}`;
         return {
             name: gemini.name,
             servings: gemini.servings ?? 4,
+            totalTimeMinutes: gemini.totalTimeMinutes ?? null,
+            tags: gemini.tags ?? [],
             instructions: instructionParts.join('\n\n') || null,
             ingredients,
         };
@@ -252,7 +293,10 @@ export interface ExtractedRecipe {
     name: string;
     servings: number;
     sourceUrl: string;
+    sourceImage: string | null;
     heroImageUrl: string | null;
+    totalTimeMinutes: number | null;
+    tags: string[];
     instructions: string | null;
     ingredients: ImportedIngredient[];
 }
@@ -325,7 +369,10 @@ async function extractFromUrl(url: string): Promise<ExtractedRecipe> {
             name: raw.name,
             servings: raw.servings,
             sourceUrl: url,
+            sourceImage: null,
             heroImageUrl,
+            totalTimeMinutes: raw.totalTimeMinutes,
+            tags: raw.tags,
             instructions: raw.instructions,
             ingredients,
         };
@@ -333,6 +380,60 @@ async function extractFromUrl(url: string): Promise<ExtractedRecipe> {
         console.log('Extract from Url ingestion failed:', e);
         throw e;
     }
+}
+
+export async function extractFromText(rawText: string): Promise<ExtractedRecipe> {
+    // Try Schema.org first in case the user pasted raw HTML
+    const schemaRaw = parseSchemaOrg(rawText);
+
+    let raw = schemaRaw;
+    if (!raw?.instructions) {
+        // For plain text / formatted text, clean if it looks like HTML
+        const looksLikeHtml = /<[a-z][\s\S]*>/i.test(rawText);
+        const cleanText = looksLikeHtml
+            ? cleanHtmlWithReadability(rawText)
+            : rawText.slice(0, 12000);
+
+        const gemini = await extractWithGemini(cleanText);
+        if (schemaRaw) {
+            raw = {...schemaRaw, instructions: gemini?.instructions ?? null};
+        } else {
+            raw = gemini;
+        }
+    }
+
+    if (!raw) throw new Error('Could not extract a recipe from the provided text');
+
+    const annotated = annotateMetric(raw.ingredients);
+    const matched = await matchIngredients(annotated.map(i => i.name));
+
+    const ingredients: ImportedIngredient[] = annotated.map((ing, idx) => {
+        const m = matched[idx];
+        return {
+            rawText: ing.name,
+            canonicalFoodId: m.canonicalFoodId,
+            foodName: m.foodName,
+            canonicalDefaultUnit: m.canonicalDefaultUnit,
+            qty: ing.qty,
+            unit: ing.unit,
+            section: ing.section ?? null,
+            metric: ing.metric,
+            optional: false,
+            confidence: m.confidence,
+        };
+    });
+
+    return {
+        name: raw.name,
+        servings: raw.servings,
+        sourceUrl: '',
+        sourceImage: null,
+        heroImageUrl: null,
+        totalTimeMinutes: raw.totalTimeMinutes,
+        tags: raw.tags,
+        instructions: raw.instructions,
+        ingredients,
+    };
 }
 
 // Exported for testing only

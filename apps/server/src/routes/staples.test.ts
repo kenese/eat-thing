@@ -5,6 +5,7 @@ import request from 'supertest';
 const mocks = vi.hoisted(() => ({
   getSession: vi.fn(),
   membershipLimit: vi.fn(),
+  listLowStockStaples: vi.fn(),
 }));
 
 vi.mock('../auth.js', () => ({
@@ -13,15 +14,33 @@ vi.mock('../auth.js', () => ({
 vi.mock('better-auth/node', () => ({ fromNodeHeaders: (h: unknown) => h }));
 vi.mock('drizzle-orm', () => ({
   and: (...args: unknown[]) => args,
-  eq: () => null,
+  eq: (field: unknown, value: unknown) => ({ field, value }),
   asc: () => null,
   sql: Object.assign(() => null, { template: () => null }),
 }));
 vi.mock('uuid', () => ({ v4: () => 'fixed-uuid' }));
 vi.mock('../db/index.js', () => {
-  const chain = { from: () => ({ where: () => ({ limit: mocks.membershipLimit }) }) };
-  return { db: { select: () => chain } };
+  const makeAwaitable = (terminal: () => unknown) => Object.assign(Promise.resolve(terminal()), {
+    orderBy: () => terminal(),
+    limit: () => terminal(),
+  });
+  const makeSelectChain = (terminal: () => unknown) => ({
+    from: () => ({
+      innerJoin: () => ({
+        where: () => makeAwaitable(terminal),
+      }),
+      where: () => ({ limit: mocks.membershipLimit }),
+    }),
+  });
+  return { db: { select: (cols?: unknown) => {
+    const isMembershipSelect = cols && typeof cols === 'object' && 'householdId' in (cols as object)
+      && Object.keys(cols as object).length === 1;
+    return makeSelectChain(isMembershipSelect ? mocks.membershipLimit : mocks.listLowStockStaples);
+  } } };
 });
+vi.mock('../lib/low-stock-staples.js', () => ({
+  listLowStockStaples: mocks.listLowStockStaples,
+}));
 vi.mock('../db/schema/index.js', () => ({
   memberships: { householdId: 'householdId', userId: 'userId' },
   staples: {},
@@ -76,5 +95,39 @@ describe('staples router', () => {
     mocks.membershipLimit.mockResolvedValue([{ householdId: 'hh-1' }]);
     const res = await request(app).put('/api/staples/some-id').send({ thresholdUnit: 'lb' });
     expect(res.status).toBe(400);
+  });
+
+  it('GET /low-stock returns the derived low-stock staples for the household', async () => {
+    mocks.getSession.mockResolvedValue({ user: { id: 'u1' } });
+    mocks.membershipLimit.mockResolvedValue([{ householdId: 'hh-1' }]);
+    mocks.listLowStockStaples.mockResolvedValueOnce([
+      {
+        id: 'staple-1',
+        householdId: 'hh-1',
+        canonicalFoodId: 'food-1',
+        foodName: 'Rice',
+        thresholdQty: 1000,
+        thresholdUnit: 'g',
+        currentQty: 250,
+        neededQty: 750,
+      },
+    ]);
+
+    const res = await request(app).get('/api/staples/low-stock');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([
+      {
+        id: 'staple-1',
+        householdId: 'hh-1',
+        canonicalFoodId: 'food-1',
+        foodName: 'Rice',
+        thresholdQty: 1000,
+        thresholdUnit: 'g',
+        currentQty: 250,
+        neededQty: 750,
+      },
+    ]);
+    expect(mocks.listLowStockStaples).toHaveBeenCalledWith('hh-1');
   });
 });

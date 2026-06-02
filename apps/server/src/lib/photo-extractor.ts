@@ -8,6 +8,11 @@ type ImageMediaType = 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp';
 export interface ExtractedPhotoRecipe {
   name: string;
   servings: number;
+  sourceUrl: string | null;
+  sourceImage: string | null;
+  heroImageUrl: string | null;
+  totalTimeMinutes: number | null;
+  tags: string[];
   instructions: string | null;
   ingredients: ImportedIngredient[];
 }
@@ -21,6 +26,8 @@ interface GeminiSection {
 interface GeminiResponse {
   name: string;
   servings: number;
+  totalTimeMinutes?: number | null;
+  tags?: string[];
   sections: GeminiSection[];
 }
 
@@ -34,11 +41,13 @@ export async function extractFromPhoto(
   mimeType: ImageMediaType,
 ): Promise<ExtractedPhotoRecipe> {
   const prompt = `Look at this recipe image. Extract the recipe and return ONLY valid JSON with this shape:
-{"name":"string","servings":4,"sections":[{"name":"string or null","ingredients":[{"name":"string","qty":"string","unit":"string"}],"instructions":"string or null"}]}
+{"name":"string","servings":4,"totalTimeMinutes":30,"tags":["quick"],"sections":[{"name":"string or null","ingredients":[{"name":"string","qty":"string","unit":"string"}],"instructions":"string or null"}]}
 
 Rules:
 - Preserve all original quantities and units exactly as written. Do not convert measurements.
 - Do not paraphrase ingredients or instructions — keep the original wording.
+- Include totalTimeMinutes when it is shown or clearly inferable, otherwise use null.
+- Include short lowercase tags when they are obvious from the recipe, otherwise use [].
 - A recipe with no named sections should return a single section with name: null.
 - Multiple components (e.g. "For the sauce", "For the pasta") should be separate sections.`;
 
@@ -88,6 +97,11 @@ Rules:
   return {
     name: raw.name,
     servings: raw.servings,
+    sourceUrl: null,
+    sourceImage: null,
+    heroImageUrl: null,
+    totalTimeMinutes: raw.totalTimeMinutes ?? null,
+    tags: raw.tags ?? [],
     instructions: instructionParts.join('\n\n') || null,
     ingredients,
   };

@@ -7,6 +7,7 @@ import { db } from '../db/index.js';
 import { mealPlanEntries, recipes } from '../db/schema/index.js';
 
 const router: ExpressRouter = Router();
+const MAX_ENTRIES_PER_DAY = 4;
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'must be YYYY-MM-DD');
 
@@ -32,6 +33,17 @@ const entryCols = {
 };
 
 const entryJoinOn = sql`${mealPlanEntries.recipeId} = ${recipes.id}`;
+
+async function loadEntriesForDay(date: string, householdId: string) {
+  return db
+    .select({ id: mealPlanEntries.id })
+    .from(mealPlanEntries)
+    .where(and(
+      eq(mealPlanEntries.householdId, householdId),
+      eq(mealPlanEntries.date, date),
+    ))
+    .limit(MAX_ENTRIES_PER_DAY);
+}
 
 // GET /api/meal-plans/entries?from=YYYY-MM-DD&to=YYYY-MM-DD
 router.get('/entries', withHousehold, async (req, res) => {
@@ -82,6 +94,12 @@ router.post('/entries', withHousehold, async (req, res) => {
       return;
     }
 
+    const entriesForDay = await loadEntriesForDay(date, req.householdId);
+    if (entriesForDay.length >= MAX_ENTRIES_PER_DAY) {
+      res.status(409).json({ error: `That day already has ${MAX_ENTRIES_PER_DAY} recipes` });
+      return;
+    }
+
     const entryId = uuidv4();
     await db.insert(mealPlanEntries).values({
       id: entryId,
@@ -116,7 +134,7 @@ router.put('/entries/:id', withHousehold, async (req, res) => {
 
   try {
     const [existing] = await db
-      .select({ householdId: mealPlanEntries.householdId })
+      .select({ householdId: mealPlanEntries.householdId, date: mealPlanEntries.date })
       .from(mealPlanEntries)
       .where(eq(mealPlanEntries.id, id))
       .limit(1);
@@ -125,6 +143,14 @@ router.put('/entries/:id', withHousehold, async (req, res) => {
     if (existing.householdId !== req.householdId) { res.status(403).json({ error: 'Forbidden' }); return; }
 
     const d = parse.data;
+    if (d.date && d.date !== existing.date) {
+      const entriesForTargetDay = await loadEntriesForDay(d.date, req.householdId);
+      if (entriesForTargetDay.length >= MAX_ENTRIES_PER_DAY) {
+        res.status(409).json({ error: `That day already has ${MAX_ENTRIES_PER_DAY} recipes` });
+        return;
+      }
+    }
+
     await db
       .update(mealPlanEntries)
       .set({
