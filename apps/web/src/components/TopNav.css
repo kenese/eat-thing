@@ -4,7 +4,7 @@
   padding: 14px var(--gutter);
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: var(--space-6);
 }
 
 .topnav-brand {
@@ -20,8 +20,8 @@
 
 .topnav-link {
   font-family: var(--font-sans);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--text-meta);
+  font-weight: var(--weight-semibold);
   letter-spacing: 0.01em;
   color: rgba(243, 245, 242, 0.6);
   text-decoration: none;
@@ -48,8 +48,8 @@
 
 .topnav-date {
   font-family: var(--font-sans);
-  font-size: 11px;
-  letter-spacing: 0.04em;
+  font-size: var(--text-eyebrow);
+  letter-spacing: var(--tracking-wide);
   text-transform: uppercase;
   color: rgba(243, 245, 242, 0.7);
 }
@@ -63,8 +63,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
-  font-size: 13px;
+  font-weight: var(--weight-bold);
+  font-size: var(--text-meta);
 }
 
 .topnav-avatar-btn {
@@ -88,7 +88,7 @@
 }
 
 @media (max-width: 768px) {
-  .topnav { padding: 12px var(--gutter-mobile); gap: 12px; }
+  .topnav { padding: 12px var(--gutter-mobile); gap: var(--space-3); }
   .topnav-links { gap: 14px; }
   .topnav-date { display: none; }
 }
@@ -96,7 +96,7 @@
 @media (max-width: 480px) {
   .topnav {
     padding: 10px 12px;
-    gap: 8px;
+    gap: var(--space-2);
   }
 
   .wordmark,
@@ -111,13 +111,13 @@
 
   .topnav-phone-brand {
     font-family: var(--font-serif);
-    font-size: 22px;
-    font-weight: 700;
+    font-size: 22px;   /* wordmark brand on narrow screens — not a section header */
+    font-weight: var(--weight-bold);
   }
 
   .topnav-links {
     justify-content: flex-end;
-    gap: 4px;
+    gap: var(--space-1);
   }
 
   .topnav-link {

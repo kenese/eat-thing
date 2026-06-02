@@ -5,9 +5,9 @@
   padding: 3px 9px;
   border-radius: var(--radius-pill);
   font-family: var(--font-sans);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
+  font-size: var(--text-chip);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-wider);
   text-transform: uppercase;
   white-space: nowrap;
 }

@@ -1,4 +1,4 @@
-.plan-page { padding: 0 var(--gutter) 36px; max-width: 1440px; margin: 0 auto; width: 100%; overflow-x: hidden; }
+.plan-page { padding: 0 var(--gutter) var(--space-section); max-width: 1440px; margin: 0 auto; width: 100%; overflow-x: hidden; }
 
 /* Title controls row */
 .plan-title-controls {
@@ -23,13 +23,13 @@
   border-radius: 6px;
   padding: 6px 10px;
   font-family: var(--font-sans);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--text-small);
+  font-weight: var(--weight-semibold);
   color: var(--ink2);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
 }
 .plan-scroll-btn:hover { background: var(--cream); color: var(--ink); }
 .plan-scroll-btn--stub { opacity: 0.4; cursor: not-allowed; }
@@ -38,14 +38,14 @@
 .plan-add-to-list-btn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .plan-add-to-list-count {
   background: rgba(255,255,255,0.25);
   border-radius: var(--radius-pill);
-  font-size: 11px;
-  font-weight: 700;
+  font-size: var(--text-eyebrow);
+  font-weight: var(--weight-bold);
   padding: 1px 7px;
   font-variant-numeric: tabular-nums;
 }
@@ -55,22 +55,22 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  padding: 14px 0 8px;
+  padding: 14px 0 var(--space-2);
   border-top: 1px solid var(--rule);
 }
 .plan-horizon-eyebrow {
   font-family: var(--font-sans);
-  font-size: 10px;
-  font-weight: 700;
+  font-size: var(--text-chip);
+  font-weight: var(--weight-bold);
   color: var(--mute);
-  letter-spacing: 0.14em;
+  letter-spacing: var(--tracking-widest);
   text-transform: uppercase;
 }
 .plan-horizon-legend {
   display: flex;
   gap: 14px;
   font-family: var(--font-sans);
-  font-size: 11px;
+  font-size: var(--text-eyebrow);
   color: var(--ink2);
 }
 .plan-horizon-legend-item {
@@ -104,7 +104,7 @@
   align-items: center;
   justify-content: center;
   gap: 2px;
-  padding: 8px 4px;
+  padding: var(--space-2) var(--space-1);
   border-radius: 10px;
   border: 1px solid transparent;
   background: transparent;
@@ -124,9 +124,9 @@
 
 .horizon-pill-day {
   font-family: var(--font-sans);
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-size: 9px;           /* tiny day label — no token below --text-chip (10px) */
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.08em;   /* fine tracking for tiny label — no token at 0.08em */
   text-transform: uppercase;
   color: var(--mute);
 }
@@ -135,8 +135,8 @@
 .horizon-pill-num {
   font-family: var(--font-serif);
   font-style: italic;
-  font-size: 18px;
-  line-height: 1;
+  font-size: var(--text-card-title);
+  line-height: var(--leading-none);
   font-variant-numeric: tabular-nums;
 }
 
@@ -151,8 +151,8 @@
 
 .horizon-pill-multi {
   font-family: var(--font-sans);
-  font-size: 9px;
-  font-weight: 700;
+  font-size: 9px;           /* tiny label — no token below --text-chip (10px) */
+  font-weight: var(--weight-bold);
   color: var(--persim-deep);
   margin-top: 2px;
 }
@@ -163,14 +163,14 @@
   overflow-x: auto;
   scroll-snap-type: x proximity;
   -webkit-overflow-scrolling: touch;
-  padding: 20px 0 8px;
+  padding: var(--space-5) 0 var(--space-2);
   width: 100%;
 }
 .plan-week-rail {
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: minmax(200px, 1fr);
-  gap: 12px;
+  gap: var(--space-3);
 }
 .plan-week-rail .day-col { scroll-snap-align: start; }
 
@@ -196,15 +196,15 @@
 }
 .day-col-label {
   font-family: var(--font-sans);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
+  font-size: var(--text-eyebrow);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.12em;   /* day-column label tracking — between --tracking-wider (0.1em) and --tracking-widest (0.14em) */
   text-transform: uppercase;
   color: var(--mute);
 }
 .day-col.today .day-col-label { color: var(--persimmon); }
 .day-col-context {
-  font-size: 12px;
+  font-size: var(--text-small);
   color: var(--ink3);
 }
 .day-col.today .day-col-context { color: rgba(243,245,242,0.7); }
@@ -212,7 +212,7 @@
 .day-col-image {
   width: 100%;
   height: 64px;
-  border-radius: 8px;
+  border-radius: var(--space-2);
   background: var(--cream);
   display: flex;
   align-items: center;
@@ -224,7 +224,7 @@
 .day-col-image-fallback {
   font-family: var(--font-serif);
   font-style: italic;
-  font-size: 12px;
+  font-size: var(--text-small);
   color: var(--ink3);
   padding: 6px;
   text-align: center;
@@ -232,29 +232,29 @@
 
 .day-col-name {
   font-family: var(--font-sans);
-  font-size: 17px;
-  font-weight: 600;
-  letter-spacing: -0.012em;
-  line-height: 1.2;
+  font-size: 17px;           /* card recipe name — between --text-body (15px) and --text-card-title (18px) */
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.012em;  /* tight card name tracking — no token at -0.012em */
+  line-height: var(--leading-snug);
 }
 .day-col-name--past { text-decoration: line-through; }
 
 .day-col-need {
   font-family: var(--font-serif);
   font-style: italic;
-  font-size: 13px;
+  font-size: var(--text-meta);
   color: var(--ink3);
-  line-height: 1.35;
+  line-height: 1.35;   /* between --leading-snug (1.2) and --leading-normal (1.4) */
 }
 .day-col.today .day-col-need { color: rgba(243,245,242,0.7); }
 
-.day-col-meta { font-size: 11px; color: var(--mute); margin-top: auto; }
+.day-col-meta { font-size: var(--text-eyebrow); color: var(--mute); margin-top: auto; }
 .day-col.today .day-col-meta { color: rgba(243,245,242,0.7); }
 
 .day-col-cooked-label {
   font-family: var(--font-serif);
   font-style: italic;
-  font-size: 12px;
+  font-size: var(--text-small);
   color: var(--mute);
   margin-top: auto;
 }
@@ -269,21 +269,21 @@
   border: 1.5px dashed var(--rule);
   border-radius: 10px;
   background: var(--paper2);
-  padding: 16px 8px;
+  padding: var(--space-4) var(--space-2);
   color: var(--mute);
 }
 .day-col-empty-title {
   font-family: var(--font-serif);
   font-style: italic;
-  font-size: 18px;
+  font-size: var(--text-card-title);
   color: var(--ink3);
 }
 .day-col-empty-hint {
-  font-size: 11px;
+  font-size: var(--text-eyebrow);
   margin-top: 6px;
   color: var(--persimmon);
-  font-weight: 700;
-  letter-spacing: 0.02em;
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.02em;   /* hint label tracking — no token at 0.02em */
 }
 
 /* Past day layout */
@@ -295,24 +295,24 @@
 .day-col-past-name-row {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  padding: 4px 0 10px;
+  gap: var(--space-2);
+  padding: var(--space-1) 0 10px;
 }
 
 /* Compact follow-up entries within a day */
 .day-col-extra {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   padding: 6px 0;
   border-top: 1px solid var(--rule2);
-  font-size: 13px;
+  font-size: var(--text-meta);
 }
 .day-col.today .day-col-extra { border-top-color: rgba(243,245,242,0.14); }
 .day-col-extra-body { flex: 1; min-width: 0; }
-.day-col-extra-name { font-weight: 600; font-size: 13px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.day-col-extra-meta { font-family: var(--font-serif); font-style: italic; font-size: 11px; color: var(--mute); display: block; margin-top: 2px; }
-.day-col-extra-actions { display: flex; gap: 4px; opacity: 0; transition: opacity 0.15s; }
+.day-col-extra-name { font-weight: var(--weight-semibold); font-size: var(--text-meta); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.day-col-extra-meta { font-family: var(--font-serif); font-style: italic; font-size: var(--text-eyebrow); color: var(--mute); display: block; margin-top: 2px; }
+.day-col-extra-actions { display: flex; gap: var(--space-1); opacity: 0; transition: opacity 0.15s; }
 .day-col-extra:hover .day-col-extra-actions,
 .day-col-extra:focus-within .day-col-extra-actions { opacity: 1; }
 .day-col-extra-btn {
@@ -320,7 +320,7 @@
   border: none;
   color: inherit;
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--text-small);
   opacity: 0.6;
 }
 .day-col-extra-btn:hover { opacity: 1; }
@@ -328,22 +328,22 @@
 /* Hover-reveal controls for the primary entry */
 .day-col-primary-actions {
   display: flex;
-  gap: 4px;
+  gap: var(--space-1);
   opacity: 0;
   transition: opacity 0.15s;
 }
 .day-col:hover .day-col-primary-actions,
 .day-col:focus-within .day-col-primary-actions { opacity: 1; }
 
-.day-col-cap { font-size: 11px; color: var(--mute); font-style: italic; margin-top: 6px; }
+.day-col-cap { font-size: var(--text-eyebrow); color: var(--mute); font-style: italic; margin-top: 6px; }
 
 /* Recipe drag grid — full width below day grid */
-.plan-recipe-section { margin-top: 36px; }
+.plan-recipe-section { margin-top: var(--space-section); }
 
 .plan-recipe-section-header {
   font-family: var(--font-serif);
   font-style: italic;
-  font-size: 28px;
+  font-size: var(--text-section);
   display: flex;
   align-items: baseline;
   gap: 14px;
@@ -352,7 +352,7 @@
 
 .plan-recipe-section-hint {
   font-family: var(--font-sans);
-  font-size: 12px;
+  font-size: var(--text-small);
   font-style: normal;
   color: var(--mute);
   letter-spacing: 0;
@@ -365,7 +365,7 @@
 }
 
 .plan-recipe-item {
-  padding: 12px 14px;
+  padding: var(--space-3) 14px;
   background: var(--paper);
   border: 1px solid var(--rule);
   border-radius: var(--radius-control);
@@ -373,11 +373,11 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .plan-recipe-item:hover { border-color: var(--persim-deep); }
-.plan-recipe-name { font-size: 14px; font-weight: 600; }
-.plan-recipe-meta { font-size: 11px; color: var(--mute); }
+.plan-recipe-name { font-size: var(--text-body-sm); font-weight: var(--weight-semibold); }
+.plan-recipe-meta { font-size: var(--text-eyebrow); color: var(--mute); }
 
 .plan-status { padding: 40px; text-align: center; color: var(--mute); }
 
@@ -390,7 +390,7 @@
   .plan-recipe-grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 768px) {
-  .plan-title-controls { flex-wrap: wrap; gap: 8px; }
+  .plan-title-controls { flex-wrap: wrap; gap: var(--space-2); }
   .plan-recipe-grid { grid-template-columns: repeat(2, 1fr); }
   .plan-add-to-list-btn { width: 100%; justify-content: center; }
 }

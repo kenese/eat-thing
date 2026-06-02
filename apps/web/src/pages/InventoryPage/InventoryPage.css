@@ -1,4 +1,4 @@
-.inventory-page { padding: 0 var(--gutter) 36px; max-width: 1440px; margin: 0 auto; }
+.inventory-page { padding: 0 var(--gutter) var(--space-section); max-width: 1440px; margin: 0 auto; }
 
 /* Use-this-week strip */
 .inv-use-week {
@@ -6,25 +6,25 @@
   color: var(--paper);
   border-radius: var(--radius-card);
   padding: 14px 18px;
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
   display: grid;
   grid-template-columns: 180px repeat(5, 1fr);
-  gap: 16px;
+  gap: var(--space-4);
   align-items: center;
 }
 
 .inv-use-week-title {
   font-family: var(--font-serif);
   font-style: italic;
-  font-size: 18px;
-  line-height: 1.1;
+  font-size: var(--text-card-title);
+  line-height: var(--leading-tight);
 }
 
 .inv-use-week-meta {
   font-family: var(--font-sans);
-  font-size: 11px;
+  font-size: var(--text-eyebrow);
   color: rgba(243, 245, 242, 0.6);
-  letter-spacing: 0.04em;
+  letter-spacing: var(--tracking-wide);
   text-transform: uppercase;
   margin-top: 2px;
 }
@@ -32,27 +32,27 @@
 .inv-use-cell {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding-left: 16px;
+  gap: var(--space-1);
+  padding-left: var(--space-4);
   border-left: 1px solid rgba(243, 245, 242, 0.14);
 }
 
 .inv-use-cell-days {
   font-family: var(--font-serif);
   font-style: italic;
-  font-size: 28px;
-  line-height: 1;
+  font-size: var(--text-section);
+  line-height: var(--leading-none);
   font-variant-numeric: tabular-nums;
   color: var(--paper);
 }
 .inv-use-cell-days--urgent { color: var(--persimmon); }
 
 .inv-use-cell-name {
-  font-weight: 600;
-  font-size: 13px;
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-meta);
 }
 .inv-use-cell-sub {
-  font-size: 11px;
+  font-size: var(--text-eyebrow);
   color: rgba(243, 245, 242, 0.6);
 }
 
@@ -61,13 +61,13 @@
   display: grid;
   grid-template-columns: 90px 1fr 130px 110px 60px;
   gap: 18px;
-  padding: 10px 12px;
+  padding: 10px var(--space-3);
   font-family: var(--font-sans);
-  font-size: 10px;
-  letter-spacing: 0.14em;
+  font-size: var(--text-chip);
+  letter-spacing: var(--tracking-widest);
   text-transform: uppercase;
   color: var(--mute);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
 }
 .inv-col-header > div:last-child { text-align: right; }
 
@@ -77,8 +77,8 @@
 .inv-group-header {
   display: flex;
   align-items: baseline;
-  gap: 12px;
-  padding: 10px 12px;
+  gap: var(--space-3);
+  padding: 10px var(--space-3);
   background: var(--paper2);
   border-bottom: 1px solid var(--rule);
 }
@@ -86,17 +86,17 @@
 .inv-group-label {
   font-family: var(--font-serif);
   font-style: italic;
-  font-size: 28px;
-  line-height: 1;
+  font-size: var(--text-section);
+  line-height: var(--leading-none);
   color: var(--green);
   text-transform: capitalize;
 }
 
 .inv-group-count {
   font-family: var(--font-sans);
-  font-size: 12px;
+  font-size: var(--text-small);
   color: var(--mute);
-  letter-spacing: 0.04em;
+  letter-spacing: var(--tracking-wide);
 }
 
 /* Row */
@@ -104,7 +104,7 @@
   display: grid;
   grid-template-columns: 90px 1fr 130px 110px 60px;
   gap: 18px;
-  padding: 11px 12px;
+  padding: 11px var(--space-3);
   align-items: baseline;
   border-top: 1px solid var(--rule2);
 }
@@ -112,27 +112,27 @@
 
 .inv-row-qty {
   font-family: var(--font-sans);
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--text-body-sm);
+  font-weight: var(--weight-semibold);
   font-variant-numeric: tabular-nums;
 }
 
 .inv-row-item { min-width: 0; }
 .inv-row-item-name {
-  font-size: 15px;
-  font-weight: 500;
-  letter-spacing: -0.005em;
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+  letter-spacing: -0.005em;   /* subtle name tracking — no token at -0.005em */
 }
 .inv-row-item-brand {
   font-family: var(--font-serif);
   font-style: italic;
-  font-size: 12px;
+  font-size: var(--text-small);
   color: var(--ink3);
   margin-top: 1px;
 }
 
 .inv-row-added {
-  font-size: 12px;
+  font-size: var(--text-small);
   color: var(--mute);
   font-variant-numeric: tabular-nums;
 }
@@ -141,7 +141,7 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
+  gap: var(--space-2);
   font-variant-numeric: tabular-nums;
 }
 .inv-row-expires-dot {
@@ -151,15 +151,15 @@
 }
 .inv-row-expires-label {
   font-family: var(--font-sans);
-  font-size: 13px;
-  font-weight: 500;
+  font-size: var(--text-meta);
+  font-weight: var(--weight-medium);
 }
 .inv-row-expires--soon .inv-row-expires-label,
 .inv-row-expires--expired .inv-row-expires-label {
   font-family: var(--font-serif);
   font-style: italic;
-  font-size: 16px;
-  font-weight: 400;
+  font-size: 16px;   /* italic expiry emphasis — between --text-body (15px) and --text-card-title (18px) */
+  font-weight: var(--weight-regular);
 }
 .inv-row-expires--soon .inv-row-expires-dot,
 .inv-row-expires--soon .inv-row-expires-label    { color: var(--persimmon); background: var(--persimmon); }
@@ -177,7 +177,7 @@
 .inv-row-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 4px;
+  gap: var(--space-1);
   opacity: 0;
   transition: opacity 0.15s ease;
 }
@@ -187,9 +187,9 @@
   background: var(--paper);
   border: 1px solid var(--rule);
   border-radius: 6px;
-  padding: 4px 8px;
+  padding: var(--space-1) var(--space-2);
   font-family: var(--font-sans);
-  font-size: 11px;
+  font-size: var(--text-eyebrow);
   color: var(--ink2);
   cursor: pointer;
 }
@@ -202,10 +202,10 @@
   color: var(--paper);
   border: none;
   border-radius: var(--radius-control);
-  padding: 10px 16px;
+  padding: 10px var(--space-4);
   font-family: var(--font-sans);
-  font-size: 13px;
-  font-weight: 700;
+  font-size: var(--text-meta);
+  font-weight: var(--weight-bold);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -221,8 +221,8 @@
   border-radius: var(--radius-control);
   padding: 10px 14px;
   font-family: var(--font-sans);
-  font-size: 13px;
-  font-weight: 500;
+  font-size: var(--text-meta);
+  font-weight: var(--weight-medium);
   cursor: pointer;
 }
 
@@ -237,7 +237,7 @@
 .inv-body {
   display: grid;
   grid-template-columns: 1fr 280px;
-  gap: 24px;
+  gap: var(--space-6);
   align-items: start;
 }
 
@@ -246,7 +246,7 @@
 /* Sidebar */
 .inv-sidebar {
   position: sticky;
-  top: 20px;
+  top: var(--space-5);
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -255,18 +255,18 @@
 .inv-sidebar-card {
   background: var(--paper2);
   border-radius: var(--radius-card);
-  padding: 16px 18px;
+  padding: var(--space-4) 18px;
   border: 1px solid var(--rule);
 }
 
 .inv-sidebar-card-title {
   font-family: var(--font-sans);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
+  font-size: var(--text-eyebrow);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-widest);
   text-transform: uppercase;
   color: var(--mute);
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
 }
 
 .inv-location-row {
@@ -275,21 +275,21 @@
   align-items: baseline;
   padding: 6px 0;
   border-bottom: 1px solid var(--rule2);
-  font-size: 14px;
+  font-size: var(--text-body-sm);
 }
 .inv-location-row:last-child { border-bottom: none; }
 
 .inv-location-label {
   font-family: var(--font-serif);
   font-style: italic;
-  font-size: 16px;
+  font-size: 16px;   /* italic location label — between --text-body (15px) and --text-card-title (18px) */
   color: var(--green);
 }
 
 .inv-location-count {
   font-family: var(--font-sans);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--text-small);
+  font-weight: var(--weight-semibold);
   font-variant-numeric: tabular-nums;
   color: var(--mute);
 }
@@ -299,20 +299,20 @@
 .inv-sidebar-exp-row {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .inv-sidebar-exp-days {
   font-family: var(--font-serif);
   font-style: italic;
-  font-size: 20px;
+  font-size: 20px;   /* expiry day count display — no role token at 20px */
   width: 32px;
   font-variant-numeric: tabular-nums;
 }
 
 .inv-sidebar-exp-name {
-  font-size: 13px;
-  font-weight: 500;
+  font-size: var(--text-meta);
+  font-weight: var(--weight-medium);
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -321,14 +321,14 @@
 }
 
 .inv-sidebar-low-meta {
-  font-size: 12px;
+  font-size: var(--text-small);
   color: var(--mute);
   font-variant-numeric: tabular-nums;
 }
 
 .inv-sidebar-note {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--text-meta);
   color: var(--mute);
   font-family: var(--font-serif);
   font-style: italic;
@@ -341,13 +341,13 @@
 
 @media (max-width: 768px) {
   .inv-use-week { grid-template-columns: 1fr; }
-  .inv-use-cell { padding-left: 0; border-left: none; border-top: 1px solid rgba(243,245,242,0.14); padding-top: 12px; }
+  .inv-use-cell { padding-left: 0; border-left: none; border-top: 1px solid rgba(243,245,242,0.14); padding-top: var(--space-3); }
   .inv-col-header { display: none; }
   .inv-row {
     grid-template-columns: 1fr auto;
     grid-template-areas: "name qty" "meta exp" "actions actions";
     gap: 6px;
-    padding: 12px;
+    padding: var(--space-3);
   }
   .inv-row-item { grid-area: name; }
   .inv-row-qty  { grid-area: qty; text-align: right; }

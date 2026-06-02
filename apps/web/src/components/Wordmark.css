@@ -2,19 +2,21 @@
   display: inline-flex;
   align-items: baseline;
   font-family: var(--font-sans);
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  font-weight: var(--weight-extrabold);
+  letter-spacing: var(--tracking-tight);
   white-space: nowrap;
 }
 
 .wordmark-italic {
   font-family: var(--font-serif);
   font-style: italic;
-  font-weight: 400;
+  font-weight: var(--weight-regular);
   margin-left: 4px;
   color: var(--persimmon);
 }
 
+/* Wordmark size variants are not role-mapped to type-scale tokens — they are
+   proportional display sizes specific to the wordmark component. */
 .wordmark--sm { font-size: 16px; }
 .wordmark--sm .wordmark-italic { font-size: 20px; }
 .wordmark--md { font-size: 22px; }

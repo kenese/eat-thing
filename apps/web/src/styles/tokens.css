@@ -19,6 +19,52 @@
   --font-sans: "Schibsted Grotesk", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   --font-serif: "Lora", Georgia, serif;
 
+  /* ── Type scale ── */
+  --text-hero: 76px;               /* hero-band display headline */
+  --text-page-title: 56px;         /* page <h1> desktop */
+  --text-page-title-mobile: 40px;  /* page <h1> mobile (≤768px) */
+  --text-section: 28px;            /* section headers — do NOT revert to 22px (D28) */
+  --text-card-title: 18px;         /* card and panel titles */
+  --text-body: 15px;               /* primary body copy */
+  --text-body-sm: 14px;            /* secondary body / labels */
+  --text-meta: 13px;               /* metadata, small buttons */
+  --text-small: 12px;              /* small labels, annotations */
+  --text-eyebrow: 11px;            /* eyebrow labels, fine detail */
+  --text-chip: 10px;               /* status chips, tiny all-caps */
+
+  /* ── Font weights ── */
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+  --weight-extrabold: 800;
+
+  /* ── Letter-spacing ── */
+  --tracking-tightest: -0.035em;  /* hero display headline */
+  --tracking-tight: -0.02em;      /* page titles, wordmarks */
+  --tracking-snug: -0.01em;       /* section titles, card names */
+  --tracking-normal: 0em;         /* body text */
+  --tracking-wide: 0.04em;        /* dates, meta labels */
+  --tracking-wider: 0.1em;        /* pills, eyebrow-style */
+  --tracking-widest: 0.14em;      /* all-caps eyebrows and column headers */
+
+  /* ── Line-heights ── */
+  --leading-none: 1;              /* display / tightest */
+  --leading-tight: 1.1;           /* card titles */
+  --leading-snug: 1.2;            /* subheads */
+  --leading-normal: 1.4;          /* primary body */
+  --leading-relaxed: 1.6;         /* comfortable reading */
+  --leading-loose: 1.7;           /* instructions / long prose */
+
+  /* ── Spacing (section / grid / card) ── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-section: 36px;
+
   /* ── Shape ── */
   --gutter: 36px;
   --gutter-mobile: 20px;

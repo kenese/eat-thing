@@ -2,7 +2,7 @@
   background: var(--ink);
   color: var(--paper);
   border-radius: var(--radius-card);
-  padding: 14px 16px;
+  padding: 14px var(--space-4);
 }
 
 .agent-card-eyebrow {
@@ -10,9 +10,9 @@
   align-items: center;
   gap: 6px;
   font-family: var(--font-sans);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
+  font-size: var(--text-chip);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-widest);
   text-transform: uppercase;
 }
 
@@ -33,10 +33,10 @@
 .agent-card-message {
   font-family: var(--font-serif);
   font-style: italic;
-  font-size: 14px;
+  font-size: var(--text-body-sm);
   color: rgba(243, 245, 242, 0.8);
   margin-top: 6px;
-  line-height: 1.4;
+  line-height: var(--leading-normal);
 }
 
 @keyframes agent-pulse {

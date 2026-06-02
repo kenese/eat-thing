@@ -9,15 +9,15 @@
   flex: 1;
   display: grid;
   grid-template-columns: 1.6fr 1fr;
-  gap: 24px;
-  padding: 8px var(--gutter) 28px;
+  gap: var(--space-6);
+  padding: var(--space-2) var(--gutter) 28px;
   min-height: 0;
 }
 
 @media (max-width: 768px) {
   .home-lower {
     grid-template-columns: 1fr;
-    gap: 20px;
-    padding: 8px var(--gutter-mobile) 24px;
+    gap: var(--space-5);
+    padding: var(--space-2) var(--gutter-mobile) var(--space-6);
   }
 }

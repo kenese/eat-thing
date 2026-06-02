@@ -1,8 +1,8 @@
 .hero-band {
-  padding: 36px var(--gutter) 24px;
+  padding: var(--space-section) var(--gutter) var(--space-6);
   display: grid;
   grid-template-columns: 1.4fr 1fr;
-  gap: 36px;
+  gap: var(--space-section);
   align-items: end;
 }
 
@@ -13,14 +13,14 @@
 .hero-pill {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   background: var(--cream);
-  padding: 6px 12px;
+  padding: 6px var(--space-3);
   border-radius: var(--radius-pill);
   border: 1px solid rgba(13, 23, 20, 0.1);
   margin-bottom: 14px;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--text-small);
+  font-weight: var(--weight-semibold);
 }
 
 .hero-pill-dot {
@@ -32,22 +32,22 @@
 
 .hero-headline {
   font-family: var(--font-sans);
-  font-size: 76px;
-  line-height: 0.95;
-  font-weight: 700;
-  letter-spacing: -0.035em;
+  font-size: var(--text-hero);
+  line-height: 0.95;   /* intentionally tighter than --leading-none for display impact */
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tightest);
   color: var(--ink);
 }
 
 .hero-headline-italic {
   font-family: var(--font-serif);
   font-style: italic;
-  font-weight: 400;
+  font-weight: var(--weight-regular);
   color: var(--green);
 }
 
 .hero-subcopy {
-  font-size: 15px;
+  font-size: var(--text-body);
   color: var(--ink2);
   margin-top: 14px;
   max-width: 540px;
@@ -56,7 +56,7 @@
 .hero-subcopy-empty {
   font-family: var(--font-serif);
   font-style: italic;
-  font-size: 15px;
+  font-size: var(--text-body);
 }
 
 /* ── Right "use this week" card ── */
@@ -65,38 +65,38 @@
   background: var(--ink);
   color: var(--paper);
   border-radius: var(--radius-card-lg);
-  padding: 20px 22px;
+  padding: var(--space-5) 22px;
 }
 
 .hero-use-head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
 }
 
-.hero-use-title { font-weight: 700; font-size: 16px; }
+.hero-use-title { font-weight: var(--weight-bold); font-size: 16px; }   /* 16px — between --text-body and --text-card-title */
 
 .hero-use-tag {
   font-family: var(--font-serif);
   font-style: italic;
-  font-size: 16px;
+  font-size: 16px;   /* 16px — between --text-body and --text-card-title */
   color: var(--fresh);
 }
 
 .hero-use-empty {
   font-family: var(--font-serif);
   font-style: italic;
-  font-size: 14px;
+  font-size: var(--text-body-sm);
   opacity: 0.7;
-  padding: 8px 0;
+  padding: var(--space-2) 0;
 }
 
 .hero-use-row {
   display: flex;
   align-items: baseline;
-  gap: 12px;
-  padding: 8px 0;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
   border-top: 1px solid rgba(243, 245, 242, 0.14);
 }
 .hero-use-row.is-first { border-top: none; }
@@ -104,8 +104,8 @@
 .hero-use-days {
   font-family: var(--font-serif);
   font-style: italic;
-  font-size: 28px;
-  line-height: 1;
+  font-size: var(--text-section);
+  line-height: var(--leading-none);
   width: 40px;
   font-variant-numeric: tabular-nums;
   color: var(--paper);
@@ -113,14 +113,14 @@
 .hero-use-days.is-today { color: var(--fresh); }
 
 .hero-use-name-col { flex: 1; min-width: 0; }
-.hero-use-name { font-weight: 600; font-size: 14px; }
-.hero-use-qty  { font-size: 11px; opacity: 0.6; }
+.hero-use-name { font-weight: var(--weight-semibold); font-size: var(--text-body-sm); }
+.hero-use-qty  { font-size: var(--text-eyebrow); opacity: 0.6; }
 
 .hero-use-tagline {
-  font-size: 11px;
-  font-weight: 600;
+  font-size: var(--text-eyebrow);
+  font-weight: var(--weight-semibold);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--tracking-wide);
   color: rgba(243, 245, 242, 0.7);
 }
 .hero-use-tagline.is-today { color: var(--fresh); }
@@ -128,8 +128,8 @@
 @media (max-width: 768px) {
   .hero-band {
     grid-template-columns: 1fr;
-    gap: 24px;
-    padding: 24px var(--gutter-mobile);
+    gap: var(--space-6);
+    padding: var(--space-6) var(--gutter-mobile);
   }
-  .hero-headline { font-size: 48px; }
+  .hero-headline { font-size: 48px; }   /* 48px mobile hero — no --text-hero-mobile token */
 }
