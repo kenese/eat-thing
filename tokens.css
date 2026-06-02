@@ -1,0 +1,82 @@
+:root {
+  /* ── Color (Crisp + Persimmon, from design_handoff_eat_thing/README.md) ── */
+  --paper: #f3f5f2;
+  --paper2: #eaeee7;
+  --cream: #e6ebe4;
+  --ink: #0d1714;
+  --ink2: #3a443e;
+  --ink3: #5a6359;
+  --mute: #6e7872;
+  --green: #1f5d33;
+  --fresh: #5aa758;
+  --persimmon: #d96e2e;
+  --persim-deep: #b6541d;
+  --warn: #c2412e;
+  --rule: rgba(13, 23, 20, 0.08);
+  --rule2: rgba(13, 23, 20, 0.04);
+
+  /* ── Font families ── */
+  --font-sans: "Schibsted Grotesk", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-serif: "Lora", Georgia, serif;
+
+  /* ── Type scale ──────────────────────────────────────────────────────────
+     Named roles, not raw px. Use these instead of hardcoding font-size in
+     component CSS — that is what keeps the scale consistent across pages
+     (e.g. section headers stayed inconsistent until this was tokenized).
+     Each role pairs a size with its canonical weight / tracking / leading
+     where the design fixes them; override only when you have a reason.       */
+
+  /* Display — Lora italic, persimmon period. */
+  --text-page-title: 56px;          /* page H1 ("Recipes.")            400 / -0.02em */
+  --text-page-title-mobile: 40px;
+  --text-section: 28px;             /* section header ("Produce.")     400 — DECIDED 2026-06-01, not 22px */
+  --text-display-sm: 36px;          /* empty-state / centered display  400 */
+
+  /* UI — Schibsted Grotesk. */
+  --text-card-title: 18px;          /* card H3                         600 / -0.012em */
+  --text-card-title-lg: 19px;
+  --text-body: 14px;                /* default body                    400 */
+  --text-meta: 13px;                /* secondary / qty / price         400-600 */
+  --text-caption: 12px;             /* captions, brand line            400 */
+  --text-eyebrow: 11px;             /* eyebrow label                   600-700 / uppercase via CSS */
+  --text-micro: 10px;               /* chip label, tiny meta           700 */
+
+  /* Italic-serif caption ("uses 3 expiring") — Lora italic. */
+  --text-caption-serif: 13px;
+
+  /* ── Font weights ── */
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+  --weight-black: 800;
+
+  /* ── Letter-spacing ── */
+  --tracking-display: -0.02em;      /* large italic-serif titles */
+  --tracking-card: -0.012em;        /* card titles */
+  --tracking-tight: -0.005em;       /* item names */
+  --tracking-eyebrow: 0.14em;       /* eyebrow / chip uppercase labels */
+  --tracking-chip: 0.10em;          /* status-chip labels */
+
+  /* ── Line-height ── */
+  --leading-display: 1;
+  --leading-tight: 1.2;
+  --leading-body: 1.4;
+  --leading-caption: 1.35;
+
+  /* ── Shape ── */
+  --gutter: 36px;
+  --gutter-mobile: 20px;
+  --radius-card: 12px;
+  --radius-card-lg: 14px;
+  --radius-control: 8px;
+  --radius-pill: 999px;
+
+  /* ── Spacing scale (page rhythm) ── */
+  --space-section-gap: 28px;        /* between stacked sections (28–36) */
+  --space-section-gap-lg: 36px;
+  --space-grid-gap: 12px;           /* card grid gap (12–16) */
+  --space-grid-gap-lg: 16px;
+  --space-card-pad: 14px;           /* card inner padding (14–22) */
+  --space-card-pad-lg: 22px;
+}
