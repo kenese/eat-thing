@@ -212,9 +212,6 @@
   font-size: 15px;
   color: var(--ink);
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .ingredient-row--unmatched .ingredient-name {
