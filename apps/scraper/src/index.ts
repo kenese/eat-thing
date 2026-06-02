@@ -1,9 +1,10 @@
 import 'dotenv/config';
 import { chromium } from 'playwright';
-import { fetchPendingJobs, claimJob, reportJobResult } from './worker-sdk/client.js';
+import { fetchPendingJobs, claimJob, reportJobProgress, reportJobResult } from './worker-sdk/client.js';
 import { newWorldAdapter } from './stores/newworld.js';
 import { paknsaveAdapter } from './stores/paknsave.js';
 import { woolworthsAdapter } from './stores/woolworths.js';
+import { runWithRetries } from './retry.js';
 import type { StoreAdapter } from './stores/base.js';
 import type { Store } from './worker-sdk/types.js';
 
@@ -33,7 +34,21 @@ async function tick(): Promise<void> {
       try {
         await claimJob(job.id);
         const adapter = ADAPTERS[job.store];
-        const result = await adapter.handle(job, browser);
+        const result = await runWithRetries(
+          () => adapter.handle(job, browser),
+          {
+            onRetry: async failure => {
+              console.warn(
+                `[scraper] job ${job.id} (${job.type}) retrying after ${failure.code}: attempt ${failure.attempt} of ${failure.maxAttempts}`,
+              );
+              try {
+                await reportJobProgress(job.id, failure);
+              } catch (err) {
+                console.error(`[scraper] failed to report retry progress for ${job.id}:`, err);
+              }
+            },
+          },
+        );
         await reportJobResult(job.id, result);
         console.log(`[scraper] job ${job.id} (${job.type}) ${result.ok ? 'done' : `failed: ${result.error}`}`);
       } catch (err) {

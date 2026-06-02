@@ -95,6 +95,16 @@ router.get('/session/:householdId/:store', withWorkerAuth, async (req, res) => {
 
 // ─── Job lifecycle (HMAC) ────────────────────────────────────────────────────
 
+function isFailurePayload(value: unknown): value is Record<string, unknown> {
+  if (!value || typeof value !== 'object') return false;
+  const failure = value as Record<string, unknown>;
+  return typeof failure['code'] === 'string'
+    && typeof failure['message'] === 'string'
+    && typeof failure['retryable'] === 'boolean'
+    && typeof failure['attempt'] === 'number'
+    && typeof failure['maxAttempts'] === 'number';
+}
+
 router.get('/jobs/pending', withWorkerAuth, async (_req, res) => {
   try {
     const rows = await db
@@ -144,10 +154,40 @@ router.post('/jobs/:id/claim', withWorkerAuth, async (req, res) => {
   }
 });
 
+router.post('/jobs/:id/progress', withWorkerAuth, async (req, res) => {
+  const id = req.params['id'] as string;
+  const { failure } = req.body as { failure?: unknown };
+  if (!isFailurePayload(failure)) {
+    res.status(400).json({ error: 'failure payload required' });
+    return;
+  }
+
+  try {
+    await db
+      .update(scraperJobs)
+      .set({ result: { failure } })
+      .where(and(eq(scraperJobs.id, id), eq(scraperJobs.status, 'in_progress')));
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[scraper] POST /jobs/:id/progress', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 router.post('/jobs/:id/result', withWorkerAuth, async (req, res) => {
   const id = req.params['id'] as string;
-  const { ok, data, error } = req.body as { ok?: boolean; data?: Record<string, unknown>; error?: string };
+  const { ok, data, error, failure } = req.body as {
+    ok?: boolean;
+    data?: Record<string, unknown>;
+    error?: string;
+    failure?: unknown;
+  };
   if (typeof ok !== 'boolean') { res.status(400).json({ error: 'ok (boolean) required' }); return; }
+  if (!ok && failure !== undefined && !isFailurePayload(failure)) {
+    res.status(400).json({ error: 'invalid failure payload' });
+    return;
+  }
 
   try {
     const jobRows = await db
@@ -172,7 +212,7 @@ router.post('/jobs/:id/result', withWorkerAuth, async (req, res) => {
       .update(scraperJobs)
       .set({
         status: ok ? 'done' : 'failed',
-        result: ok ? data ?? null : null,
+        result: ok ? data ?? null : failure ? { failure } : null,
         error: ok ? null : (error ?? 'unknown'),
         completedAt: new Date(),
       })

@@ -4,7 +4,7 @@ Living plan for eat-thing. Tasks update as we go. New work appends; completed wo
 
 **Status legend:** `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` deferred / dropped
 
-**Currently on:** Architecture-audit remediation complete through Slice C4 — resume the remaining handoff backlog at Slice 2
+**Currently on:** Handoff backlog Slice 2 complete — resume at Slice 3 shared date picker
 
 Execution order and acceptance criteria: [docs/superpowers/plans/2026-06-01-handoff-backlog-roadmap.md](./docs/superpowers/plans/2026-06-01-handoff-backlog-roadmap.md)
 
@@ -81,10 +81,10 @@ Scraper on Mac mini. Logs in, reads. No writes to the supermarket account. Built
 - [x] Inline price + availability column on the existing `ShoppingListPage` — _2026-05-10_
 - [x] First-run login + smoke test against live New World — _2026-05-15_
 
-### Slice 2 — Hardening (next)
+### Slice 2 — Hardening (complete)
 
-- [ ] Robustness: detect logged-out state and prompt user; retry/backoff for transient failures
-- [ ] `launchd` plist so the scraper auto-starts on the Mac mini
+- [x] Robustness: detect logged-out state and prompt user; retry/backoff for transient failures — _2026-06-02_
+- [x] `launchd` plist so the scraper auto-starts on the Mac mini — _2026-06-02_
 - [x] Fix pre-existing test failures in `scraper.test.ts` (10 tests) and `gemini.test.ts` (1 test) — `SCRAPER_HMAC_SECRET` env var name mismatch + hardcoded API key removed — _2026-05-15_
 
 Pak'nSave and Woolworths adapters exist in `apps/scraper` but are deferred post-MVP (see [IDEAS.md](./IDEAS.md) and D21).
@@ -148,8 +148,8 @@ Moved to Done after `pnpm test` and `pnpm test:e2e` passed.
 
 Detailed roadmap: [docs/superpowers/plans/2026-06-01-handoff-backlog-roadmap.md](./docs/superpowers/plans/2026-06-01-handoff-backlog-roadmap.md)
 
-- [ ] Slice 1: wire Inventory low-stock staples sidebar widget — absorbed into architecture-audit remediation Slice B
-- [ ] Slice 2: New World logged-out prompt, transient retry/backoff, and Mac-mini `launchd` service
+- [x] Slice 1: wire Inventory low-stock staples sidebar widget — absorbed into architecture-audit remediation Slice B — _2026-06-02_
+- [x] Slice 2: New World logged-out prompt, transient retry/backoff, and Mac-mini `launchd` service — _2026-06-02_
 - [ ] Slice 3: shared date picker for Plan load-date and Recipes hero add-to-day
 - [ ] Slice 4: shopping-list scheduled date + dynamic Recipes quick-shop copy
 - [ ] Slice 5: Plan auto-shop read-only preview + pre-flight API
@@ -170,6 +170,7 @@ Detailed roadmap: [docs/superpowers/plans/2026-06-01-handoff-backlog-roadmap.md]
 
 ## Done
 
+- 2026-06-02 — Handoff backlog Slice 2: hardened the New World worker with structured failure codes, bounded inline retry/backoff for transient failures, worker-authenticated retry progress reporting, Shopping List retry/session-expired states, and a production Mac-mini `launchd` plist with install notes. Verified the live New World smoke after starting the configured local API, then passed `pnpm test` and `pnpm test:e2e`. See D27 and `docs/superpowers/specs/2026-06-02-slice2-newworld-hardening-design.md`.
 - 2026-06-02 — Architecture-audit remediation Slice C4: replaced silent `canonical_foods` insertion in inventory and manual shopping-list flows with a server-enforced taxonomy review step. New foods now stop with a typed `taxonomy_review_required` response, show explicit reuse/create actions in the web UI, and only create global canonical foods through a confirm step. Added targeted Vitest and Playwright coverage; `pnpm test` and `pnpm test:e2e` passed. See D26.
 - 2026-06-02 — Architecture-audit remediation Slices B, C1, C2, C3, C5, and D runtime/docs pass: added shared server-side low-stock staples derivation and reused it in `POST /api/shopping-lists/from-plan` plus the Inventory sidebar; preserved manual shopping-list items while refreshing recipe/staple-derived rows; restricted inventory storage units to canonical `g` / `ml` / `count` with migration `0013_inventory_canonical_units.sql`; enforced the four-recipes-per-day rule in the meal-plan API; preserved original recipe ingredient qty/unit text while retaining metric annotations; accepted and persisted `recipes.total_time_minutes` and `recipes.tags` through recipe create/update and import paths; deleted the obsolete OpenBrain `launchd` plist; refreshed architecture/agent docs to describe mutable inventory balances, append-only cooking audit events, public recipe-photo URLs, Meal Planner HTTP MCP with stdio fallback, single-household-first middleware, Better-Auth table exceptions, pending scraper `launchd` supervision, and the still-pending taxonomy-review gate. See D25.
 - 2026-06-01 — Architecture-audit remediation Slice A: added tenant ownership to `shopping_list_prices` with migration 0012; enforced direct household filtering and owned-list checks across shopping-list price/cart reads, enqueueing, selection, and mutation; rejected cross-household scraper result upserts; standardized scraper signing on `SCRAPER_HMAC_SECRET`; added shared `add_to_cart`; documented global `canonical_foods` and Better-Auth table exceptions. Also repaired stale web test copy selectors uncovered by the required full-suite run. See D24.

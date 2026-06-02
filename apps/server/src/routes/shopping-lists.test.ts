@@ -87,7 +87,16 @@ vi.mock('../db/schema/index.js', () => ({
   mealPlanEntries: {}, recipes: {}, recipeIngredients: {},
   inventoryItems: {}, canonicalFoods: {},
   shoppingLists: {}, shoppingListItems: {},
-  scraperJobs: { id: 'id', householdId: 'householdId', type: 'type', createdAt: 'createdAt' },
+  scraperJobs: {
+    id: 'id',
+    householdId: 'householdId',
+    type: 'type',
+    status: 'status',
+    error: 'error',
+    result: 'result',
+    payload: 'payload',
+    createdAt: 'createdAt',
+  },
   shoppingListPrices: { householdId: 'priceHouseholdId', shoppingListItemId: 'shoppingListItemId', store: 'store' },
   supermarketProducts: { householdId: 'householdId', preferred: 'preferred', canonicalFoodId: 'canonicalFoodId', brand: 'brand' },
 }));
@@ -331,6 +340,45 @@ describe('shopping-lists router', () => {
     expect(mocks.whereArgs).toHaveBeenCalledWith(expect.arrayContaining([
       { field: 'priceHouseholdId', value: 'hh-1' },
     ]));
+  });
+
+  it('GET /:id/prices returns structured retry progress for the active scraper job', async () => {
+    mocks.getSession.mockResolvedValue({ user: { id: 'u1' } });
+    mocks.membershipLimit.mockResolvedValue([{ householdId: 'hh-1' }]);
+    mocks.selectFrom.mockResolvedValueOnce([{ id: 'list-1' }]);
+    mocks.selectFrom.mockResolvedValueOnce([]);
+    mocks.selectFrom.mockResolvedValueOnce([{
+      id: 'job-1',
+      status: 'in_progress',
+      error: null,
+      result: {
+        failure: {
+          code: 'navigation_timeout',
+          message: 'Navigation timed out',
+          retryable: true,
+          attempt: 2,
+          maxAttempts: 3,
+        },
+      },
+      payload: { shoppingListId: '550e8400-e29b-41d4-a716-446655440001' },
+    }]);
+
+    const res = await getPrices('550e8400-e29b-41d4-a716-446655440001');
+
+    expect(res.status).toBe(200);
+    expect(res.body.job).toEqual({
+      id: 'job-1',
+      status: 'in_progress',
+      error: null,
+      retrying: true,
+      failure: {
+        code: 'navigation_timeout',
+        message: 'Navigation timed out',
+        retryable: true,
+        attempt: 2,
+        maxAttempts: 3,
+      },
+    });
   });
 
   it('PATCH /items/:id/chosen-sku filters price selection and mutation by household_id directly', async () => {

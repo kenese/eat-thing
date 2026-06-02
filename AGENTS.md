@@ -17,7 +17,7 @@ Household food management app. Inventory ↔ recipes ↔ meal plans ↔ shopping
 ## Stack at a glance
 - Turborepo monorepo: `apps/web` (PWA) · `apps/server` (Express + Better-Auth + Drizzle) · `apps/scraper` (Playwright on home Mac mini) · `packages/shared` · `packages/taxonomy` · `packages/meal-planning`.
 - Postgres on Supabase. Photos on Supabase Storage.
-- Frontend + API on Vercel. `apps/scraper` runs on the home Mac mini, with `launchd` supervision still planned until the scraper plist lands. Meal Planner import runs from the server via HTTP MCP when configured, with local stdio fallback. Workers poll the Vercel API outbound — no inbound port at home.
+- Frontend + API on Vercel. `apps/scraper` runs on the home Mac mini under `launchd` supervision. Meal Planner import runs from the server via HTTP MCP when configured, with local stdio fallback. Workers poll the Vercel API outbound — no inbound port at home.
 - Auth: Better-Auth with Google OAuth.
 - Storage units canonical (g / ml / count); display layer converts.
 

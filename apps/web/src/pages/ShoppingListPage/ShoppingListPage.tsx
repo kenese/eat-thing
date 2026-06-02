@@ -414,8 +414,13 @@ function ListView({ list }: { list: ShoppingList }) {
 
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
-  const job = pricesData?.job;
-  const refreshing = job?.status === 'pending' || job?.status === 'in_progress' || refresh.isPending;
+  const priceJob = pricesData?.job;
+  const cartJob = cartResult.data?.job;
+  const priceJobActive = priceJob?.status === 'pending' || priceJob?.status === 'in_progress';
+  const cartJobActive = cartJob?.status === 'pending' || cartJob?.status === 'in_progress';
+  const job = cartJobActive ? cartJob : priceJobActive ? priceJob : cartJob?.status === 'failed' ? cartJob : priceJob;
+  const jobAction = job === cartJob ? 'cart update' : 'price check';
+  const refreshing = priceJobActive || refresh.isPending;
 
   const hasUnpicked = list.items.some(it => {
     const p = prices.get(it.id);
@@ -461,16 +466,22 @@ function ListView({ list }: { list: ShoppingList }) {
   }).length;
   const unmatched = allItems.length - pricedCount;
 
-  const storeKey = pricesData?.prices?.[0]?.store ?? null;
+  const storeKey = pricesData?.prices?.[0]?.store ?? (job ? 'new_world' : null);
   const storeLabel = storeKey ? STORE_LABEL[storeKey] : null;
+  const sessionExpired = job?.failure?.code === 'session_expired';
 
   const agentState: AgentState =
     job?.status === 'pending' || job?.status === 'in_progress' ? 'running'
     : job?.status === 'failed' ? 'failed'
     : 'idle';
   const agentMessage =
-    agentState === 'running' ? `Checking prices${storeLabel ? ' at ' + storeLabel.name : ''}.`
-    : agentState === 'failed' ? 'Last price check failed. Run refresh to try again.'
+    job?.retrying && job.failure
+      ? `Retrying ${jobAction}${storeLabel ? ' at ' + storeLabel.name : ''}… attempt ${job.failure.attempt} of ${job.failure.maxAttempts}`
+    : agentState === 'running' ? `Checking prices${storeLabel ? ' at ' + storeLabel.name : ''}.`
+    : agentState === 'failed'
+      ? sessionExpired
+        ? 'New World needs a fresh sign-in on the Mac mini.'
+        : 'Last price check failed. Run refresh to try again.'
     : `I'll log in, drop everything into your cart, choose the window, and stop before checkout for your okay.`;
 
   function toggleSelect(id: string) {
@@ -599,6 +610,13 @@ function ListView({ list }: { list: ShoppingList }) {
             <div className="sl-totals-sub">{pricedCount} priced · {unmatched} without a match</div>
           </div>
         </div>
+
+        {sessionExpired && (
+          <div className="form-error" role="alert">
+            <strong>New World needs you to sign in again on the Mac mini.</strong>
+            <div>Re-run bootstrap and ingest your session, then try again.</div>
+          </div>
+        )}
 
         <button
           type="button"

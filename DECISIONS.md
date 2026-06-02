@@ -83,6 +83,7 @@ Each decision: short title, date, context, decision, rationale. Keep it terse �
 
 ## D15 — Photo storage: Supabase Storage
 **Date:** 2026-05-07
+**Status:** Superseded in part by D25. Recipe photos currently use public URLs; inventory photos are not implemented.
 **Decision:** Recipe and inventory photos live in Supabase Storage. Database rows store the storage path; URLs are signed on read.
 **Rationale:** Same vendor as the DB — no second auth surface, no second billing relationship. Free tier (1 GB) covers a household's recipe photos comfortably. Vercel Blob and R2 add vendors without solving anything Supabase Storage doesn't.
 
@@ -165,3 +166,9 @@ worker that wasn't running.
 **Context:** Inventory add and manual shopping-list add were still able to silently create rows in the global `canonical_foods` table. That contradicted the curated-taxonomy rule and made it too easy for alternate clients or future routes to bypass review.
 **Decision:** Server call sites that previously used silent `findOrCreateFood` now use a "find existing or require review" flow. Strong existing matches are reused; otherwise the server returns a typed `taxonomy_review_required` response and the client must either pick an existing canonical food or explicitly confirm creation via `POST /api/foods`.
 **Rationale:** Making taxonomy review a server invariant keeps the global reference table curated across all clients, not just the current web UI. Returning a structured stop instead of silently inserting keeps the UX lightweight while preserving a clean, reviewable taxonomy.
+
+## D27 — New World hardening uses bounded inline retries and `launchd` supervision
+**Date:** 2026-06-02
+**Context:** The New World worker needed to recover from brief upstream failures without hiding progress from the Shopping List UI, while expired sessions needed a clear operator action instead of repeated attempts.
+**Decision:** The scraper retries transient `429`, upstream `5xx`, navigation-timeout, and network failures inline up to three attempts with short bounded backoff. Before sleeping, it reports structured retry metadata through the worker-authenticated job-progress endpoint; the server stores that metadata in the existing `scraper_jobs.result` JSON while the job remains `in_progress`. Logged-out sessions fail immediately and prompt the user to refresh the Mac-mini session. The production worker runs from its compiled output under `apps/scraper/launchd/com.eat-thing.scraper.plist`.
+**Rationale:** Inline retries keep one queue row and preserve the idempotent add-to-cart flow, while progress reporting makes the retry visible without a schema migration. Immediate session-expired failures avoid useless traffic and turn an operational issue into an actionable UI state. `launchd` keeps the residential-IP worker supervised without opening an inbound port.

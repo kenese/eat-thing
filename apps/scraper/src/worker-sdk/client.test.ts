@@ -25,4 +25,32 @@ describe('worker SDK client', () => {
       .digest('hex');
     expect(headers['X-Worker-Signature']).toBe(expected);
   });
+
+  it('reports retry progress without completing the job', async () => {
+    vi.stubEnv('SCRAPER_HMAC_SECRET', 'canonical-secret');
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { reportJobProgress } = await import('./client.js');
+    await reportJobProgress('job-1', {
+      code: 'navigation_timeout',
+      message: 'Navigation timed out',
+      retryable: true,
+      attempt: 1,
+      maxAttempts: 3,
+    });
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain('/api/scraper/jobs/job-1/progress');
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(String(init.body))).toEqual({
+      failure: {
+        code: 'navigation_timeout',
+        message: 'Navigation timed out',
+        retryable: true,
+        attempt: 1,
+        maxAttempts: 3,
+      },
+    });
+  });
 });

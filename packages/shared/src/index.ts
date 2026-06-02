@@ -372,6 +372,33 @@ export type Store = 'new_world' | 'paknsave' | 'woolworths';
 export type ScraperJobType = 'import_past_orders' | 'compare_prices' | 'add_to_cart';
 export type ScraperJobStatus = 'pending' | 'in_progress' | 'done' | 'failed';
 
+export type ScraperErrorCode =
+  | 'session_expired'
+  | 'rate_limited'
+  | 'upstream_unavailable'
+  | 'navigation_timeout'
+  | 'network_error'
+  | 'parser_error'
+  | 'invalid_payload'
+  | 'no_session'
+  | 'unknown';
+
+export interface ScraperJobFailureSummary {
+  code: ScraperErrorCode;
+  message: string;
+  retryable: boolean;
+  attempt: number;
+  maxAttempts: number;
+}
+
+export interface ScraperJobSummary {
+  id: string;
+  status: ScraperJobStatus;
+  error: string | null;
+  failure: ScraperJobFailureSummary | null;
+  retrying: boolean;
+}
+
 export interface ScraperJob {
   id: string;
   householdId: string;
@@ -402,7 +429,7 @@ export interface ShoppingListPrice {
 
 export interface PricesForListResponse {
   prices: ShoppingListPrice[];
-  job: { id: string; status: ScraperJobStatus; error: string | null } | null;
+  job: ScraperJobSummary | null;
 }
 
 export interface RefreshPricesResponse {
@@ -462,6 +489,6 @@ export interface SendToCartResponse {
 }
 
 export interface CartResultResponse {
-  job: { id: string; status: ScraperJobStatus; error: string | null } | null;
+  job: ScraperJobSummary | null;
   result: CartJobResult | null;
 }

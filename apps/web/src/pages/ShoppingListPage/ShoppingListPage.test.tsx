@@ -158,6 +158,88 @@ describe('ShoppingListPage prices', () => {
     expect(screen.getByText('Checking prices…')).toBeInTheDocument();
   });
 
+  it('shows a New World re-login prompt when the latest job failed with session_expired', () => {
+    hooks.usePricesForList.mockReturnValue({
+      data: {
+        prices: [],
+        job: {
+          id: 'job-1',
+          status: 'failed',
+          error: 'session_expired',
+          retrying: false,
+          failure: {
+            code: 'session_expired',
+            message: 'New World session expired',
+            retryable: false,
+            attempt: 1,
+            maxAttempts: 3,
+          },
+        },
+      },
+    });
+    hooks.useRefreshPrices.mockReturnValue({ mutate: vi.fn(), isPending: false });
+
+    renderPage();
+
+    expect(screen.getByText(/new world needs you to sign in again on the mac mini/i)).toBeInTheDocument();
+    expect(screen.getByText(/re-run bootstrap and ingest your session/i)).toBeInTheDocument();
+  });
+
+  it('shows retrying attempt status while a scraper job is being retried', () => {
+    hooks.usePricesForList.mockReturnValue({
+      data: {
+        prices: [],
+        job: {
+          id: 'job-2',
+          status: 'in_progress',
+          error: null,
+          retrying: true,
+          failure: {
+            code: 'navigation_timeout',
+            message: 'Retrying after timeout',
+            retryable: true,
+            attempt: 2,
+            maxAttempts: 3,
+          },
+        },
+      },
+    });
+    hooks.useRefreshPrices.mockReturnValue({ mutate: vi.fn(), isPending: false });
+
+    renderPage();
+
+    expect(screen.getByText(/retrying price check at new world/i)).toBeInTheDocument();
+    expect(screen.getByText(/attempt 2 of 3/i)).toBeInTheDocument();
+  });
+
+  it('shows cart-update wording while an add-to-cart job is being retried', () => {
+    hooks.usePricesForList.mockReturnValue({ data: { prices: [], job: null } });
+    hooks.useCartResult.mockReturnValue({
+      data: {
+        result: null,
+        job: {
+          id: 'job-cart',
+          status: 'in_progress',
+          error: null,
+          retrying: true,
+          failure: {
+            code: 'upstream_unavailable',
+            message: 'New World returned HTTP 503',
+            retryable: true,
+            attempt: 2,
+            maxAttempts: 3,
+          },
+        },
+      },
+    });
+    hooks.useRefreshPrices.mockReturnValue({ mutate: vi.fn(), isPending: false });
+
+    renderPage();
+
+    expect(screen.getByText(/retrying cart update at new world/i)).toBeInTheDocument();
+    expect(screen.getByText(/attempt 2 of 3/i)).toBeInTheDocument();
+  });
+
   it('refresh button enqueues a job', async () => {
     const refreshMutate = vi.fn();
     hooks.usePricesForList.mockReturnValue({ data: { prices: [], job: null } });

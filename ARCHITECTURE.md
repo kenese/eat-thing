@@ -25,7 +25,7 @@ For per-decision rationale see [DECISIONS.md](./DECISIONS.md). For the rolling t
                                           └──────────────────────┘
 
 ┌────────────────────────────────────────────────┐
-│  Home Mac mini (always-on, launchd planned)    │
+│  Home Mac mini (always-on, launchd supervised) │
 │                                                │
 │  apps/scraper ────────▶ New World NZ (V3/V4)   │
 │   (Playwright,           Pak'nSave / Woolworths│
@@ -121,6 +121,7 @@ Household-scoped domain tables carry `household_id` and are filtered by request 
 - Per-store adapters live in `apps/scraper/src/stores/{newworld,paknsave,woolworths}.ts`. Only New World is wired for MVP (D21).
 - Sessions persisted as encrypted cookie blobs in `supermarket_credentials` (AES-256-GCM, key on the mini only — D17). First login per store is two-step: a headed `bootstrap:newworld` runs on the user's laptop and writes a plaintext `storageState`; the user copies it to the mini, where `bootstrap:ingest` encrypts and POSTs. Subsequent runs are headless and decrypt on the mini.
 - Job model: `scraper_jobs` (pending → in_progress → done | failed) with type-specific payloads. Types: `import_past_orders` (one-shot per store), `compare_prices` (per shopping list), `add_to_cart` (Phase 4, diffs the live trolley).
+- Transient failures (`429`, upstream `5xx`, navigation timeouts, and network errors) retry inline with bounded backoff. Retry progress is stored in the existing job result JSON while status remains `in_progress`, so the Shopping List UI can show the current attempt. Logged-out sessions fail immediately with a Mac-mini re-login prompt.
 - Per-item price snapshots + candidates in `shopping_list_prices` (one row per (item, store), upserted on each comparison).
 - Read-only in V3, build-to-cart in V4. **Never places orders** (D3).
 
@@ -142,7 +143,7 @@ Household-scoped domain tables carry `household_id` and are filtered by request 
 - **Frontend + API:** Vercel (`apps/web` and `apps/server`).
 - **DB + storage:** Supabase free tier — Postgres for domain data, Storage for recipe photos. Recipe rows currently store public image URLs. Inventory photos are not implemented.
 - **Meal Planner import:** the server prefers HTTP MCP when `MEAL_PLANNING_BASE_URL` is configured and falls back to local stdio transport via `@eat/meal-planning` in development/local setups.
-- **Background workers:** `apps/scraper` runs on the home Mac mini. `launchd` supervision is still the planned deployment shape, but the scraper plist is pending the handoff Slice 2 ops work. The worker polls the Vercel API outbound for pending jobs — no inbound port is exposed at home.
+- **Background workers:** `apps/scraper` runs on the home Mac mini under `launchd` supervision using `apps/scraper/launchd/com.eat-thing.scraper.plist`. The worker polls the Vercel API outbound for pending jobs — no inbound port is exposed at home.
 - **Worker auth:** Mac mini holds `SCRAPER_HMAC_SECRET`, a long-lived shared secret used to sign job-queue requests (HMAC).
 - **Secrets:**
   - Vercel: OAuth client ID/secret, Supabase anon/service keys, `SCRAPER_HMAC_SECRET`.

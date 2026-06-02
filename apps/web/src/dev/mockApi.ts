@@ -131,7 +131,7 @@ const shoppingList: ShoppingList = {
 };
 
 const prices: PricesForListResponse = {
-  job: { id: 'dev-price-job', status: 'done', error: null },
+  job: { id: 'dev-price-job', status: 'done', error: null, failure: null, retrying: false },
   prices: [
     { id: 'price-fish', shoppingListItemId: 'shop-fish', store: 'new_world', sku: 'fish-001', name: 'Fresh white fish fillets', price: 14.5, inStock: true, matched: true, checkedAt: ts('2026-05-12'), candidates: [], chosenSku: null },
     { id: 'price-tortillas', shoppingListItemId: 'shop-tortillas', store: 'new_world', sku: 'tortilla-001', name: 'Flour tortillas 8 pack', price: 4.2, inStock: true, matched: true, checkedAt: ts('2026-05-12'), candidates: [], chosenSku: null },

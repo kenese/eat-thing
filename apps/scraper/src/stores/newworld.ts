@@ -1,5 +1,5 @@
 import * as cheerio from 'cheerio';
-import type { Browser } from 'playwright';
+import type { Browser, Page } from 'playwright';
 import type { JobResult, ScraperJob } from '../worker-sdk/types.js';
 import type { StoreAdapter } from './base.js';
 import { loadStorageState } from '../session.js';
@@ -113,6 +113,17 @@ export function isLoggedOutPage(html: string): boolean {
 const SEARCH_URL = (q: string) => `https://www.newworld.co.nz/shop/search?q=${encodeURIComponent(q)}`;
 const ORDERS_URL = 'https://www.newworld.co.nz/shop/account/orders';
 
+export function assertNewWorldResponse(status: number | null): void {
+  if (status === 429 || (status !== null && status >= 500)) {
+    throw new Error(`HTTP ${status}`);
+  }
+}
+
+async function gotoNewWorld(page: Page, url: string): Promise<void> {
+  const response = await page.goto(url, { waitUntil: 'domcontentloaded' });
+  assertNewWorldResponse(response?.status() ?? null);
+}
+
 interface ComparePayload {
   shoppingListId: string;
   items: Array<{
@@ -205,7 +216,7 @@ async function handleAddToCart(job: ScraperJob, browser: Browser): Promise<JobRe
 
   try {
     // 1) Read trolley
-    await page.goto(TROLLEY_URL, { waitUntil: 'domcontentloaded' });
+    await gotoNewWorld(page, TROLLEY_URL);
     let html = await page.content();
     if (isLoggedOutPage(html)) return { ok: false, error: 'session_expired' };
     const trolley = parseTrolley(html);
@@ -219,7 +230,7 @@ async function handleAddToCart(job: ScraperJob, browser: Browser): Promise<JobRe
     for (const a of actions) {
       if (a.action === 'skip') continue;
       try {
-        await page.goto(PRODUCT_URL(a.sku), { waitUntil: 'domcontentloaded' });
+        await gotoNewWorld(page, PRODUCT_URL(a.sku));
         const qtyInput = page.locator('input[data-testid="qty-input"]');
         await qtyInput.waitFor({ timeout: 5000 });
         await qtyInput.fill(String(a.qty));
@@ -240,7 +251,7 @@ async function handleAddToCart(job: ScraperJob, browser: Browser): Promise<JobRe
     }
 
     // 4) Read trolley back for total
-    await page.goto(TROLLEY_URL, { waitUntil: 'domcontentloaded' });
+    await gotoNewWorld(page, TROLLEY_URL);
     html = await page.content();
     const $ = cheerio.load(html);
     const totalText = $('[data-testid="trolley-total"]').first().text().trim();
@@ -291,7 +302,7 @@ export const newWorldAdapter: StoreAdapter = {
           chosenSku: string | null;
         }> = [];
         for (const item of payload.items) {
-          await page.goto(SEARCH_URL(item.name), { waitUntil: 'domcontentloaded' });
+          await gotoNewWorld(page, SEARCH_URL(item.name));
           await page.waitForSelector('p[data-testid="product-title"]', { timeout: 15000 }).catch(() => {});
           const html = await page.content();
           if (isLoggedOutPage(html)) {
@@ -321,7 +332,7 @@ export const newWorldAdapter: StoreAdapter = {
       }
 
       if (job.type === 'import_past_orders') {
-        await page.goto(ORDERS_URL, { waitUntil: 'domcontentloaded' });
+        await gotoNewWorld(page, ORDERS_URL);
         const html = await page.content();
         if (isLoggedOutPage(html)) {
           return { ok: false, error: 'session_expired' };

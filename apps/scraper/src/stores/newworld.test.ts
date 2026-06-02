@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseSearchResults, parsePastOrders, isLoggedOutPage, parseTrolley, diffTrolley, buildCartResultFromActions } from './newworld.js';
+import { parseSearchResults, parsePastOrders, isLoggedOutPage, parseTrolley, diffTrolley, buildCartResultFromActions, assertNewWorldResponse } from './newworld.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const fixturesDir = join(here, '..', '..', 'test', 'fixtures', 'newworld');
@@ -144,5 +144,17 @@ describe('buildCartResultFromActions', () => {
       { shoppingListItemId: 'sli-c', sku: 'C', requestedQty: 1, action: 'already_in_cart' },
       { shoppingListItemId: 'sli-d', sku: 'D', requestedQty: 1, action: 'failed', failureReason: 'out_of_stock' },
     ]);
+  });
+});
+
+describe('assertNewWorldResponse', () => {
+  it('throws stable HTTP errors for retryable upstream responses', () => {
+    expect(() => assertNewWorldResponse(429)).toThrow('HTTP 429');
+    expect(() => assertNewWorldResponse(503)).toThrow('HTTP 503');
+  });
+
+  it('accepts successful and missing Playwright responses', () => {
+    expect(() => assertNewWorldResponse(200)).not.toThrow();
+    expect(() => assertNewWorldResponse(null)).not.toThrow();
   });
 });

@@ -635,6 +635,66 @@ test.describe('shopping list — find products + manual pick + send to cart', ()
     await expect(page.locator('.row-badge', { hasText: 'Sole match' })).toBeVisible();
   });
 
+  test('shows the Mac-mini sign-in prompt when New World session is expired', async ({ page }) => {
+    await page.route(`**/api/shopping-lists/${LIST_ID}/prices`, route =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          prices: [],
+          job: {
+            id: 'job-expired',
+            status: 'failed',
+            error: 'session_expired',
+            retrying: false,
+            failure: {
+              code: 'session_expired',
+              message: 'New World session expired',
+              retryable: false,
+              attempt: 1,
+              maxAttempts: 3,
+            },
+          },
+        }),
+      }),
+    );
+
+    await page.goto('/list');
+
+    await expect(page.getByText(/new world needs you to sign in again on the mac mini/i)).toBeVisible();
+    await expect(page.getByText(/re-run bootstrap and ingest your session/i)).toBeVisible();
+  });
+
+  test('shows retrying status while a New World price job is retried', async ({ page }) => {
+    await page.route(`**/api/shopping-lists/${LIST_ID}/prices`, route =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          prices: [],
+          job: {
+            id: 'job-retrying',
+            status: 'in_progress',
+            error: null,
+            retrying: true,
+            failure: {
+              code: 'navigation_timeout',
+              message: 'Navigation timed out',
+              retryable: true,
+              attempt: 2,
+              maxAttempts: 3,
+            },
+          },
+        }),
+      }),
+    );
+
+    await page.goto('/list');
+
+    await expect(page.getByText(/retrying price check at new world/i)).toBeVisible();
+    await expect(page.getByText(/attempt 2 of 3/i)).toBeVisible();
+  });
+
   test('Show options expands candidates for the "Pick one" row', async ({ page }) => {
     await page.goto('/list');
     await expect(page.getByText('Tip Top White Bread')).not.toBeVisible();

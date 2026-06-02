@@ -14,7 +14,7 @@ import {
   shoppingLists, shoppingListItems,
   scraperJobs, shoppingListPrices, supermarketProducts,
 } from '../db/schema/index.js';
-import type { ProductCandidate } from '@eat/shared';
+import type { ProductCandidate, ScraperErrorCode, ScraperJobStatus, ScraperJobSummary } from '@eat/shared';
 
 const router: ExpressRouter = Router();
 
@@ -40,6 +40,51 @@ const updateItemSchema = z.object({
 });
 
 type Category = 'produce' | 'meat' | 'dairy' | 'pantry' | 'frozen' | 'drinks' | 'other';
+
+const SCRAPER_ERROR_CODES = new Set<ScraperErrorCode>([
+  'session_expired',
+  'rate_limited',
+  'upstream_unavailable',
+  'navigation_timeout',
+  'network_error',
+  'parser_error',
+  'invalid_payload',
+  'no_session',
+  'unknown',
+]);
+
+function toJobSummary(job: {
+  id: string;
+  status: string;
+  error: string | null;
+  result: unknown;
+}): ScraperJobSummary {
+  const result = job.result && typeof job.result === 'object'
+    ? job.result as Record<string, unknown>
+    : null;
+  const rawFailure = result?.['failure'];
+  const failure = rawFailure && typeof rawFailure === 'object'
+    ? rawFailure as Record<string, unknown>
+    : null;
+  const rawCode = typeof failure?.['code'] === 'string' ? failure['code'] : 'unknown';
+  const code = SCRAPER_ERROR_CODES.has(rawCode as ScraperErrorCode)
+    ? rawCode as ScraperErrorCode
+    : 'unknown';
+
+  return {
+    id: job.id,
+    status: job.status as ScraperJobStatus,
+    error: job.error,
+    retrying: job.status === 'in_progress' && failure?.['retryable'] === true,
+    failure: failure ? {
+      code,
+      message: typeof failure['message'] === 'string' ? failure['message'] : job.error ?? 'Unknown scraper error',
+      retryable: failure['retryable'] === true,
+      attempt: typeof failure['attempt'] === 'number' ? failure['attempt'] : 1,
+      maxAttempts: typeof failure['maxAttempts'] === 'number' ? failure['maxAttempts'] : 1,
+    } : null,
+  };
+}
 
 const listItemCols = {
   id: shoppingListItems.id,
@@ -695,8 +740,8 @@ router.get('/:id/cart-result', withHousehold, async (req, res) => {
       return p && p['shoppingListId'] === listId;
     }) ?? null;
     res.json({
-      job: job ? { id: job.id, status: job.status, error: job.error } : null,
-      result: job?.result ?? null,
+      job: job ? toJobSummary(job) : null,
+      result: job?.status === 'done' ? job.result ?? null : null,
     });
   } catch (err) {
     console.error(err);
@@ -733,7 +778,7 @@ router.get('/:id/prices', withHousehold, async (req, res) => {
       ));
 
     const jobRows = await db
-      .select({ id: scraperJobs.id, status: scraperJobs.status, error: scraperJobs.error, payload: scraperJobs.payload })
+      .select({ id: scraperJobs.id, status: scraperJobs.status, error: scraperJobs.error, result: scraperJobs.result, payload: scraperJobs.payload })
       .from(scraperJobs)
       .where(and(eq(scraperJobs.householdId, req.householdId), eq(scraperJobs.type, 'compare_prices')))
       .orderBy(desc(scraperJobs.createdAt))
@@ -752,7 +797,7 @@ router.get('/:id/prices', withHousehold, async (req, res) => {
         chosenSku: r.chosenSku ?? null,
         checkedAt: r.checkedAt instanceof Date ? r.checkedAt.toISOString() : r.checkedAt,
       })),
-      job: job ? { id: job.id, status: job.status, error: job.error } : null,
+      job: job ? toJobSummary(job) : null,
     });
   } catch (err) {
     console.error(err);

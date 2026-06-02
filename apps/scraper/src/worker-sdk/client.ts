@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { signedHeaders } from './sign.js';
-import type { JobResult, ScraperJob, SessionEnvelope, Store } from './types.js';
+import type { JobResult, ScraperFailure, ScraperJob, SessionEnvelope, Store } from './types.js';
 
 const API_BASE = process.env.API_BASE_URL ?? 'http://localhost:3001';
 const SECRET = process.env.SCRAPER_HMAC_SECRET ?? '';
@@ -29,6 +29,11 @@ export async function claimJob(jobId: string): Promise<void> {
 export async function reportJobResult(jobId: string, result: JobResult): Promise<void> {
   const res = await workerFetch('POST', `/api/scraper/jobs/${jobId}/result`, result);
   if (!res.ok) throw new Error(`Failed to report job result ${jobId}: ${res.status}`);
+}
+
+export async function reportJobProgress(jobId: string, failure: ScraperFailure): Promise<void> {
+  const res = await workerFetch('POST', `/api/scraper/jobs/${jobId}/progress`, { failure });
+  if (!res.ok) throw new Error(`Failed to report job progress ${jobId}: ${res.status}`);
 }
 
 export async function fetchSession(householdId: string, store: Store): Promise<SessionEnvelope | null> {

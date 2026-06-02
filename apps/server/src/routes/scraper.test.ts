@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   selectLimit: vi.fn(),
   selectMany: vi.fn(),
   updateReturning: vi.fn(),
+  updateSet: vi.fn(),
   getSession: vi.fn(),
   txSelectLimit: vi.fn(),
 }));
@@ -37,11 +38,14 @@ vi.mock('../db/index.js', () => ({
       }),
     }),
     update: () => ({
-      set: () => ({
+      set: (values: unknown) => {
+        mocks.updateSet(values);
+        return {
         where: () => ({
           returning: mocks.updateReturning,
         }),
-      }),
+        };
+      },
     }),
     transaction: async (fn: (tx: unknown) => Promise<unknown>) => fn({
       insert: () => ({
@@ -169,12 +173,53 @@ describe('scraper router — jobs', () => {
   it('POST /jobs/:id/result with ok=false records failure', async () => {
     mocks.selectLimit.mockResolvedValue([{ id: 'job-1', type: 'compare_prices', householdId: 'h', store: 'new_world' }]);
     mocks.updateReturning.mockResolvedValue([{ id: 'job-1' }]);
-    const body = JSON.stringify({ ok: false, error: 'session_expired' });
+    const failure = {
+      code: 'session_expired',
+      message: 'New World session expired',
+      retryable: false,
+      attempt: 1,
+      maxAttempts: 3,
+    };
+    const body = JSON.stringify({ ok: false, error: 'session_expired', failure });
     const res = await request(app)
       .post('/api/scraper/jobs/job-1/result')
       .set(sign('POST', '/api/scraper/jobs/job-1/result', body))
       .type('json').send(body);
     expect(res.status).toBe(200);
+    expect(mocks.updateSet).toHaveBeenCalledWith(expect.objectContaining({
+      status: 'failed',
+      result: { failure },
+      error: 'session_expired',
+    }));
+  });
+
+  it('POST /jobs/:id/progress records retry metadata without completing the job', async () => {
+    const body = JSON.stringify({
+      failure: {
+        code: 'navigation_timeout',
+        message: 'Navigation timed out',
+        retryable: true,
+        attempt: 1,
+        maxAttempts: 3,
+      },
+    });
+    const res = await request(app)
+      .post('/api/scraper/jobs/job-1/progress')
+      .set(sign('POST', '/api/scraper/jobs/job-1/progress', body))
+      .type('json').send(body);
+
+    expect(res.status).toBe(200);
+    expect(mocks.updateSet).toHaveBeenCalledWith({
+      result: {
+        failure: {
+          code: 'navigation_timeout',
+          message: 'Navigation timed out',
+          retryable: true,
+          attempt: 1,
+          maxAttempts: 3,
+        },
+      },
+    });
   });
 
   it('writes candidates + chosenSku for each item when compare_prices completes', async () => {
