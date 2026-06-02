@@ -12,7 +12,7 @@ Household food management app. Inventory ↔ recipes ↔ meal plans ↔ shopping
 - All domain data is scoped by `household_id`. Every query and migration must respect this.
 - Inventory is stored as mutable balance rows; `cook_events` are append-only cooking audit records. Don't edit cook events; emit new ones.
 - `packages/meal-planning` is the Meal Planner import adapter only. Keep runtime ownership in eat-thing; don't make core app logic depend on Meal Planner as a source of truth.
-- `canonical_foods` is curated. Taxonomy-review prompting is the target behavior; until Slice C4 lands, don't add new silent insert paths.
+- `canonical_foods` is curated. Inventory and manual shopping-list flows must go through the explicit taxonomy-review prompt; don't add new silent insert paths.
 
 ## Stack at a glance
 - Turborepo monorepo: `apps/web` (PWA) · `apps/server` (Express + Better-Auth + Drizzle) · `apps/scraper` (Playwright on home Mac mini) · `packages/shared` · `packages/taxonomy` · `packages/meal-planning`.

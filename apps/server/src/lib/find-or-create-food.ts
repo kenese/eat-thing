@@ -1,34 +1,55 @@
 import { ilike } from 'drizzle-orm';
-import { v4 as uuidv4 } from 'uuid';
 import { db } from '../db/index.js';
 import { canonicalFoods } from '../db/schema/index.js';
 
 export type FoodCategory = 'produce' | 'meat' | 'dairy' | 'pantry' | 'frozen' | 'drinks' | 'other';
 
-export async function findOrCreateFood(name: string, category: FoodCategory, defaultUnit: string): Promise<string> {
+export interface TaxonomyReviewMatch {
+  id: string;
+  name: string;
+  category: FoodCategory;
+  defaultUnit: string;
+}
+
+export type ExistingFoodOrReview =
+  | { kind: 'existing'; id: string }
+  | {
+      kind: 'review';
+      proposed: { name: string; category: FoodCategory; defaultUnit: string };
+      matches: TaxonomyReviewMatch[];
+    };
+
+export async function findExistingFoodOrRequireReview(
+  name: string,
+  category: FoodCategory,
+  defaultUnit: string,
+): Promise<ExistingFoodOrReview> {
   const trimmed = name.trim();
 
-  const [existing] = await db
-    .select({ id: canonicalFoods.id })
+  const matches = await db
+    .select({
+      id: canonicalFoods.id,
+      name: canonicalFoods.name,
+      category: canonicalFoods.category,
+      defaultUnit: canonicalFoods.defaultUnit,
+    })
     .from(canonicalFoods)
-    .where(ilike(canonicalFoods.name, trimmed))
-    .limit(1);
+    .where(ilike(canonicalFoods.name, `%${trimmed}%`))
+    .limit(5);
 
-  if (existing) return existing.id;
+  const exact = matches.find((match) => match.name.toLowerCase() === trimmed.toLowerCase());
+  if (exact) {
+    return { kind: 'existing', id: exact.id };
+  }
 
-  const result = await db
-    .insert(canonicalFoods)
-    .values({ id: uuidv4(), name: trimmed, category, defaultUnit, aliases: [] })
-    .onConflictDoNothing()
-    .returning({ id: canonicalFoods.id });
-
-  if (result.length > 0) return result[0].id;
-
-  // Race condition: another request inserted first — fetch it.
-  const [conflict] = await db
-    .select({ id: canonicalFoods.id })
-    .from(canonicalFoods)
-    .where(ilike(canonicalFoods.name, trimmed))
-    .limit(1);
-  return conflict.id;
+  return {
+    kind: 'review',
+    proposed: { name: trimmed, category, defaultUnit },
+    matches: matches.map(match => ({
+      id: match.id,
+      name: match.name,
+      category: match.category as FoodCategory,
+      defaultUnit: match.defaultUnit,
+    })),
+  };
 }

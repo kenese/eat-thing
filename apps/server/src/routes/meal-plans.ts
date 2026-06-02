@@ -134,7 +134,7 @@ router.put('/entries/:id', withHousehold, async (req, res) => {
 
   try {
     const [existing] = await db
-      .select({ householdId: mealPlanEntries.householdId })
+      .select({ householdId: mealPlanEntries.householdId, date: mealPlanEntries.date })
       .from(mealPlanEntries)
       .where(eq(mealPlanEntries.id, id))
       .limit(1);

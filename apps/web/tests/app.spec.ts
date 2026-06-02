@@ -83,6 +83,9 @@ async function stubAuthedShell(page: Page) {
     }
     return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
   });
+  await page.route('**/api/foods*', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }),
+  );
 }
 
 test('page title is eat-thing', async ({ page }) => {
@@ -203,6 +206,71 @@ test.describe('authenticated routes load', () => {
     const unitSelect = page.locator('#unit');
     await expect(unitSelect).toBeVisible();
     await expect(unitSelect.locator('option')).toHaveText(['g', 'ml', 'count']);
+  });
+
+  test('inventory add prompts for taxonomy review before reusing an existing canonical food', async ({ page }) => {
+    let finalInventoryBody: unknown;
+
+    await page.route('**/api/inventory*', async (route) => {
+      const { method } = route.request();
+      if (method === 'GET') {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+        return;
+      }
+
+      const body = route.request().postDataJSON() as { canonicalFoodId?: string } | null;
+      if (!body || body.canonicalFoodId !== 'food-1') {
+        await route.fulfill({
+          status: 409,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            code: 'taxonomy_review_required',
+            error: 'Taxonomy review required',
+            proposed: { name: 'Dish Soap', category: 'other', defaultUnit: 'count' },
+            matches: [{ id: 'food-1', name: 'Dish soap', category: 'other', defaultUnit: 'count' }],
+          }),
+        });
+        return;
+      }
+
+      finalInventoryBody = body;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'inv-2',
+          householdId: 'h-1',
+          canonicalFoodId: 'food-1',
+          foodName: 'Dish Soap',
+          brand: null,
+          qty: 1,
+          unit: 'count',
+          category: 'other',
+          purchasedAt: null,
+          expiresAt: null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }),
+      });
+    });
+
+    await page.goto('/inventory');
+    await page.getByRole('button', { name: /add item/i }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByLabel('Food *').fill('Dish Soap');
+    await dialog.getByLabel(/quantity/i).fill('1');
+    await dialog.getByLabel(/unit/i).selectOption('count');
+    await dialog.getByRole('button', { name: /^add item$/i }).click();
+
+    await expect(page.getByRole('button', { name: /use existing: dish soap/i })).toBeVisible();
+    await page.getByRole('button', { name: /use existing: dish soap/i }).click();
+
+    await expect.poll(() => finalInventoryBody).not.toBeNull();
+    expect(finalInventoryBody).toMatchObject({
+      canonicalFoodId: 'food-1',
+      qty: 1,
+      unit: 'count',
+    });
   });
 
   test('recipes route loads', async ({ page }) => {
@@ -682,5 +750,84 @@ test.describe('shopping list — find products + manual pick + send to cart', ()
     await expect(modal.getByText('Added', { exact: true })).toBeVisible();
     // Trolley link
     await expect(modal.getByRole('link', { name: /Open New World trolley/i })).toBeVisible();
+  });
+
+  test('manual shopping-list add prompts for taxonomy review before creating a canonical food', async ({ page }) => {
+    let addItemPostCount = 0;
+    let createFoodBody: unknown;
+    let finalItemBody: unknown;
+
+    await page.route(`**/api/shopping-lists/${LIST_ID}/items`, async (route) => {
+      addItemPostCount += 1;
+      const body = route.request().postDataJSON();
+      if (addItemPostCount === 1) {
+        await route.fulfill({
+          status: 409,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            code: 'taxonomy_review_required',
+            error: 'Taxonomy review required',
+            proposed: { name: 'Dish Soap', category: 'other', defaultUnit: 'count' },
+            matches: [],
+          }),
+        });
+        return;
+      }
+
+      finalItemBody = body;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'sli-new',
+          shoppingListId: LIST_ID,
+          canonicalFoodId: 'food-new',
+          name: 'Dish Soap',
+          qty: 1,
+          unit: 'count',
+          source: 'manual',
+          checked: false,
+          category: 'other',
+          sourceRecipeNames: null,
+          sourceRecipeId: null,
+        }),
+      });
+    });
+    await page.route('**/api/foods', async (route) => {
+      createFoodBody = route.request().postDataJSON();
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'food-new',
+          name: 'Dish Soap',
+          defaultUnit: 'count',
+          aliases: [],
+          densityGPerMl: null,
+          countToGrams: null,
+        }),
+      });
+    });
+
+    await page.goto('/list');
+    await page.getByPlaceholder('Food name or search…').fill('Dish Soap');
+    await page.getByRole('spinbutton').fill('1');
+    await page.getByRole('button', { name: /\+ add/i }).click();
+
+    await expect(page.getByText('Review this new canonical food before adding it.')).toBeVisible();
+    await page.getByRole('button', { name: /create canonical food: dish soap/i }).click();
+
+    await expect.poll(() => addItemPostCount).toBe(2);
+    expect(createFoodBody).toMatchObject({
+      name: 'Dish Soap',
+      category: 'other',
+      defaultUnit: 'count',
+    });
+    expect(finalItemBody).toMatchObject({
+      canonicalFoodId: 'food-new',
+      name: 'Dish Soap',
+      qty: 1,
+      unit: 'count',
+    });
   });
 });

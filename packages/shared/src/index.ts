@@ -19,6 +19,24 @@ export interface CreateFoodInput {
   category?: Category;
 }
 
+export interface TaxonomyReviewMatch {
+  id: string;
+  name: string;
+  category: Category;
+  defaultUnit: string;
+}
+
+export interface TaxonomyReviewRequiredResponse {
+  code: 'taxonomy_review_required';
+  error: string;
+  proposed: {
+    name: string;
+    category: Category;
+    defaultUnit: string;
+  };
+  matches: TaxonomyReviewMatch[];
+}
+
 // ─── Inventory ────────────────────────────────────────────────────────────────
 
 export interface InventoryRow {
