@@ -645,6 +645,7 @@ const FAKE_SHOPPING_LIST = {
   householdId: 'h-1',
   createdAt: '2026-05-12T09:14:00.000Z',
   finalizedAt: null,
+  scheduledFor: null,
   items: [
     {
       id: 'sli-1',
@@ -1071,5 +1072,83 @@ test.describe('shopping list — find products + manual pick + send to cart', ()
       qty: 1,
       unit: 'count',
     });
+  });
+
+  test('scheduled shopping date updates Recipes quick-shop copy', async ({ page }) => {
+    let scheduledFor: string | null = null;
+    const listWithDate = () => ({ ...FAKE_SHOPPING_LIST, scheduledFor });
+
+    await page.route(`**/api/shopping-lists/current`, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(listWithDate()),
+      }),
+    );
+    await page.route(`**/api/shopping-lists/${LIST_ID}`, async (route) => {
+      if (route.request().method() !== 'PATCH') return route.fallback();
+      scheduledFor = route.request().postDataJSON().scheduledFor;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(listWithDate()),
+      });
+    });
+    await page.unroute('**/api/recipes*');
+    await page.route('**/api/recipes/recipe-shop', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'recipe-shop',
+          householdId: 'h-1',
+          name: 'Fish tacos',
+          servings: 4,
+          sourceUrl: null,
+          sourceImage: null,
+          totalTimeMinutes: null,
+          tags: [],
+          instructions: null,
+          ingredients: [
+            { id: 'ing-1', canonicalFoodId: 'food-extra', foodName: 'extra', qty: '1', unit: 'count', originalQty: '1', originalUnit: 'count', section: null, optional: false },
+          ],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }),
+      }),
+    );
+    await page.route('**/api/recipes', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([{
+          id: 'recipe-shop',
+          householdId: 'h-1',
+          name: 'Fish tacos',
+          servings: 4,
+          sourceUrl: null,
+          sourceImage: null,
+          ingredientCount: 1,
+          totalTimeMinutes: null,
+          tags: [],
+          canonicalFoodIds: ['food-extra'],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }]),
+      }),
+    );
+
+    await page.goto('/list');
+    await page.getByRole('button', { name: /set shop date/i }).click();
+    await expect(page.getByRole('dialog', { name: /choose a date/i })).toBeVisible();
+    await page.getByRole('button', { name: /friday 5 june 2026/i }).click();
+    await page.getByRole('button', { name: /choose friday 5 june 2026/i }).click();
+
+    await expect.poll(() => scheduledFor).toBe('2026-06-05');
+    await expect(page.getByRole('button', { name: /shop fri 5 jun/i })).toBeVisible();
+
+    await page.getByRole('link', { name: 'recipes' }).click();
+    await expect(page.getByText(/1 quick shop for fri 5 jun/i)).toBeVisible();
+    await expect(page.getByText(/add to your fri 5 jun list/i)).toBeVisible();
   });
 });
