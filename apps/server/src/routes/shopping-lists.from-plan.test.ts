@@ -73,7 +73,13 @@ vi.mock('../db/schema/index.js', () => ({
   recipeIngredients: { canonicalFoodId: 'ingredientFoodId', unit: 'ingredientUnit', qty: 'ingredientQty', recipeId: 'ingredientRecipeId', optional: 'ingredientOptional' },
   inventoryItems: { canonicalFoodId: 'inventoryFoodId', unit: 'inventoryUnit', qty: 'inventoryQty', householdId: 'inventoryHouseholdId' },
   canonicalFoods: { id: 'foodId', name: 'foodName', densityGPerMl: 'densityGPerMl', countToGrams: 'countToGrams', category: 'category' },
-  shoppingLists: { id: 'shoppingListId', householdId: 'shoppingListHouseholdId', createdAt: 'shoppingListCreatedAt', finalizedAt: 'shoppingListFinalizedAt' },
+  shoppingLists: {
+    id: 'shoppingListId',
+    householdId: 'shoppingListHouseholdId',
+    createdAt: 'shoppingListCreatedAt',
+    finalizedAt: 'shoppingListFinalizedAt',
+    scheduledFor: 'shoppingListScheduledFor',
+  },
   shoppingListItems: {
     id: 'itemId',
     shoppingListId: 'itemShoppingListId',
@@ -123,9 +129,10 @@ describe('shopping-lists from-plan', () => {
     mocks.selectFrom
       .mockResolvedValueOnce([]) // raw ingredients
       .mockResolvedValueOnce([]) // inventory rows
+      .mockResolvedValueOnce([{ id: 'list-1' }]) // transaction where() awaitable setup
       .mockResolvedValueOnce([{ id: 'list-1' }]) // existing list in transaction
       .mockResolvedValueOnce([
-        { id: 'list-1', householdId: 'hh-1', createdAt: '2026-06-02T00:00:00.000Z', finalizedAt: null },
+        { id: 'list-1', householdId: 'hh-1', createdAt: '2026-06-02T00:00:00.000Z', finalizedAt: null, scheduledFor: '2026-06-05' },
       ]) // final list fetch
       .mockResolvedValueOnce([
         {
@@ -178,5 +185,6 @@ describe('shopping-lists from-plan', () => {
         source: 'staple',
       }),
     ]);
+    expect(res.body.scheduledFor).toBe('2026-06-05');
   });
 });

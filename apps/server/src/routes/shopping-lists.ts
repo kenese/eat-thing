@@ -110,6 +110,7 @@ const listCols = {
   householdId: shoppingLists.householdId,
   createdAt: shoppingLists.createdAt,
   finalizedAt: shoppingLists.finalizedAt,
+  scheduledFor: shoppingLists.scheduledFor,
 };
 
 async function findOwnedList(listId: string, householdId: string) {

@@ -60,7 +60,8 @@ vi.mock('../db/index.js', () => {
     db: {
       select: (cols?: unknown) => {
         // Membership select (withHousehold) — has 'householdId' key
-        const isMembershipSelect = cols && typeof cols === 'object' && 'householdId' in (cols as object);
+        const isMembershipSelect = cols && typeof cols === 'object' &&
+          Object.keys(cols as object).length === 1 && 'householdId' in (cols as object);
         if (isMembershipSelect) {
           return makeSelectChain(mocks.membershipLimit);
         }
@@ -86,7 +87,13 @@ vi.mock('../db/schema/index.js', () => ({
   memberships: { householdId: 'householdId', userId: 'userId' },
   mealPlanEntries: {}, recipes: {}, recipeIngredients: {},
   inventoryItems: {}, canonicalFoods: {},
-  shoppingLists: {}, shoppingListItems: {},
+  shoppingLists: {
+    id: 'shoppingListId',
+    householdId: 'shoppingListHouseholdId',
+    createdAt: 'shoppingListCreatedAt',
+    finalizedAt: 'shoppingListFinalizedAt',
+    scheduledFor: 'shoppingListScheduledFor',
+  }, shoppingListItems: {},
   scraperJobs: {
     id: 'id',
     householdId: 'householdId',
@@ -255,6 +262,25 @@ describe('shopping-lists router', () => {
       .send({ entryIds: ['not-a-uuid'] });
 
     expect(res.status).toBe(400);
+  });
+
+  it('GET /current returns the scheduled shopping date', async () => {
+    mocks.getSession.mockResolvedValue({ user: { id: 'u1' } });
+    mocks.membershipLimit.mockResolvedValue([{ householdId: 'hh-1' }]);
+    mocks.selectFrom.mockResolvedValueOnce([{
+      id: '550e8400-e29b-41d4-a716-446655440001',
+      householdId: 'hh-1',
+      createdAt: new Date('2026-06-01T00:00:00Z'),
+      finalizedAt: null,
+      scheduledFor: '2026-06-05',
+    }]);
+    mocks.selectFrom.mockResolvedValueOnce([]);
+
+    const res = await request(app).get('/api/shopping-lists/current');
+
+    expect(res.status).toBe(200);
+    expect(res.body.scheduledFor).toBe('2026-06-05');
+    expect(res.body.items).toEqual([]);
   });
 
   it('PATCH /items/:id/chosen-sku updates chosenSku when sku is in candidates', async () => {

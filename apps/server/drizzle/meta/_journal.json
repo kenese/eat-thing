@@ -92,6 +92,13 @@
       "when": 1780300800000,
       "tag": "0012_shopping_list_price_household",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1780444800000,
+      "tag": "0014_shopping_list_scheduled_for",
+      "breakpoints": true
     }
   ]
 }

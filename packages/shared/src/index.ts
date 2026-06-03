@@ -268,6 +268,7 @@ export interface ShoppingList {
   householdId: string;
   createdAt: string;
   finalizedAt: string | null;
+  scheduledFor: string | null;
   items: ShoppingListItem[];
 }
 
