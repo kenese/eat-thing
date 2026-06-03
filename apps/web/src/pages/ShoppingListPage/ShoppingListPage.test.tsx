@@ -5,6 +5,7 @@ import { ShoppingListPage } from './ShoppingListPage';
 
 const hooks = vi.hoisted(() => ({
   useCurrentShoppingList: vi.fn(),
+  useUpdateShoppingList: vi.fn(),
   useUpdateShoppingListItem: vi.fn(),
   useAddShoppingListItem: vi.fn(),
   useDeleteShoppingListItem: vi.fn(),
@@ -21,6 +22,7 @@ const hooks = vi.hoisted(() => ({
 
 vi.mock('../../hooks/useShoppingList', () => ({
   useCurrentShoppingList: hooks.useCurrentShoppingList,
+  useUpdateShoppingList: hooks.useUpdateShoppingList,
   useUpdateShoppingListItem: hooks.useUpdateShoppingListItem,
   useAddShoppingListItem: hooks.useAddShoppingListItem,
   useDeleteShoppingListItem: hooks.useDeleteShoppingListItem,
@@ -55,6 +57,7 @@ function renderPage() {
 const baseList = {
   id: 'list-1', householdId: 'h',
   createdAt: '2026-05-10T00:00:00Z', finalizedAt: null,
+  scheduledFor: null,
   items: [
     { id: 'i1', shoppingListId: 'list-1', canonicalFoodId: 'cf1', name: 'Eggs',  qty: 1, unit: 'count', source: 'recipe', checked: false, category: 'dairy',  sourceRecipeNames: ['Shakshuka'], sourceRecipeId: 'r1' },
     { id: 'i2', shoppingListId: 'list-1', canonicalFoodId: 'cf2', name: 'Bread', qty: 1, unit: 'count', source: 'staple', checked: false, category: 'pantry', sourceRecipeNames: null, sourceRecipeId: null },
@@ -65,6 +68,7 @@ describe('ShoppingListPage prices', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     hooks.useCurrentShoppingList.mockReturnValue({ data: baseList, isLoading: false });
+    hooks.useUpdateShoppingList.mockReturnValue({ mutate: vi.fn(), isPending: false, isError: false });
     hooks.useUpdateShoppingListItem.mockReturnValue({ mutate: vi.fn() });
     hooks.useAddShoppingListItem.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
     hooks.useDeleteShoppingListItem.mockReturnValue({ mutate: vi.fn() });
@@ -101,6 +105,41 @@ describe('ShoppingListPage prices', () => {
     hooks.useRefreshPrices.mockReturnValue({ mutate: vi.fn(), isPending: false });
     renderPage();
     expect(screen.getByText('The list')).toBeInTheDocument();
+  });
+
+  it('opens a date picker from the scheduled shop chip and confirms a date', async () => {
+    const mutate = vi.fn();
+    hooks.usePricesForList.mockReturnValue({ data: { prices: [], job: null } });
+    hooks.useRefreshPrices.mockReturnValue({ mutate: vi.fn(), isPending: false });
+    hooks.useUpdateShoppingList.mockReturnValue({ mutate, isPending: false, isError: false });
+    hooks.useCurrentShoppingList.mockReturnValue({
+      data: { ...baseList, scheduledFor: null },
+      isLoading: false,
+    });
+
+    renderPage();
+
+    fireEvent.click(screen.getByRole('button', { name: /set shop date/i }));
+    expect(screen.getByRole('dialog', { name: /choose a date/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /choose/i }));
+
+    await waitFor(() =>
+      expect(mutate).toHaveBeenCalledWith({ scheduledFor: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/) }),
+    );
+  });
+
+  it('shows the scheduled shopping date when the list has one', () => {
+    hooks.usePricesForList.mockReturnValue({ data: { prices: [], job: null } });
+    hooks.useRefreshPrices.mockReturnValue({ mutate: vi.fn(), isPending: false });
+    hooks.useCurrentShoppingList.mockReturnValue({
+      data: { ...baseList, scheduledFor: '2026-06-05' },
+      isLoading: false,
+    });
+
+    renderPage();
+
+    expect(screen.getByRole('button', { name: /shop fri,? 5 jun/i })).toBeInTheDocument();
   });
 
   it('renders category section headings', () => {
