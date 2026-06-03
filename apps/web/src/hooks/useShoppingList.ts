@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
 import type {
   ShoppingList, ShoppingListItem,
-  ApplyPlanToShoppingListInput, AddShoppingListItemInput, UpdateShoppingListItemInput,
+  ApplyPlanToShoppingListInput, AddShoppingListItemInput, UpdateShoppingListInput, UpdateShoppingListItemInput,
   PurchaseShoppingListItemsInput, BatchDeleteShoppingListItemsInput,
 } from '@eat/shared';
 
@@ -27,6 +27,15 @@ export function useApplyPlanToShoppingList() {
   return useMutation({
     mutationFn: (data: ApplyPlanToShoppingListInput) =>
       api.post<ShoppingList>('/api/shopping-lists/from-plan', data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['shopping-list'] }),
+  });
+}
+
+export function useUpdateShoppingList(listId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: UpdateShoppingListInput) =>
+      api.patch<ShoppingList>(`/api/shopping-lists/${listId}`, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['shopping-list'] }),
   });
 }

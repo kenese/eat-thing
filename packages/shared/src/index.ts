@@ -276,6 +276,10 @@ export interface ApplyPlanToShoppingListInput {
   entryIds: string[];
 }
 
+export interface UpdateShoppingListInput {
+  scheduledFor: string | null;
+}
+
 export interface AddShoppingListItemInput {
   name: string;
   qty: number;
