@@ -39,6 +39,15 @@ const updateItemSchema = z.object({
   message: 'At least one of checked or qty must be provided',
 });
 
+const isoDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((value) => {
+  const parsed = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+}, 'scheduledFor must be a valid ISO date');
+
+const updateListSchema = z.object({
+  scheduledFor: isoDateSchema.nullable(),
+});
+
 type Category = 'produce' | 'meat' | 'dairy' | 'pantry' | 'frozen' | 'drinks' | 'other';
 
 const SCRAPER_ERROR_CODES = new Set<ScraperErrorCode>([
@@ -110,6 +119,7 @@ const listCols = {
   householdId: shoppingLists.householdId,
   createdAt: shoppingLists.createdAt,
   finalizedAt: shoppingLists.finalizedAt,
+  scheduledFor: shoppingLists.scheduledFor,
 };
 
 async function findOwnedList(listId: string, householdId: string) {
@@ -329,6 +339,50 @@ router.get('/current', withHousehold, async (req, res) => {
     if (!list) { res.status(404).json({ error: 'No shopping list found' }); return; }
     const items = await itemsForList(list.id, req.householdId);
     res.json({ ...list, items });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// PATCH /api/shopping-lists/:listId
+router.patch('/:listId', withHousehold, async (req, res) => {
+  const listId = req.params['listId'] as string;
+  if (!z.string().uuid().safeParse(listId).success) {
+    res.status(404).json({ error: 'Shopping list not found' });
+    return;
+  }
+
+  const parse = updateListSchema.safeParse(req.body);
+  if (!parse.success) {
+    res.status(400).json({ error: 'Invalid input', details: parse.error.flatten() });
+    return;
+  }
+
+  try {
+    const existing = await findOwnedList(listId, req.householdId);
+    if (!existing) {
+      res.status(404).json({ error: 'Shopping list not found' });
+      return;
+    }
+
+    await db.update(shoppingLists)
+      .set({ scheduledFor: parse.data.scheduledFor })
+      .where(and(eq(shoppingLists.id, listId), eq(shoppingLists.householdId, req.householdId)));
+
+    const [updatedList] = await db
+      .select(listCols)
+      .from(shoppingLists)
+      .where(and(eq(shoppingLists.id, listId), eq(shoppingLists.householdId, req.householdId)))
+      .limit(1);
+
+    if (!updatedList) {
+      res.status(404).json({ error: 'Shopping list not found' });
+      return;
+    }
+
+    const items = await itemsForList(listId, req.householdId);
+    res.json({ ...updatedList, items });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });

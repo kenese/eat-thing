@@ -60,7 +60,8 @@ vi.mock('../db/index.js', () => {
     db: {
       select: (cols?: unknown) => {
         // Membership select (withHousehold) — has 'householdId' key
-        const isMembershipSelect = cols && typeof cols === 'object' && 'householdId' in (cols as object);
+        const isMembershipSelect = cols && typeof cols === 'object' &&
+          Object.keys(cols as object).length === 1 && 'householdId' in (cols as object);
         if (isMembershipSelect) {
           return makeSelectChain(mocks.membershipLimit);
         }
@@ -86,7 +87,13 @@ vi.mock('../db/schema/index.js', () => ({
   memberships: { householdId: 'householdId', userId: 'userId' },
   mealPlanEntries: {}, recipes: {}, recipeIngredients: {},
   inventoryItems: {}, canonicalFoods: {},
-  shoppingLists: {}, shoppingListItems: {},
+  shoppingLists: {
+    id: 'shoppingListId',
+    householdId: 'shoppingListHouseholdId',
+    createdAt: 'shoppingListCreatedAt',
+    finalizedAt: 'shoppingListFinalizedAt',
+    scheduledFor: 'shoppingListScheduledFor',
+  }, shoppingListItems: {},
   scraperJobs: {
     id: 'id',
     householdId: 'householdId',
@@ -124,6 +131,13 @@ async function postSendToCart(listId: string) {
   app.use(express.json());
   app.use('/api/shopping-lists', shoppingListsRouter);
   return request(app).post(`/api/shopping-lists/${listId}/send-to-cart`);
+}
+
+async function patchShoppingList(listId: string, body: { scheduledFor?: string | null }) {
+  const app = express();
+  app.use(express.json());
+  app.use('/api/shopping-lists', shoppingListsRouter);
+  return request(app).patch(`/api/shopping-lists/${listId}`).send(body);
 }
 
 describe('shopping-lists router', () => {
@@ -255,6 +269,99 @@ describe('shopping-lists router', () => {
       .send({ entryIds: ['not-a-uuid'] });
 
     expect(res.status).toBe(400);
+  });
+
+  it('GET /current returns the scheduled shopping date', async () => {
+    mocks.getSession.mockResolvedValue({ user: { id: 'u1' } });
+    mocks.membershipLimit.mockResolvedValue([{ householdId: 'hh-1' }]);
+    mocks.selectFrom.mockResolvedValueOnce([{
+      id: '550e8400-e29b-41d4-a716-446655440001',
+      householdId: 'hh-1',
+      createdAt: new Date('2026-06-01T00:00:00Z'),
+      finalizedAt: null,
+      scheduledFor: '2026-06-05',
+    }]);
+    mocks.selectFrom.mockResolvedValueOnce([]);
+
+    const res = await request(app).get('/api/shopping-lists/current');
+
+    expect(res.status).toBe(200);
+    expect(res.body.scheduledFor).toBe('2026-06-05');
+    expect(res.body.items).toEqual([]);
+  });
+
+  it('PATCH /:listId sets a scheduled shopping date for an owned list', async () => {
+    mocks.getSession.mockResolvedValue({ user: { id: 'u1' } });
+    mocks.membershipLimit.mockResolvedValue([{ householdId: 'hh-1' }]);
+    mocks.selectFrom.mockResolvedValueOnce([{ id: '550e8400-e29b-41d4-a716-446655440001' }]);
+    mocks.selectFrom.mockResolvedValueOnce([{
+      id: '550e8400-e29b-41d4-a716-446655440001',
+      householdId: 'hh-1',
+      createdAt: new Date('2026-06-01T00:00:00Z'),
+      finalizedAt: null,
+      scheduledFor: '2026-06-05',
+    }]);
+    mocks.selectFrom.mockResolvedValueOnce([]);
+
+    const res = await patchShoppingList('550e8400-e29b-41d4-a716-446655440001', {
+      scheduledFor: '2026-06-05',
+    });
+
+    expect(res.status).toBe(200);
+    expect(mocks.updateSet).toHaveBeenCalledWith({ scheduledFor: '2026-06-05' });
+    expect(mocks.updateWhereArgs).toHaveBeenCalledWith(expect.arrayContaining([
+      { field: 'shoppingListId', value: '550e8400-e29b-41d4-a716-446655440001' },
+      { field: 'shoppingListHouseholdId', value: 'hh-1' },
+    ]));
+    expect(res.body.scheduledFor).toBe('2026-06-05');
+  });
+
+  it('PATCH /:listId clears the scheduled shopping date', async () => {
+    mocks.getSession.mockResolvedValue({ user: { id: 'u1' } });
+    mocks.membershipLimit.mockResolvedValue([{ householdId: 'hh-1' }]);
+    mocks.selectFrom.mockResolvedValueOnce([{ id: '550e8400-e29b-41d4-a716-446655440001' }]);
+    mocks.selectFrom.mockResolvedValueOnce([{
+      id: '550e8400-e29b-41d4-a716-446655440001',
+      householdId: 'hh-1',
+      createdAt: new Date('2026-06-01T00:00:00Z'),
+      finalizedAt: null,
+      scheduledFor: null,
+    }]);
+    mocks.selectFrom.mockResolvedValueOnce([]);
+
+    const res = await patchShoppingList('550e8400-e29b-41d4-a716-446655440001', {
+      scheduledFor: null,
+    });
+
+    expect(res.status).toBe(200);
+    expect(mocks.updateSet).toHaveBeenCalledWith({ scheduledFor: null });
+    expect(res.body.scheduledFor).toBeNull();
+  });
+
+  it('PATCH /:listId rejects invalid scheduled dates', async () => {
+    mocks.getSession.mockResolvedValue({ user: { id: 'u1' } });
+    mocks.membershipLimit.mockResolvedValue([{ householdId: 'hh-1' }]);
+
+    const res = await patchShoppingList('550e8400-e29b-41d4-a716-446655440001', {
+      scheduledFor: '2026-02-31',
+    });
+
+    expect(res.status).toBe(400);
+    expect(mocks.updateSet).not.toHaveBeenCalled();
+  });
+
+  it('PATCH /:listId returns not found for a foreign household list', async () => {
+    mocks.getSession.mockResolvedValue({ user: { id: 'u1' } });
+    mocks.membershipLimit.mockResolvedValue([{ householdId: 'hh-1' }]);
+    mocks.selectFrom.mockResolvedValueOnce([]);
+
+    const res = await patchShoppingList('550e8400-e29b-41d4-a716-446655440001', {
+      scheduledFor: '2026-06-05',
+    });
+
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'Shopping list not found' });
+    expect(mocks.updateSet).not.toHaveBeenCalled();
   });
 
   it('PATCH /items/:id/chosen-sku updates chosenSku when sku is in candidates', async () => {

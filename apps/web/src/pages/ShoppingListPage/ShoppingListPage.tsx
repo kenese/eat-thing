@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import {
   useCurrentShoppingList,
+  useUpdateShoppingList,
   useUpdateShoppingListItem, useAddShoppingListItem, useDeleteShoppingListItem,
   usePurchaseShoppingListItems, useBatchDeleteShoppingListItems,
 } from '../../hooks/useShoppingList';
@@ -15,6 +16,7 @@ import { CandidatePicker } from './CandidatePicker';
 import { PageTitle } from '../../components/PageTitle';
 import { FilterStrip } from '../../components/FilterStrip';
 import { AgentStatusCard, type AgentState } from '../../components/AgentStatusCard';
+import { DatePickerModal } from '../../components/DatePickerModal';
 import type {
   ShoppingList, ShoppingListItem, ShoppingListPrice, Category, ShoppingSource, CanonicalFood,
   TaxonomyReviewRequiredResponse,
@@ -37,6 +39,19 @@ const STORE_LABEL: Record<string, { name: string; initials: string }> = {
   paknsave:   { name: "Pak'nSave",  initials: 'PS' },
   woolworths: { name: 'Woolworths', initials: 'WW' },
 };
+
+function localTodayIso() {
+  const today = new Date();
+  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+}
+
+function formatShoppingDate(iso: string) {
+  const [year, month, day] = iso.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  const weekday = date.toLocaleDateString(undefined, { weekday: 'short' }).replace(/,$/, '');
+  const monthLabel = date.toLocaleDateString(undefined, { month: 'short' }).replace(/,$/, '');
+  return `${weekday} ${date.getDate()} ${monthLabel}`;
+}
 
 function ReasonChip({ source, sourceRecipeNames }: { source: ShoppingSource; sourceRecipeNames: string[] | null }) {
   const label =
@@ -66,6 +81,34 @@ function ConfirmDialog({ message, onConfirm, onCancel }: { message: string; onCo
         </div>
       </div>
     </div>
+  );
+}
+
+function ScheduledDateAction({ list }: { list: ShoppingList }) {
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const updateList = useUpdateShoppingList(list.id);
+
+  return (
+    <>
+      <button
+        className="btn-outline"
+        onClick={() => setShowDatePicker(true)}
+        disabled={updateList.isPending}
+      >
+        {list.scheduledFor ? `Shop ${formatShoppingDate(list.scheduledFor)}` : 'Set shop date'}
+      </button>
+      {updateList.isError && <span className="page-status error">Could not update the shop date.</span>}
+      {showDatePicker && (
+        <DatePickerModal
+          initialDate={list.scheduledFor ?? localTodayIso()}
+          onClose={() => setShowDatePicker(false)}
+          onConfirm={(date) => {
+            updateList.mutate({ scheduledFor: date });
+            setShowDatePicker(false);
+          }}
+        />
+      )}
+    </>
   );
 }
 
@@ -697,6 +740,7 @@ export function ShoppingListPage() {
         }
         actions={
           <>
+            {list && <ScheduledDateAction list={list} />}
             <button className="btn-outline" onClick={() => setShowStaples(true)}>staples</button>
             <button
               className="btn-primary"

@@ -123,6 +123,7 @@ const shoppingList: ShoppingList = {
   householdId: HOUSEHOLD_ID,
   createdAt: '2026-05-12T09:14:00',
   finalizedAt: null,
+  scheduledFor: null,
   items: [
     { id: 'shop-fish', shoppingListId: LIST_ID, canonicalFoodId: 'food-fish', name: 'white fish', qty: 500, unit: 'g', source: 'recipe', checked: false, category: 'meat', sourceRecipeNames: ['Fish Tacos'], sourceRecipeId: 'recipe-tacos' },
     { id: 'shop-tortillas', shoppingListId: LIST_ID, canonicalFoodId: 'food-tortillas', name: 'tortillas', qty: 8, unit: 'count', source: 'recipe', checked: false, category: 'pantry', sourceRecipeNames: ['Fish Tacos'], sourceRecipeId: 'recipe-tacos' },

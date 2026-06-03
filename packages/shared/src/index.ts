@@ -268,11 +268,16 @@ export interface ShoppingList {
   householdId: string;
   createdAt: string;
   finalizedAt: string | null;
+  scheduledFor: string | null;
   items: ShoppingListItem[];
 }
 
 export interface ApplyPlanToShoppingListInput {
   entryIds: string[];
+}
+
+export interface UpdateShoppingListInput {
+  scheduledFor: string | null;
 }
 
 export interface AddShoppingListItemInput {

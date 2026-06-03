@@ -178,3 +178,16 @@ worker that wasn't running.
 **What:** `tokens.css` now carries the full `--text-*` role scale (`--text-hero` through `--text-chip`), plus `--weight-*`, `--tracking-*`, `--leading-*`, and `--space-*` tokens. Section headers are fixed at `--text-section` (28px) — previously drifting between 22px and 28px across pages.
 **Why:** Without a tokenized type scale each page hardcoded sizes independently and they diverged. A single source of truth in `tokens.css` prevents recurrence. The three known 22px section headers (`MealsStrip`, `RecipeForm` ingredients section) have been corrected to 28px as part of this change.
 **Enforced by:** Design system rules in CLAUDE.md / AGENTS.md prohibit raw `font-size`, `font-weight`, `letter-spacing`, `line-height`, or spacing values in component CSS.
+
+## D29 — Shopping lists schedule by household-local date
+**Date:** 2026-06-03
+
+Shopping lists now carry an optional `scheduled_for` date. The field is a household-local
+calendar day, serialized as `YYYY-MM-DD`, rather than a timestamp.
+
+This keeps Slice 4 focused on "what day are we shopping?" while avoiding premature
+delivery-slot modeling. Later supermarket delivery work can add slot/timestamp tables
+without changing the meaning of the active list's shopping day.
+
+The value remains scoped through the owning `shopping_lists.household_id`; update routes
+must filter by both list id and household id.

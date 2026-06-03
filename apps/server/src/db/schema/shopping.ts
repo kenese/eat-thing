@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, doublePrecision, boolean, unique } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, date, doublePrecision, boolean, unique } from 'drizzle-orm/pg-core';
 import { households } from './households.js';
 import { canonicalFoods } from './foods.js';
 import { recipes } from './recipes.js';
@@ -9,6 +9,7 @@ export const shoppingLists = pgTable('shopping_lists', {
   householdId: uuid('household_id').notNull().references(() => households.id, { onDelete: 'cascade' }),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   finalizedAt: timestamp('finalized_at'),
+  scheduledFor: date('scheduled_for'),
 });
 
 export const shoppingListItems = pgTable('shopping_list_items', {

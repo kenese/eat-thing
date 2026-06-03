@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useRecipes, useRecipe, useDeleteRecipe } from '../../hooks/useRecipes';
 import { useInventory } from '../../hooks/useInventory';
 import { useAddToNextEmptyDays } from '../../hooks/useMealPlan';
+import { useCurrentShoppingList } from '../../hooks/useShoppingList';
 import { RecipeForm } from './RecipeForm';
 import { ImportModal } from './ImportModal';
 import { PageTitle } from '../../components/PageTitle';
@@ -17,6 +18,14 @@ type SortOrder = 'cookable-first' | 'recently-added' | 'name-az';
 interface MatchInfo {
   bucket: 'cookable' | 'shoppable' | 'library';
   missing: string[];
+}
+
+function formatShoppingDate(iso: string) {
+  const [year, month, day] = iso.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  const weekday = date.toLocaleDateString(undefined, { weekday: 'short' }).replace(/,$/, '');
+  const monthLabel = date.toLocaleDateString(undefined, { month: 'short' }).replace(/,$/, '');
+  return `${weekday} ${date.getDate()} ${monthLabel}`;
 }
 
 export function HeroPlanButton({
@@ -364,6 +373,7 @@ export function RecipesPage() {
     q: debouncedSearch || undefined,
   });
   const { data: inventory = [] } = useInventory({});
+  const { data: shoppingList } = useCurrentShoppingList();
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const addToNextEmptyDays = useAddToNextEmptyDays();
@@ -437,6 +447,7 @@ export function RecipesPage() {
   const cookable  = sortedByMatch.filter((x) => x.match.bucket === 'cookable');
   const shoppable = sortedByMatch.filter((x) => x.match.bucket === 'shoppable');
   const library   = sortedByMatch.filter((x) => x.match.bucket === 'library');
+  const scheduledShopLabel = shoppingList?.scheduledFor ? formatShoppingDate(shoppingList.scheduledFor) : null;
 
   const tabs = [
     { key: 'all',       label: 'all',         count: recipes.length },
@@ -470,7 +481,11 @@ export function RecipesPage() {
           <>
             <strong>{cookable.length} cookable</strong> with what you have
             {' · '}
-            <span style={{ color: 'var(--persim-deep)', fontWeight: 600 }}>{shoppable.length} a quick shop away</span>
+            <span style={{ color: 'var(--persim-deep)', fontWeight: 600 }}>
+              {scheduledShopLabel
+                ? `${shoppable.length} quick ${shoppable.length === 1 ? 'shop' : 'shops'} for ${scheduledShopLabel}`
+                : `${shoppable.length} a quick shop away`}
+            </span>
             {' · '}
             <span style={{ color: 'var(--mute)', fontSize: 14 }}>
               {recipes.length} total
@@ -560,7 +575,11 @@ export function RecipesPage() {
                   One quick shop<span className="dot" style={{ color: 'var(--persimmon)' }}>.</span>
                 </span>
                 <span className="rx-section-count">{shoppable.length} {shoppable.length === 1 ? 'recipe' : 'recipes'}</span>
-                <span className="rx-section-hint">1–3 items away · auto-added to your next list</span>
+                <span className="rx-section-hint">
+                  {scheduledShopLabel
+                    ? `1–3 items away · add to your ${scheduledShopLabel} list`
+                    : '1–3 items away · auto-added to your next list'}
+                </span>
               </div>
               <div className="rx-grid">
                 {shoppable.map(({ recipe, match }) => (
