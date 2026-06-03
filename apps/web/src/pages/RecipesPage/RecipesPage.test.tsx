@@ -1,7 +1,33 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, it, expect, vi } from 'vitest';
 import { RecipeCard } from './RecipesPage';
 import { HeroPlanButton } from './RecipesPage';
+import { RecipesPage } from './RecipesPage';
+
+const pageHooks = vi.hoisted(() => ({
+  useRecipes: vi.fn(),
+  useRecipe: vi.fn(),
+  useDeleteRecipe: vi.fn(),
+  useInventory: vi.fn(),
+  useCurrentShoppingList: vi.fn(),
+  useAddToNextEmptyDays: vi.fn(),
+}));
+
+vi.mock('../../hooks/useRecipes', () => ({
+  useRecipes: pageHooks.useRecipes,
+  useRecipe: pageHooks.useRecipe,
+  useDeleteRecipe: pageHooks.useDeleteRecipe,
+}));
+vi.mock('../../hooks/useInventory', () => ({
+  useInventory: pageHooks.useInventory,
+}));
+vi.mock('../../hooks/useShoppingList', () => ({
+  useCurrentShoppingList: pageHooks.useCurrentShoppingList,
+}));
+vi.mock('../../hooks/useMealPlan', () => ({
+  useAddToNextEmptyDays: pageHooks.useAddToNextEmptyDays,
+}));
 
 const recipe = {
   id: 'r1',
@@ -193,5 +219,63 @@ describe('HeroPlanButton', () => {
     await waitFor(() =>
       expect(screen.getByRole('button', { name: 'added to Thu, 4 Jun' })).toBeInTheDocument(),
     );
+  });
+});
+
+function renderRecipesPage() {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(<QueryClientProvider client={qc}><RecipesPage /></QueryClientProvider>);
+}
+
+const shoppableRecipe = {
+  id: 'r-shop',
+  name: 'Fish tacos',
+  servings: 4,
+  sourceUrl: null,
+  sourceImage: null,
+  ingredientCount: 2,
+  totalTimeMinutes: null,
+  tags: [],
+  canonicalFoodIds: ['food-fish'],
+  createdAt: '2026-06-01T00:00:00Z',
+  updatedAt: '2026-06-01T00:00:00Z',
+};
+
+function setupRecipesPage(scheduledFor: string | null) {
+  pageHooks.useRecipes.mockReturnValue({ data: [shoppableRecipe], isLoading: false, isError: false });
+  pageHooks.useRecipe.mockReturnValue({ data: null });
+  pageHooks.useDeleteRecipe.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
+  pageHooks.useInventory.mockReturnValue({ data: [], isLoading: false });
+  pageHooks.useCurrentShoppingList.mockReturnValue({
+    data: {
+      id: 'list-1',
+      householdId: 'h',
+      createdAt: '2026-06-01T00:00:00Z',
+      finalizedAt: null,
+      scheduledFor,
+      items: [],
+    },
+    isLoading: false,
+  });
+  pageHooks.useAddToNextEmptyDays.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
+}
+
+describe('RecipesPage quick-shop copy', () => {
+  it('uses the scheduled shopping date in quick-shop copy', () => {
+    setupRecipesPage('2026-06-05');
+
+    renderRecipesPage();
+
+    expect(screen.getByText(/1 quick shop for fri 5 jun/i)).toBeInTheDocument();
+    expect(screen.getByText(/add to your fri 5 jun list/i)).toBeInTheDocument();
+  });
+
+  it('keeps generic quick-shop copy without a scheduled shopping date', () => {
+    setupRecipesPage(null);
+
+    renderRecipesPage();
+
+    expect(screen.getByText(/1 a quick shop away/i)).toBeInTheDocument();
+    expect(screen.getByText(/auto-added to your next list/i)).toBeInTheDocument();
   });
 });
