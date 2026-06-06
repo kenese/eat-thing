@@ -224,7 +224,7 @@ test.describe('authenticated routes load', () => {
 
     await page.route('**/api/inventory*', async (route) => {
       const { method } = route.request();
-      if (method === 'GET') {
+      if (method() === 'GET') {
         await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
         return;
       }
