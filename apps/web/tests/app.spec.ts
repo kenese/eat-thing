@@ -382,6 +382,13 @@ test.describe('authenticated routes load', () => {
     expect((metrics?.targetRight ?? 0) <= ((metrics?.scrollLeft ?? 0) + (metrics?.clientWidth ?? 0))).toBe(true);
   });
 
+  test('plan auto-shop preview opens with an empty state when the plan is already covered', async ({ page }) => {
+    await page.goto('/plan');
+    await page.getByRole('button', { name: /add recipes to list/i }).click();
+    await expect(page.getByRole('dialog', { name: 'Auto-shop preview' })).toBeVisible();
+    await expect(page.getByText('Everything in the current plan window is covered by inventory.')).toBeVisible();
+  });
+
   test('recipes page shows Import button that opens import modal', async ({ page }) => {
     await page.goto('/recipes');
     const importBtn = page.getByRole('button', { name: /import/i });

@@ -4,7 +4,7 @@ Living plan for eat-thing. Tasks update as we go. New work appends; completed wo
 
 **Status legend:** `[ ]` not started · `[~]` in progress · `[x]` done · `[-]` deferred / dropped
 
-**Currently on:** Handoff backlog Slice 4 complete — resume at Slice 5 Plan auto-shop read-only preview + pre-flight API
+**Currently on:** Handoff backlog Slice 5 complete — resume at Slice 6 research and design New World delivery-window integration before implementation
 
 Execution order and acceptance criteria: [docs/superpowers/plans/2026-06-01-handoff-backlog-roadmap.md](./docs/superpowers/plans/2026-06-01-handoff-backlog-roadmap.md)
 
@@ -152,7 +152,7 @@ Detailed roadmap: [docs/superpowers/plans/2026-06-01-handoff-backlog-roadmap.md]
 - [x] Slice 2: New World logged-out prompt, transient retry/backoff, and Mac-mini `launchd` service — _2026-06-02_
 - [x] Slice 3: Plan load-date picker + Recipes hero next-open-day feedback — _2026-06-03_
 - [x] Slice 4: shopping-list scheduled date + dynamic Recipes quick-shop copy — _2026-06-03_
-- [ ] Slice 5: Plan auto-shop read-only preview + pre-flight API
+- [x] Slice 5: Plan auto-shop read-only preview + pre-flight API — _2026-06-03_
 - [ ] Slice 6: research and design New World delivery-window integration before implementation
 - [ ] Slice 7: design and build the New World-first `/shops` route
 - [ ] Spot-check tablet breakpoint during Slice 1; keep `<=768px` unless review demonstrates a problem
@@ -170,6 +170,7 @@ Detailed roadmap: [docs/superpowers/plans/2026-06-01-handoff-backlog-roadmap.md]
 
 ## Done
 
+- 2026-06-03 — Handoff backlog Slice 5: added a household-scoped `POST /api/shopping-lists/preview-from-plan` pre-flight API backed by a shared shopping-list derivation helper so preview and confirm use the same inventory, recipe-gap, and low-stock staple rules. Plan now opens an Auto-shop preview panel instead of jumping straight to `/list`; the panel handles empty, loading, error, and success states, and confirming reuses the existing `/api/shopping-lists/from-plan` mutation before navigating to `/list`. Added focused Vitest coverage for the preview hook/UI and server route plus Playwright coverage for the empty-state preview entry point; `pnpm test` and `pnpm test:e2e` passed.
 - 2026-06-03 — Handoff backlog Slice 4: added a household-local `scheduled_for` date to shopping lists with migration `0014`, API read/update support, shared types, and TanStack mutation plumbing. Shopping List now exposes a compact scheduled-shop chip backed by the shared date picker; Recipes quick-shop copy reflects the scheduled shop date when present and keeps the generic fallback otherwise. Added focused Vitest and Playwright coverage; `pnpm test` and `pnpm test:e2e` passed.
 - 2026-06-03 — Handoff backlog Slice 3: replaced the disabled Plan load-date stub with a compact keyboard-accessible mini-calendar modal; confirming a date recenters the rolling 17-day rail and scrolls the selected day into view while local-midnight rollover keeps actual-today semantics current. Kept the Recipes hero intentionally fast: it auto-adds the featured recipe to the next open day and reports pending, success, and retry states without opening a picker. Added focused Vitest and Playwright coverage; `pnpm test` and `pnpm test:e2e` passed.
 - 2026-06-02 — Handoff backlog Slice 2: hardened the New World worker with structured failure codes, bounded inline retry/backoff for transient failures, worker-authenticated retry progress reporting, Shopping List retry/session-expired states, and a production Mac-mini `launchd` plist with install notes. Verified the live New World smoke after starting the configured local API, then passed `pnpm test` and `pnpm test:e2e`. See D27 and `docs/superpowers/specs/2026-06-02-slice2-newworld-hardening-design.md`.

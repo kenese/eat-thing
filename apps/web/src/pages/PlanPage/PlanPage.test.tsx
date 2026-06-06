@@ -14,6 +14,17 @@ const mockUseMealPlanEntries = vi.fn();
 const mockUseAddMealPlanEntry = vi.fn(() => ({ mutate: vi.fn() }));
 const mockUseUpdateMealPlanEntry = vi.fn(() => ({ mutate: vi.fn() }));
 const mockUseDeleteMealPlanEntry = vi.fn(() => ({ mutate: vi.fn() }));
+const mockUseShoppingListFromPlanPreview = vi.fn(() => ({
+  data: undefined,
+  isLoading: false,
+  error: null,
+  refetch: vi.fn(),
+}));
+const mockApplyMutateAsync = vi.fn();
+const mockUseApplyPlanToShoppingList = vi.fn(() => ({
+  mutateAsync: mockApplyMutateAsync,
+  isPending: false,
+}));
 const mockNavigate = vi.fn();
 
 vi.mock('@tanstack/react-query', async () => {
@@ -37,6 +48,11 @@ vi.mock('../../hooks/useMealPlan', () => ({
   useAddMealPlanEntry: () => mockUseAddMealPlanEntry(),
   useUpdateMealPlanEntry: () => mockUseUpdateMealPlanEntry(),
   useDeleteMealPlanEntry: () => mockUseDeleteMealPlanEntry(),
+}));
+
+vi.mock('../../hooks/useShoppingList', () => ({
+  useShoppingListFromPlanPreview: (...args: unknown[]) => mockUseShoppingListFromPlanPreview(...args),
+  useApplyPlanToShoppingList: () => mockUseApplyPlanToShoppingList(),
 }));
 
 vi.mock('react-router-dom', async () => {
@@ -112,5 +128,85 @@ describe('PlanPage time handling', () => {
     fireEvent.click(screen.getByRole('button', { name: 'today' }));
 
     expect(mockUseMealPlanEntries).toHaveBeenLastCalledWith('2026-06-01', '2026-06-17');
+  });
+
+  it('opens the auto-shop preview and confirms through the shopping-list mutation', async () => {
+    vi.setSystemTime(new Date('2026-06-03T10:00:00'));
+    mockUseRecipes.mockReturnValue({
+      data: [{
+        id: 'recipe-1',
+        name: 'Tomato Pasta',
+        servings: 4,
+        sourceUrl: null,
+        sourceImage: null,
+        ingredientCount: 1,
+        totalTimeMinutes: 25,
+        tags: [],
+        canonicalFoodIds: ['food-tomato'],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }],
+    });
+    mockUseMealPlanEntries.mockReturnValue({
+      data: {
+        entries: [{ id: 'entry-1', date: '2026-06-04', recipeId: 'recipe-1', recipeName: 'Tomato Pasta', servings: 4, status: 'planned' }],
+      },
+      isLoading: false,
+    });
+    mockUseQueries.mockReturnValue([{
+      data: {
+        id: 'recipe-1',
+        householdId: 'hh-1',
+        name: 'Tomato Pasta',
+        servings: 4,
+        sourceUrl: null,
+        sourceImage: null,
+        instructions: null,
+        totalTimeMinutes: 25,
+        tags: [],
+        ingredients: [{ id: 'ing-1', recipeId: 'recipe-1', canonicalFoodId: 'food-tomato', foodName: 'Tomatoes', qty: '500', unit: 'g', section: null, metricValue: null, optional: false, sortOrder: 0 }],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    }]);
+    mockUseShoppingListFromPlanPreview.mockReturnValue({
+      data: {
+        scheduledFor: '2026-06-05',
+        entryIds: ['entry-1'],
+        dayCount: 1,
+        recipeCount: 1,
+        itemCount: 1,
+        recipeItemCount: 1,
+        stapleItemCount: 0,
+        items: [{
+          canonicalFoodId: 'food-tomato',
+          name: 'Tomatoes',
+          qty: 500,
+          unit: 'g',
+          source: 'recipe',
+          sourceRecipeNames: ['Tomato Pasta'],
+          sourceRecipeId: 'recipe-1',
+        }],
+      },
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    render(
+      <MemoryRouter>
+        <PlanPage />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /add recipes to list/i }));
+    expect(screen.getByText(/shopping for 2026-06-05/i)).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /update list/i }));
+    });
+
+    expect(mockApplyMutateAsync).toHaveBeenCalledWith({ entryIds: ['entry-1'] });
+    expect(mockNavigate).toHaveBeenCalledWith('/list');
   });
 });

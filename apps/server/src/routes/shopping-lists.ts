@@ -1,15 +1,12 @@
 import { Router, type Router as ExpressRouter } from 'express';
 import { z } from 'zod';
-import { and, eq, asc, desc, sql, inArray } from 'drizzle-orm';
+import { and, eq, asc, desc, inArray } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { withHousehold } from '../middleware/with-household.js';
 import { db } from '../db/index.js';
 import { findExistingFoodOrRequireReview, type FoodCategory } from '../lib/find-or-create-food.js';
-import { normalizeRecipeAmount } from '../lib/recipe-quantities.js';
-import { amountInUnit } from '../lib/food-amounts.js';
-import { listLowStockStaples } from '../lib/low-stock-staples.js';
+import { deriveShoppingListFromPlanPreview } from '../lib/shopping-list-from-plan.js';
 import {
-  mealPlanEntries, recipes, recipeIngredients,
   inventoryItems, canonicalFoods,
   shoppingLists, shoppingListItems,
   scraperJobs, shoppingListPrices, supermarketProducts,
@@ -162,128 +159,16 @@ router.post('/from-plan', withHousehold, async (req, res) => {
   const hid = req.householdId;
 
   try {
-    type RawIng = {
-      canonicalFoodId: string; foodName: string;
-      unit: string; qty: string;
-      recipeServings: number; entryServings: number;
-      densityGPerMl: number | null;
-      countToGrams: number | null;
-      recipeName: string;
-      recipeId: string;
-    };
-
-    const rawIngredients: RawIng[] = entryIds.length > 0
-      ? await db
-          .select({
-            canonicalFoodId: recipeIngredients.canonicalFoodId,
-            foodName: canonicalFoods.name,
-            unit: recipeIngredients.unit,
-            qty: recipeIngredients.qty,
-            recipeServings: recipes.servings,
-            entryServings: mealPlanEntries.servings,
-            densityGPerMl: canonicalFoods.densityGPerMl,
-            countToGrams: canonicalFoods.countToGrams,
-            recipeName: recipes.name,
-            recipeId: recipes.id,
-          })
-          .from(mealPlanEntries)
-          .innerJoin(recipes, eq(mealPlanEntries.recipeId, recipes.id))
-          .innerJoin(recipeIngredients, eq(recipeIngredients.recipeId, recipes.id))
-          .innerJoin(canonicalFoods, eq(recipeIngredients.canonicalFoodId, canonicalFoods.id))
-          .where(and(
-            eq(mealPlanEntries.householdId, hid),
-            inArray(mealPlanEntries.id, entryIds),
-            eq(recipeIngredients.optional, false),
-          ))
-      : [];
-
-    type FoodInfo = {
-      foodName: string; unit: string; qty: number;
-      densityGPerMl: number | null; countToGrams: number | null;
-      recipeNames: Set<string>; recipeIds: Set<string>;
-    };
-    const needed = new Map<string, FoodInfo>();
-    for (const row of rawIngredients) {
-      const amount = normalizeRecipeAmount(row.qty, row.unit);
-      if (!amount) continue;
-      const ratio = row.recipeServings > 0 ? row.entryServings / row.recipeServings : 1;
-      const key = `${row.canonicalFoodId}::${amount.unit}`;
-      const cur = needed.get(key);
-      if (cur) {
-        cur.qty += amount.qty * ratio;
-        cur.recipeNames.add(row.recipeName);
-        cur.recipeIds.add(row.recipeId);
-      } else {
-        needed.set(key, {
-          foodName: row.foodName,
-          unit: amount.unit,
-          qty: amount.qty * ratio,
-          densityGPerMl: row.densityGPerMl,
-          countToGrams: row.countToGrams,
-          recipeNames: new Set([row.recipeName]),
-          recipeIds: new Set([row.recipeId]),
-        });
-      }
-    }
-
-    const invRows = await db
-      .select({
-        canonicalFoodId: inventoryItems.canonicalFoodId,
-        unit: inventoryItems.unit,
-        total: sql<number>`sum(${inventoryItems.qty})`,
-      })
-      .from(inventoryItems)
-      .where(eq(inventoryItems.householdId, hid))
-      .groupBy(inventoryItems.canonicalFoodId, inventoryItems.unit);
-
-    const invByFood = new Map<string, { unit: string; qty: number }[]>();
-    for (const r of invRows) {
-      const rows = invByFood.get(r.canonicalFoodId) ?? [];
-      rows.push({ unit: r.unit, qty: Number(r.total) });
-      invByFood.set(r.canonicalFoodId, rows);
-    }
-
     type ItemInsert = {
       canonicalFoodId: string; name: string; qty: number; unit: string;
       source: 'recipe' | 'staple'; checked: boolean;
       sourceRecipeNames: string[] | null;
       sourceRecipeId: string | null;
     };
-    const recipeItemsToInsert: ItemInsert[] = [];
-
-    for (const [key, info] of needed) {
-      const [foodId] = key.split('::');
-      let available = 0;
-      for (const inv of invByFood.get(foodId) ?? []) {
-        available += amountInUnit(inv, info.unit, info) ?? 0;
-      }
-      const gap = info.qty - available;
-
-      if (gap > 0.001) {
-        const firstRecipeId = info.recipeIds.values().next().value as string;
-        recipeItemsToInsert.push({
-          canonicalFoodId: foodId,
-          name: info.foodName,
-          qty: gap,
-          unit: info.unit,
-          source: 'recipe',
-          checked: false,
-          sourceRecipeNames: [...info.recipeNames],
-          sourceRecipeId: firstRecipeId,
-        });
-      }
-    }
-
-    const lowStockStaples = await listLowStockStaples(hid);
-    const stapleItemsToInsert: ItemInsert[] = lowStockStaples.map((staple) => ({
-      canonicalFoodId: staple.canonicalFoodId,
-      name: staple.foodName,
-      qty: staple.neededQty,
-      unit: staple.thresholdUnit,
-      source: 'staple',
+    const derived = await deriveShoppingListFromPlanPreview(hid, entryIds);
+    const derivedItemsToInsert: ItemInsert[] = derived.items.map((item) => ({
+      ...item,
       checked: false,
-      sourceRecipeNames: null,
-      sourceRecipeId: null,
     }));
 
     // Find or create current list, then replace derived items.
@@ -308,7 +193,6 @@ router.post('/from-plan', withHousehold, async (req, res) => {
         inArray(shoppingListItems.source, ['recipe', 'staple']),
       ));
 
-      const derivedItemsToInsert = [...recipeItemsToInsert, ...stapleItemsToInsert];
       if (derivedItemsToInsert.length > 0) {
         await tx.insert(shoppingListItems).values(
           derivedItemsToInsert.map(item => ({ id: uuidv4(), shoppingListId: id!, householdId: hid, ...item })),
@@ -321,6 +205,22 @@ router.post('/from-plan', withHousehold, async (req, res) => {
     const [list] = await db.select(listCols).from(shoppingLists).where(and(eq(shoppingLists.id, listId), eq(shoppingLists.householdId, hid)));
     const items = await itemsForList(listId, hid);
     res.status(200).json({ ...list, items });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.post('/preview-from-plan', withHousehold, async (req, res) => {
+  const parse = fromPlanSchema.safeParse(req.body);
+  if (!parse.success) {
+    res.status(400).json({ error: 'Invalid input', details: parse.error.flatten() });
+    return;
+  }
+
+  try {
+    const preview = await deriveShoppingListFromPlanPreview(req.householdId, parse.data.entryIds);
+    res.status(200).json(preview);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });

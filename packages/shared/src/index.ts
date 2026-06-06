@@ -276,6 +276,27 @@ export interface ApplyPlanToShoppingListInput {
   entryIds: string[];
 }
 
+export interface ShoppingListPreviewItem {
+  canonicalFoodId: string;
+  name: string;
+  qty: number;
+  unit: string;
+  source: Exclude<ShoppingSource, 'manual'>;
+  sourceRecipeNames: string[] | null;
+  sourceRecipeId: string | null;
+}
+
+export interface ShoppingListFromPlanPreview {
+  scheduledFor: string | null;
+  entryIds: string[];
+  dayCount: number;
+  recipeCount: number;
+  itemCount: number;
+  recipeItemCount: number;
+  stapleItemCount: number;
+  items: ShoppingListPreviewItem[];
+}
+
 export interface UpdateShoppingListInput {
   scheduledFor: string | null;
 }

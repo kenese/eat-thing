@@ -394,6 +394,105 @@
 
 .plan-status { padding: 40px; text-align: center; color: var(--mute); }
 
+.auto-shop-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(13, 23, 20, 0.38);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  z-index: 40;
+}
+
+.auto-shop-panel {
+  width: min(560px, 100%);
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-card);
+  padding: var(--space-4);
+  box-shadow: 0 24px 80px rgba(13, 23, 20, 0.16);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.auto-shop-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.auto-shop-eyebrow {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-chip);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-widest);
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
+.auto-shop-title {
+  margin: 0;
+  font-size: var(--text-section);
+  line-height: var(--leading-tight);
+}
+
+.auto-shop-close {
+  background: transparent;
+  border: none;
+  font: inherit;
+  color: var(--ink2);
+  cursor: pointer;
+}
+
+.auto-shop-summary,
+.auto-shop-state {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.auto-shop-kicker,
+.auto-shop-copy,
+.auto-shop-item-name,
+.auto-shop-item-meta {
+  margin: 0;
+}
+
+.auto-shop-kicker {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: var(--text-body);
+  color: var(--persim-deep);
+}
+
+.auto-shop-copy--muted,
+.auto-shop-item-meta {
+  color: var(--mute);
+}
+
+.auto-shop-items {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.auto-shop-item {
+  padding: var(--space-2) 0;
+  border-top: 1px solid var(--rule);
+}
+
+.auto-shop-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
 @media (max-width: 1024px) {
   .plan-recipe-grid { grid-template-columns: repeat(3, 1fr); }
   .plan-week-rail { grid-auto-columns: minmax(180px, 240px); }

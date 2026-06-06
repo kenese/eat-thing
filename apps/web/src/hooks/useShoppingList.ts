@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
 import type {
   ShoppingList, ShoppingListItem,
-  ApplyPlanToShoppingListInput, AddShoppingListItemInput, UpdateShoppingListInput, UpdateShoppingListItemInput,
+  ApplyPlanToShoppingListInput, AddShoppingListItemInput, ShoppingListFromPlanPreview, UpdateShoppingListInput, UpdateShoppingListItemInput,
   PurchaseShoppingListItemsInput, BatchDeleteShoppingListItemsInput,
 } from '@eat/shared';
 
@@ -28,6 +28,16 @@ export function useApplyPlanToShoppingList() {
     mutationFn: (data: ApplyPlanToShoppingListInput) =>
       api.post<ShoppingList>('/api/shopping-lists/from-plan', data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['shopping-list'] }),
+  });
+}
+
+export function useShoppingListFromPlanPreview(entryIds: string[], enabled: boolean) {
+  const stableEntryIds = [...entryIds].sort();
+  return useQuery<ShoppingListFromPlanPreview>({
+    queryKey: ['shopping-list', 'preview-from-plan', ...stableEntryIds],
+    enabled: enabled && stableEntryIds.length > 0,
+    queryFn: () =>
+      api.post<ShoppingListFromPlanPreview>('/api/shopping-lists/preview-from-plan', { entryIds: stableEntryIds }),
   });
 }
 
