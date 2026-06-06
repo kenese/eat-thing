@@ -156,6 +156,7 @@ Detailed roadmap: [docs/superpowers/plans/2026-06-01-handoff-backlog-roadmap.md]
 - [ ] Slice 6: research and design New World delivery-window integration before implementation
 - [ ] Slice 7: design and build the New World-first `/shops` route
 - [ ] Spot-check tablet breakpoint during Slice 1; keep `<=768px` unless review demonstrates a problem
+- [~] Plan day-card redesign (D30): collapse-to-tray, click-to-expand floating overlay, draggable cards, `--text-chip-sm`. Code + e2e + decision log updated on top of current main — **pending `pnpm test` / `pnpm test:e2e` before Done.**
 - [-] Restore inventory `location` field — defer until category-derived counts cause a demonstrated problem
 
 ## Deferred

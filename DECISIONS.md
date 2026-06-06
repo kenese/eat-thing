@@ -191,3 +191,11 @@ without changing the meaning of the active list's shopping day.
 
 The value remains scoped through the owning `shopping_lists.household_id`; update routes
 must filter by both list id and household id.
+
+## D30 — Plan day-cards: collapse-to-tray, actions on click not hover
+**Date:** 2026-06-06
+**Context:** The `plan-week-rail` day cards were tall (`min-height: 220px`) and always showed servings, the full ingredients-needed line, follow-up meal rows, and a hover-reveal action cluster (`.day-col-primary-actions` / `.day-col-extra-actions`). On the dense rail this read as cluttered, the title sat awkwardly far from the thumbnail, and hover-reveal is undiscoverable on touch (this is a mobile-first PWA, D6).
+**Decision:** The collapsed card shows only day label · thumbnail · recipe name · status chip · a `+N` badge for follow-up meals (~⅔ the previous height). Clicking the card expands a floating detail tray (`.day-tray`, `position: fixed`, anchored to the card rect, raised z-index + soft shadow) that overlays the content below instead of pushing it; the tray holds the ingredients-needed line, a servings stepper, total time, and the actions (open recipe, mark cooked, remove) — one row per entry, follow-ups included. The card body stays draggable (incl. while expanded) for moving a meal between days. A new `--text-chip-sm` (9px) token sizes the chip down on this dense surface. Co-exists with the D29 date-picker/anchor logic and the auto-shop preview — both untouched.
+**Rationale:** Less standing clutter, a clear tap target, and touch-friendly actions. Overlaying (not reflowing) keeps the rail height stable while a tray is open. Tray/card clicks `stopPropagation`; a document-level click + scroll/resize/Escape listener closes it deterministically. Narrow cards stack the tray's secondary actions via a container query so buttons don't clip below ~192px.
+**Scope:** Plan day-cards only. The inventory hover-reveal pattern (`.inv-row-actions`) is unchanged; D30 makes click-to-expand the documented exception for dense card rails.
+**Enforced by:** Updated the "Row action affordances" rule in CLAUDE.md / AGENTS.md to note this exception. The removed hover-reveal e2e assertion (`getByTitle('Mark cooked')` clicked directly) now opens the card first; a new test covers expand/collapse.

@@ -31,6 +31,7 @@
   --text-small: 12px;              /* small labels, annotations */
   --text-eyebrow: 11px;            /* eyebrow labels, fine detail */
   --text-chip: 10px;               /* status chips, tiny all-caps */
+  --text-chip-sm: 9px;             /* compact chip on dense surfaces (plan day cards) — D30 */
 
   /* ── Font weights ── */
   --weight-regular: 400;

@@ -304,8 +304,23 @@ test.describe('authenticated routes load', () => {
     await expect(page).toHaveURL(/\/inventory$/);
   });
 
+  test('plan page expands a day card into a tray on click', async ({ page }) => {
+    await page.goto('/plan');
+    // Detail actions live in the tray now, not on hover — hidden until the card is expanded.
+    await expect(page.getByTitle('Mark cooked')).toHaveCount(0);
+    await expect(page.locator('.day-tray')).toHaveCount(0);
+
+    await page.locator('.day-col-name', { hasText: 'Pasta' }).click();
+
+    await expect(page.locator('.day-tray')).toBeVisible();
+    await expect(page.getByRole('button', { name: /open recipe/i })).toBeVisible();
+    await expect(page.getByTitle('Mark cooked')).toBeVisible();
+  });
+
   test('plan page shows cook modal when mark cooked is clicked', async ({ page }) => {
     await page.goto('/plan');
+    // Mark cooked now lives in the expand tray — open the card first.
+    await page.locator('.day-col-name', { hasText: 'Pasta' }).click();
     await page.getByTitle('Mark cooked').first().click();
     await expect(page.getByRole('heading', { name: /mark.*cooked/i })).toBeVisible();
     await expect(page.getByText('Will deduct from inventory')).toBeVisible();

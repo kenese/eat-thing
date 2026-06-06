@@ -36,7 +36,7 @@ The system is real and tokenized. Honour it on every UI change; don't reinvent v
 - **Eyebrows are lowercase in source.** `.eyebrow` / `.page-title-eyebrow` apply `text-transform: uppercase` in CSS. Never call `.toUpperCase()` in JS for display strings.
 - **Status-chip semantics are fixed:** fresh-green = `cook now`, persimmon = `needs shop` / `missing N`, ink = `leftover`, dashed-mute = `open seat`. Don't introduce new chip colors or meanings.
 - **Aisle/section labels come from `AISLE_LABEL` in `@eat/taxonomy`** (Produce / Butcher / Dairy & cheese / Pantry & oils / Frozen / Drinks / Other). Never hardcode them. `CATEGORY_LABEL` is the *separate* form/inventory taxonomy set — don't conflate the two.
-- **Row action affordances are hover-reveal** (pattern: `.inv-row-actions`, opacity 0→1 on `:hover`/`:focus-within`), not always-visible.
+- **Row action affordances are hover-reveal** (pattern: `.inv-row-actions`, opacity 0→1 on `:hover`/`:focus-within`), not always-visible. **Exception (D30):** dense card rails use click-to-expand instead — the **plan day-cards** collapse to label/thumbnail/name/chip and reveal servings + ingredients-needed + actions in a floating `.day-tray` (fixed, anchored to the card, overlays content below) on click. `--text-chip-sm` (9px) sizes the chip on that surface.
 - **Emoji-free.** Unicode glyphs (`⌕ → ·`) + inline SVG only; no icon library.
 - **Reuse the utilities** in `index.css`: `.caption-serif`, `.eyebrow`, `.dot`, `.btn-outline--on-dark`.
 - **`design_handoff_eat_thing/` is a frozen reference snapshot.** The live pages + tokens.css supersede it. Read it for intent; never edit it to change the system, and note its store names are US placeholders — the real product is NZ (New World / Pak'nSave / Woolworths, D21).
