@@ -6,15 +6,32 @@ import {
   resolveAnchorAfterTodayChange,
   useCurrentLocalDay,
 } from './PlanPage';
+import type {
+  InventoryRow,
+  MealPlanEntriesResponse,
+  Recipe,
+  RecipeSummary,
+  ShoppingListFromPlanPreview,
+} from '@eat/shared';
 
-const mockUseQueries = vi.fn(() => []);
-const mockUseRecipes = vi.fn(() => ({ data: [] }));
-const mockUseInventory = vi.fn(() => ({ data: [] }));
-const mockUseMealPlanEntries = vi.fn();
+type RecipeQueryResult = { data?: Recipe };
+type PreviewQueryResult = {
+  data: ShoppingListFromPlanPreview | undefined;
+  isLoading: boolean;
+  error: Error | null;
+  refetch: ReturnType<typeof vi.fn>;
+};
+
+const mockUseQueries = vi.fn<() => RecipeQueryResult[]>(() => []);
+const mockUseRecipes = vi.fn<() => { data: RecipeSummary[] }>(() => ({ data: [] }));
+const mockUseInventory = vi.fn<() => { data: InventoryRow[] }>(() => ({ data: [] }));
+const mockUseMealPlanEntries = vi.fn<
+  (from: string, to: string) => { data: MealPlanEntriesResponse; isLoading: boolean; from?: string; to?: string }
+>();
 const mockUseAddMealPlanEntry = vi.fn(() => ({ mutate: vi.fn() }));
 const mockUseUpdateMealPlanEntry = vi.fn(() => ({ mutate: vi.fn() }));
 const mockUseDeleteMealPlanEntry = vi.fn(() => ({ mutate: vi.fn() }));
-const mockUseShoppingListFromPlanPreview = vi.fn(() => ({
+const mockUseShoppingListFromPlanPreview = vi.fn<(entryIds: string[], enabled: boolean) => PreviewQueryResult>(() => ({
   data: undefined,
   isLoading: false,
   error: null,
@@ -44,14 +61,14 @@ vi.mock('../../hooks/useInventory', () => ({
 }));
 
 vi.mock('../../hooks/useMealPlan', () => ({
-  useMealPlanEntries: (...args: unknown[]) => mockUseMealPlanEntries(...args),
+  useMealPlanEntries: (from: string, to: string) => mockUseMealPlanEntries(from, to),
   useAddMealPlanEntry: () => mockUseAddMealPlanEntry(),
   useUpdateMealPlanEntry: () => mockUseUpdateMealPlanEntry(),
   useDeleteMealPlanEntry: () => mockUseDeleteMealPlanEntry(),
 }));
 
 vi.mock('../../hooks/useShoppingList', () => ({
-  useShoppingListFromPlanPreview: (...args: unknown[]) => mockUseShoppingListFromPlanPreview(...args),
+  useShoppingListFromPlanPreview: (entryIds: string[], enabled: boolean) => mockUseShoppingListFromPlanPreview(entryIds, enabled),
   useApplyPlanToShoppingList: () => mockUseApplyPlanToShoppingList(),
 }));
 

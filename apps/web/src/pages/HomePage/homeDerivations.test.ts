@@ -169,7 +169,7 @@ describe('computeShopSummary', () => {
   it('returns empty state when list has no items', () => {
     const list: ShoppingList = {
       id: 'sl-1', householdId: 'h-1',
-      createdAt: '2026-05-11T09:14:00Z', finalizedAt: null, items: [],
+      createdAt: '2026-05-11T09:14:00Z', finalizedAt: null, scheduledFor: null, items: [],
     };
     const r = computeShopSummary(list, [], new Date('2026-05-12T08:00:00'));
     expect(r.state).toBe('empty');
@@ -178,7 +178,7 @@ describe('computeShopSummary', () => {
   it('groups items by category and caps aisles at 4 by count desc', () => {
     const list: ShoppingList = {
       id: 'sl-1', householdId: 'h-1',
-      createdAt: '2026-05-11T09:14:00Z', finalizedAt: null,
+      createdAt: '2026-05-11T09:14:00Z', finalizedAt: null, scheduledFor: null,
       items: [
         listItem({ name: 'apple',   category: 'produce' }),
         listItem({ name: 'kale',    category: 'produce' }),
@@ -202,7 +202,7 @@ describe('computeShopSummary', () => {
   it('sums unchecked-item prices for total', () => {
     const list: ShoppingList = {
       id: 'sl-1', householdId: 'h-1',
-      createdAt: '2026-05-11T09:14:00Z', finalizedAt: null,
+      createdAt: '2026-05-11T09:14:00Z', finalizedAt: null, scheduledFor: null,
       items: [
         listItem({ id: 'a', name: 'apple', category: 'produce', qty: 2 }),
         listItem({ id: 'b', name: 'kale',  category: 'produce', checked: true }),
@@ -222,7 +222,7 @@ describe('computeShopSummary', () => {
   it('returns null total when no prices exist', () => {
     const list: ShoppingList = {
       id: 'sl-1', householdId: 'h-1',
-      createdAt: '2026-05-11T09:14:00Z', finalizedAt: null,
+      createdAt: '2026-05-11T09:14:00Z', finalizedAt: null, scheduledFor: null,
       items: [listItem({ name: 'apple', category: 'produce' })],
     };
     const r = computeShopSummary(list, [], new Date('2026-05-12T08:00:00'));
@@ -234,6 +234,7 @@ describe('computeShopSummary', () => {
       id: 'sl-1', householdId: 'h-1',
       createdAt: '2026-05-10T09:14:00', // local time, Sunday 9:14 am
       finalizedAt: null,
+      scheduledFor: null,
       items: [listItem({ name: 'apple', category: 'produce' })],
     };
     const r = computeShopSummary(list, [], new Date('2026-05-12T08:00:00'));
