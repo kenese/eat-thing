@@ -8,8 +8,13 @@ import {
   useUpdateMealPlanEntry,
   useDeleteMealPlanEntry,
 } from '../../hooks/useMealPlan';
+import {
+  useApplyPlanToShoppingList,
+  useShoppingListFromPlanPreview,
+} from '../../hooks/useShoppingList';
 import { CookModal } from './CookModal';
 import { RecipeForm } from '../RecipesPage/RecipeForm';
+import { AutoShopPreviewPanel } from './AutoShopPreviewPanel';
 import { PageTitle } from '../../components/PageTitle';
 import { StatusChip } from '../../components/StatusChip';
 import type { MealPlanEntry, Recipe } from '@eat/shared';
@@ -311,9 +316,11 @@ export function PlanPage() {
   const addEntry = useAddMealPlanEntry();
   const updateEntry = useUpdateMealPlanEntry();
   const deleteEntry = useDeleteMealPlanEntry();
+  const applyPlanToShoppingList = useApplyPlanToShoppingList();
 
   const [cookingEntryId, setCookingEntryId] = useState<string | null>(null);
   const [viewRecipeId, setViewRecipeId] = useState<string | null>(null);
+  const [isAutoShopPreviewOpen, setAutoShopPreviewOpen] = useState(false);
   const cookingEntry = cookingEntryId
     ? (entriesResp?.entries ?? []).find((e) => e.id === cookingEntryId) ?? null
     : null;
@@ -373,6 +380,22 @@ export function PlanPage() {
   ).length;
 
   const openCount = next7.filter((d) => !(entriesByDay[d.iso]?.length)).length;
+
+  const previewEntryIds = useMemo(() => (
+    days.flatMap((day) =>
+      (entriesByDay[day.iso] ?? [])
+        .filter((de) => !day.isPast && de.entry.status === 'planned' && de.kind === 'shop')
+        .map((de) => de.entry.id),
+    )
+  ), [days, entriesByDay]);
+
+  const autoShopPreview = useShoppingListFromPlanPreview(previewEntryIds, isAutoShopPreviewOpen);
+  const { refetch: refetchAutoShopPreview } = autoShopPreview;
+
+  useEffect(() => {
+    if (!isAutoShopPreviewOpen || previewEntryIds.length === 0) return;
+    void refetchAutoShopPreview();
+  }, [isAutoShopPreviewOpen, previewEntryIds, refetchAutoShopPreview]);
 
   function handleDrop(date: string, recipeId: string) {
     const recipe = recipes.find((r) => r.id === recipeId);
@@ -473,7 +496,7 @@ export function PlanPage() {
             </div>
             <button
               className="btn-primary plan-add-to-list-btn"
-              onClick={() => navigate('/list')}
+              onClick={() => setAutoShopPreviewOpen(true)}
             >
               add recipes to list
               {shopCount > 0 && (
@@ -623,6 +646,23 @@ export function PlanPage() {
           }}
         />
       )}
+
+      <AutoShopPreviewPanel
+        isOpen={isAutoShopPreviewOpen}
+        entryIds={previewEntryIds}
+        preview={autoShopPreview.data}
+        isLoading={autoShopPreview.isLoading}
+        error={autoShopPreview.error as Error | null}
+        isConfirming={applyPlanToShoppingList.isPending}
+        onClose={() => setAutoShopPreviewOpen(false)}
+        onRetry={() => {
+          void refetchAutoShopPreview();
+        }}
+        onConfirm={async (entryIds) => {
+          await applyPlanToShoppingList.mutateAsync({ entryIds });
+          navigate('/list');
+        }}
+      />
     </div>
   );
 }

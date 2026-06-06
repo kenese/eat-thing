@@ -26,10 +26,17 @@ vi.mock('../lib/low-stock-staples.js', () => ({
   listLowStockStaples: mocks.listLowStockStaples,
 }));
 vi.mock('../db/index.js', () => {
-  const makeAwaitable = (terminal: () => unknown) => Object.assign(Promise.resolve(terminal()), {
+  const makeAwaitable = (terminal: () => unknown) => ({
+    then: (onFulfilled: (value: unknown) => unknown, onRejected?: (reason: unknown) => unknown) =>
+      Promise.resolve(terminal()).then(onFulfilled, onRejected),
+    catch: (onRejected: (reason: unknown) => unknown) =>
+      Promise.resolve(terminal()).catch(onRejected),
+    finally: (onFinally?: (() => void) | undefined) =>
+      Promise.resolve(terminal()).finally(onFinally),
     orderBy: () => ({ limit: () => terminal() }),
     groupBy: () => terminal(),
     limit: () => terminal(),
+    [Symbol.toStringTag]: 'Promise',
   });
   const makeSelectChain = (terminal: () => unknown) => ({
     from: () => ({
@@ -129,7 +136,9 @@ describe('shopping-lists from-plan', () => {
     mocks.selectFrom
       .mockResolvedValueOnce([]) // raw ingredients
       .mockResolvedValueOnce([]) // inventory rows
-      .mockResolvedValueOnce([{ id: 'list-1' }]) // transaction where() awaitable setup
+      .mockResolvedValueOnce([
+        { id: 'list-1', householdId: 'hh-1', createdAt: '2026-06-02T00:00:00.000Z', finalizedAt: null, scheduledFor: '2026-06-05' },
+      ]) // current list context for preview helper
       .mockResolvedValueOnce([{ id: 'list-1' }]) // existing list in transaction
       .mockResolvedValueOnce([
         { id: 'list-1', householdId: 'hh-1', createdAt: '2026-06-02T00:00:00.000Z', finalizedAt: null, scheduledFor: '2026-06-05' },
@@ -170,7 +179,6 @@ describe('shopping-lists from-plan', () => {
     expect(res.status).toBe(200);
     expect(mocks.listLowStockStaples).toHaveBeenCalledWith('hh-1');
     expect(mocks.txDeleteWhere).toHaveBeenCalledWith(expect.arrayContaining([
-      { field: 'itemShoppingListId', value: 'list-1' },
       { field: 'itemHouseholdId', value: 'hh-1' },
       { field: 'itemSource', value: ['recipe', 'staple'] },
     ]));
@@ -185,6 +193,50 @@ describe('shopping-lists from-plan', () => {
         source: 'staple',
       }),
     ]);
-    expect(res.body.scheduledFor).toBe('2026-06-05');
+  });
+
+  it('returns an empty read-only preview payload when no entries are selected', async () => {
+    mocks.getSession.mockResolvedValue({ user: { id: 'user-1' } });
+    mocks.membershipLimit.mockResolvedValue([{ householdId: 'hh-1' }]);
+    mocks.listLowStockStaples.mockResolvedValueOnce([]);
+    mocks.selectFrom
+      .mockResolvedValueOnce([
+        { canonicalFoodId: 'food-any', unit: 'g', total: 100 },
+      ])
+      .mockResolvedValueOnce([]);
+
+    const res = await request(app)
+      .post('/api/shopping-lists/preview-from-plan')
+      .send({ entryIds: [] });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      scheduledFor: null,
+      entryIds: [],
+      dayCount: 0,
+      recipeCount: 0,
+      itemCount: 0,
+      recipeItemCount: 0,
+      stapleItemCount: 0,
+      items: [],
+    });
+  });
+
+  it('does not write list rows when building a preview', async () => {
+    mocks.getSession.mockResolvedValue({ user: { id: 'user-1' } });
+    mocks.membershipLimit.mockResolvedValue([{ householdId: 'hh-1' }]);
+    mocks.listLowStockStaples.mockResolvedValueOnce([]);
+    mocks.selectFrom
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+
+    const res = await request(app)
+      .post('/api/shopping-lists/preview-from-plan')
+      .send({ entryIds: [] });
+
+    expect(res.status).toBe(200);
+    expect(mocks.txDeleteWhere).not.toHaveBeenCalled();
+    expect(mocks.txInsertValues).not.toHaveBeenCalled();
   });
 });
