@@ -269,7 +269,7 @@
   font-weight: var(--weight-semibold);
   letter-spacing: var(--tracking-snug);
   line-height: var(--leading-snug);
-  display: -webkit-box;
+  /*display: -webkit-box;*/
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
