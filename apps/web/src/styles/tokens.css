@@ -24,7 +24,7 @@
   --text-page-title: 56px;         /* page <h1> desktop */
   --text-page-title-mobile: 40px;  /* page <h1> mobile (≤768px) */
   --text-section: 28px;            /* section headers — do NOT revert to 22px (D28) */
-  --text-card-title: 18px;         /* card and panel titles */
+  --text-card-title: 14px;         /* card and panel titles */
   --text-body: 15px;               /* primary body copy */
   --text-body-sm: 14px;            /* secondary body / labels */
   --text-meta: 13px;               /* metadata, small buttons */

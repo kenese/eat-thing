@@ -33,7 +33,7 @@
   --text-display-sm: 36px;          /* empty-state / centered display  400 */
 
   /* UI — Schibsted Grotesk. */
-  --text-card-title: 18px;          /* card H3                         600 / -0.012em */
+  --text-card-title: 14px;          /* card H3                         600 / -0.012em */
   --text-card-title-lg: 19px;
   --text-body: 14px;                /* default body                    400 */
   --text-meta: 13px;                /* secondary / qty / price         400-600 */

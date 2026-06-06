@@ -5,7 +5,8 @@ import { useMealPlanEntries } from '../../hooks/useMealPlan';
 import { useCurrentShoppingList } from '../../hooks/useShoppingList';
 import { usePricesForList } from '../../hooks/usePricesForList';
 import { api } from '../../api/client';
-import { planWindow } from '../../lib/dateUtils';
+import { planWindow, planWindowDays } from '../../lib/dateUtils';
+import type { PlanWindowDay } from '../../lib/dateUtils';
 import {
   computeMeals,
   computeExpiring,
@@ -16,6 +17,8 @@ import {
   type MealCellStatus,
   type ShopSummary,
 } from './homeDerivations';
+import { computeMissing } from '../../lib/recipeMatch';
+import type { DayEntry, DayKind } from '../../lib/planTypes';
 import type { Recipe } from '@eat/shared';
 
 export interface HomeData {
@@ -28,6 +31,8 @@ export interface HomeData {
   meals: MealCellStatus[];
   expiring: ExpiringSummary;
   shop: ShopSummary;
+  planDays: PlanWindowDay[];
+  entriesByDay: Record<string, DayEntry[]>;
   loading: { inventory: boolean; mealPlan: boolean; recipes: boolean; shopping: boolean };
   errors:  { inventory: boolean; mealPlan: boolean; recipes: boolean; shopping: boolean };
 }
@@ -69,6 +74,25 @@ export function useHomeData(now: Date = new Date()): HomeData {
   const expiring = computeExpiring(inventory, now);
   const shop = computeShopSummary(shopListQ.data ?? null, pricesQ.data?.prices ?? [], now);
 
+  const planDays = useMemo(() => planWindowDays(now), [now]);
+
+  const entriesByDay = useMemo<Record<string, DayEntry[]>>(() => {
+    const map: Record<string, DayEntry[]> = {};
+    for (const e of entries) {
+      const full = recipesById[e.recipeId];
+      const missingNames = full ? computeMissing(full, inventory) : [];
+      const kind: DayKind = e.status === 'cooked' ? 'cook' : missingNames.length > 0 ? 'shop' : 'cook';
+      (map[e.date] ??= []).push({
+        entry: e,
+        missingNames,
+        kind,
+        totalTimeMinutes: full?.totalTimeMinutes ?? null,
+        sourceImage: full?.sourceImage ?? null,
+      });
+    }
+    return map;
+  }, [entries, recipesById, inventory]);
+
   return {
     hero: {
       pill: coveragePill(meals),
@@ -79,6 +103,8 @@ export function useHomeData(now: Date = new Date()): HomeData {
     meals,
     expiring,
     shop,
+    planDays,
+    entriesByDay,
     loading: {
       inventory: inventoryQ.isLoading,
       mealPlan:  mealPlanQ.isLoading,
