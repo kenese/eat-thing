@@ -1,0 +1,1630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>eat-thing — architecture map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Schibsted+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --paper:#f3f5f2; --paper2:#eaeee7; --cream:#e6ebe4;
+  --ink:#0d1714; --ink2:#3a443e; --ink3:#5a6359; --mute:#6e7872;
+  --green:#1f5d33; --fresh:#5aa758; --persimmon:#d96e2e; --persim-deep:#b6541d; --warn:#c2412e;
+  --rule:rgba(13,23,20,.08); --rule2:rgba(13,23,20,.04);
+  --font-sans:"Schibsted Grotesk",system-ui,-apple-system,sans-serif;
+  --font-serif:"Lora",Georgia,serif;
+  --radius-card:12px; --radius-control:8px; --radius-pill:999px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  font-family:var(--font-sans); background:var(--paper); color:var(--ink);
+  display:flex; flex-direction:column; height:100vh; overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+.dot{color:var(--persimmon)}
+.eyebrow{
+  font-size:11px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--mute); font-weight:600;
+}
+
+/* ── Top bar ── */
+header.topbar{
+  display:flex; align-items:baseline; gap:18px; padding:14px 22px;
+  border-bottom:1px solid var(--rule); background:var(--paper);
+  flex:0 0 auto; flex-wrap:wrap;
+}
+header.topbar h1{
+  font-family:var(--font-serif); font-weight:500; font-size:24px;
+  letter-spacing:-.02em; margin:0;
+}
+header.topbar .sub{ font-size:13px; color:var(--ink3); }
+header.topbar .lens-tabs{ margin-left:auto; display:flex; gap:6px; }
+.lens-tab{
+  font:inherit; font-size:13px; font-weight:600; cursor:pointer;
+  border:1px solid var(--rule); background:transparent; color:var(--ink2);
+  padding:7px 14px; border-radius:var(--radius-pill); transition:.15s;
+}
+.lens-tab:hover{ border-color:var(--ink3); }
+.lens-tab[aria-selected="true"]{
+  background:var(--ink); color:var(--paper); border-color:var(--ink);
+}
+
+/* ── Body layout ── */
+.shell{ flex:1 1 auto; display:flex; min-height:0; }
+
+/* ── Left control rail ── */
+aside.rail{
+  flex:0 0 254px; border-right:1px solid var(--rule); background:var(--paper);
+  overflow-y:auto; padding:18px 18px 40px;
+}
+.rail h2{
+  font-family:var(--font-serif); font-weight:500; font-size:20px;
+  margin:0 0 2px; letter-spacing:-.01em;
+}
+.rail .lens-desc{ font-size:12.5px; color:var(--ink3); line-height:1.5; margin:6px 0 18px; }
+.rail section{ margin-bottom:22px; }
+.rail .grp-title{ margin-bottom:9px; }
+.toggle{
+  display:flex; align-items:center; gap:9px; padding:5px 0; cursor:pointer;
+  font-size:13px; color:var(--ink2); user-select:none;
+}
+.toggle input{ display:none; }
+.swatch{
+  width:13px; height:13px; border-radius:4px; flex:0 0 auto;
+  border:1.5px solid currentColor; position:relative;
+}
+.line-swatch{
+  width:20px; height:0; flex:0 0 auto; border-top-width:2.5px; border-top-style:solid;
+  position:relative;
+}
+.line-swatch.dashed{ border-top-style:dashed; }
+.toggle input:not(:checked) ~ .swatch{ opacity:.28; background:transparent !important; }
+.toggle input:checked ~ .swatch{ background:currentColor; }
+.toggle input:not(:checked) ~ .line-swatch{ opacity:.28; }
+.toggle input:not(:checked) ~ .lbl{ opacity:.5; }
+.toggle .lbl{ flex:1; }
+.toggle .cnt{ font-size:11px; color:var(--mute); }
+.rail .opt-toggle{
+  display:flex; align-items:center; gap:9px; padding:6px 0; font-size:13px;
+  color:var(--ink2); cursor:pointer; user-select:none;
+}
+.rail .opt-toggle input{
+  appearance:none; width:34px; height:19px; border-radius:999px;
+  background:var(--paper2); border:1px solid var(--rule); position:relative;
+  cursor:pointer; transition:.18s; flex:0 0 auto;
+}
+.rail .opt-toggle input::after{
+  content:""; position:absolute; top:1.5px; left:1.5px; width:14px; height:14px;
+  border-radius:50%; background:var(--mute); transition:.18s;
+}
+.rail .opt-toggle input:checked{ background:var(--persimmon); border-color:var(--persimmon); }
+.rail .opt-toggle input:checked::after{ left:16px; background:#fff; }
+.btn{
+  font:inherit; font-size:12.5px; font-weight:600; cursor:pointer;
+  border:1px solid var(--rule); background:transparent; color:var(--ink2);
+  padding:8px 12px; border-radius:var(--radius-control); width:100%;
+  transition:.15s; margin-top:4px;
+}
+.btn:hover{ border-color:var(--ink3); background:var(--paper2); }
+
+/* ── Canvas ── */
+.canvas-wrap{ flex:1 1 auto; position:relative; overflow:auto; background:
+  radial-gradient(circle at 1px 1px, rgba(13,23,20,.05) 1px, transparent 0) 0 0 / 26px 26px,
+  var(--paper); }
+.canvas{ position:relative; width:1640px; height:920px; }
+svg.wire{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none; overflow:visible; }
+.boundary-rect{ fill:rgba(13,23,20,.018); stroke:var(--rule); stroke-width:1.5; stroke-dasharray:7 6; }
+.boundary-label{ font-family:var(--font-sans); font-size:10px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; fill:var(--mute); }
+.edge{ fill:none; stroke-width:2; opacity:.85; }
+.edge-label{ font-family:var(--font-sans); font-size:10px; font-weight:600; fill:var(--ink3); paint-order:stroke; stroke:var(--paper); stroke-width:3px; }
+
+.node{
+  position:absolute; min-width:128px; max-width:184px; background:#fff;
+  border:1px solid var(--rule); border-left-width:4px; border-radius:var(--radius-card);
+  padding:10px 12px; cursor:grab; box-shadow:0 1px 2px rgba(13,23,20,.05);
+  transition:box-shadow .15s, transform .05s; user-select:none;
+}
+.node:hover{ box-shadow:0 4px 14px rgba(13,23,20,.12); }
+.node.dragging{ cursor:grabbing; box-shadow:0 10px 26px rgba(13,23,20,.18); z-index:50; }
+.node.selected{ box-shadow:0 0 0 2px var(--persimmon), 0 6px 18px rgba(13,23,20,.14); }
+.node .n-type{ font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; font-weight:700; color:var(--mute); margin-bottom:3px; }
+.node .n-name{ font-size:14px; font-weight:700; letter-spacing:-.01em; line-height:1.15; }
+.node .n-sub{ font-size:11px; color:var(--ink3); line-height:1.3; margin-top:3px; font-family:var(--font-serif); font-style:italic; }
+.node .n-flag{ display:inline-block; margin-top:6px; font-size:9px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; padding:2px 6px; border-radius:var(--radius-pill); }
+.node--rich{ min-width:198px; max-width:234px; }
+.n-eps{ margin-top:8px; padding-top:7px; border-top:1px solid var(--rule2); display:flex; flex-direction:column; gap:3px; }
+.ep{ display:flex; align-items:center; gap:6px; }
+.ep-m{ font-size:8.5px; font-weight:800; letter-spacing:.03em; padding:1.5px 4px; border-radius:4px; color:#fff; min-width:32px; text-align:center; flex:0 0 auto; }
+.ep-GET{ background:var(--fresh); } .ep-POST{ background:var(--persimmon); }
+.ep-PUT{ background:var(--green); } .ep-PATCH{ background:var(--ink3); } .ep-DEL{ background:var(--warn); }
+.ep-p{ font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:10.5px; color:var(--ink2);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.d-ep{ padding:3px 0; }
+.d-ep .ep-p{ white-space:normal; overflow:visible; font-size:11.5px; }
+
+/* ── Detail panel ── */
+aside.detail{
+  position:absolute; top:0; right:0; height:100%; width:320px; background:var(--paper);
+  border-left:1px solid var(--rule); box-shadow:-8px 0 24px rgba(13,23,20,.06);
+  transform:translateX(100%); transition:transform .22s cubic-bezier(.4,0,.2,1);
+  overflow-y:auto; padding:20px 20px 40px; z-index:80;
+}
+aside.detail.open{ transform:translateX(0); }
+.detail .close{ position:absolute; top:14px; right:16px; cursor:pointer; border:none; background:none; font-size:20px; color:var(--mute); line-height:1; }
+.detail .close:hover{ color:var(--ink); }
+.detail .d-type{ margin-bottom:8px; }
+.detail h3{ font-family:var(--font-serif); font-weight:500; font-size:26px; letter-spacing:-.015em; margin:0 0 4px; line-height:1.1; }
+.detail .d-block{ margin-top:18px; }
+.detail .d-block .eyebrow{ display:block; margin-bottom:6px; }
+.detail .d-desc{ font-size:13.5px; line-height:1.55; color:var(--ink2); }
+.detail .d-tech{ font-size:12.5px; color:var(--ink2); line-height:1.5; }
+.detail .chips{ display:flex; flex-wrap:wrap; gap:6px; }
+.detail .chip{ font-size:11px; font-weight:600; padding:3px 9px; border-radius:var(--radius-pill); background:var(--paper2); color:var(--ink2); border:1px solid var(--rule); }
+.detail .chip.d{ cursor:default; }
+.detail .conns{ list-style:none; margin:0; padding:0; }
+.detail .conns li{ font-size:12.5px; padding:6px 0; border-bottom:1px solid var(--rule2); color:var(--ink2); display:flex; gap:8px; align-items:baseline; }
+.detail .conns li .arrow{ color:var(--persimmon); font-weight:700; }
+.detail .conns li .ct{ margin-left:auto; font-size:10px; color:var(--mute); text-transform:uppercase; letter-spacing:.06em; }
+.detail .d-hide-btn{ font:inherit; font-size:13px; font-weight:600; cursor:pointer; width:100%;
+  border:1px solid var(--rule); background:#fff; color:var(--ink2); border-radius:var(--radius-control);
+  padding:10px 12px; transition:.15s; display:flex; align-items:center; justify-content:center; gap:8px; }
+.detail .d-hide-btn:hover{ border-color:var(--ink3); background:var(--paper2); }
+.detail .d-hide-btn svg{ width:15px; height:15px; flex:0 0 auto; }
+.detail .d-hide-btn.is-hidden{ border-color:var(--persimmon); color:var(--persim-deep); }
+.detail .d-hide-btn.is-hidden:hover{ background:rgba(217,110,46,.07); }
+
+.hint{ position:absolute; bottom:14px; left:50%; transform:translateX(-50%);
+  font-size:11.5px; color:var(--mute); background:var(--paper); padding:6px 14px;
+  border:1px solid var(--rule); border-radius:var(--radius-pill); pointer-events:none; }
+
+/* ── Flows: rail controls ── */
+.flow-pick{ display:block; width:100%; text-align:left; padding:9px 11px; border:1px solid var(--rule);
+  border-radius:8px; background:#fff; margin-bottom:7px; cursor:pointer; font:inherit; transition:.15s; }
+.flow-pick:hover{ border-color:var(--ink3); }
+.flow-pick[aria-selected=true]{ border-color:var(--persimmon); box-shadow:inset 3px 0 0 var(--persimmon); }
+.flow-pick .fp-name{ display:block; font-weight:700; font-size:13px; letter-spacing:-.01em; }
+.flow-pick .fp-sum{ display:block; font-size:11px; color:var(--ink3); font-family:var(--font-serif); font-style:italic; margin-top:1px; }
+.playbar{ display:flex; gap:6px; margin-top:12px; }
+.playbar button{ font:inherit; font-weight:700; cursor:pointer; border:1px solid var(--rule);
+  background:#fff; color:var(--ink2); border-radius:8px; padding:9px 0; transition:.15s; }
+.playbar button:hover{ border-color:var(--ink3); }
+.playbar #prevBtn,.playbar #nextBtn{ flex:0 0 40px; font-size:16px; }
+.playbar .play-main{ flex:1; background:var(--persimmon); border-color:var(--persimmon); color:#fff; font-size:13px; }
+.playbar .play-main:hover{ background:var(--persim-deep); border-color:var(--persim-deep); }
+.flow-legend-dd{ margin-top:16px; padding-top:13px; border-top:1px solid var(--rule); }
+.flow-legend-dd summary{ cursor:pointer; font-size:11px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--mute); font-weight:600; list-style:none; display:flex; align-items:center; gap:7px; }
+.flow-legend-dd summary::-webkit-details-marker{ display:none; }
+.flow-legend-dd summary::before{ content:'▸'; font-size:9px; transition:transform .15s; }
+.flow-legend-dd[open] summary::before{ transform:rotate(90deg); }
+.flow-legend-dd #flowLegend{ margin-top:11px; }
+.fl-leg-row{ display:flex; align-items:center; gap:9px; padding:3px 0; font-size:12px; color:var(--ink2); }
+
+/* ── Flows: node + edge states ── */
+.node.fl-active{ box-shadow:0 0 0 2px var(--persimmon), 0 10px 26px rgba(217,110,46,.30); }
+.node.fl-dim{ opacity:.42; }
+.node.fl-dim:hover{ opacity:.72; }
+.edge.fl-active{ stroke-width:3.2; animation:dashflow .8s linear infinite; }
+.edge.fl-done{ opacity:.5; stroke-width:2.4; }
+.edge.fl-todo{ opacity:.14; stroke-width:2; }
+@keyframes dashflow{ to{ stroke-dashoffset:-24; } }
+
+/* ── Flows: UX strip ── */
+.flow-strip{ position:fixed; left:254px; right:0; bottom:0; z-index:60;
+  background:rgba(243,245,242,.97); backdrop-filter:blur(6px);
+  border-top:1px solid var(--rule); padding:16px 26px 20px; box-shadow:0 -6px 22px rgba(13,23,20,.08);
+  min-height:208px; display:flex; flex-direction:column; }
+.fs-head{ display:flex; align-items:baseline; gap:14px; margin-bottom:12px; flex-wrap:wrap; }
+.fs-flowname{ font-family:var(--font-serif); font-size:18px; font-weight:600; letter-spacing:-.01em; color:var(--ink); }
+.fs-hop{ font-size:12px; font-weight:600; color:var(--ink3); display:inline-flex; align-items:center; gap:7px; }
+.fs-hop .fs-dot{ width:9px; height:9px; border-radius:50%; flex:0 0 auto; }
+.fs-hop .fs-hop-arrow{ color:var(--mute); }
+.fs-hop .fs-hop-kind{ color:var(--mute); text-transform:uppercase; letter-spacing:.08em; font-size:10px; }
+.fs-counter{ margin-left:auto; font-size:11px; letter-spacing:.12em; text-transform:uppercase; font-weight:700; color:var(--mute); }
+.fs-steps{ display:flex; gap:7px; margin-bottom:14px; flex-wrap:wrap; }
+.fs-pill{ width:28px; height:28px; border-radius:50%; border:1px solid var(--rule); background:#fff;
+  font:inherit; font-size:12px; font-weight:700; color:var(--ink3); cursor:pointer; transition:.15s; }
+.fs-pill:hover{ border-color:var(--ink3); }
+.fs-pill.done{ background:var(--fresh); border-color:var(--fresh); color:#fff; }
+.fs-pill.active{ background:var(--persimmon); border-color:var(--persimmon); color:#fff; box-shadow:0 0 0 3px rgba(217,110,46,.2); }
+.fs-detail{ display:flex; flex-direction:column; gap:7px; }
+.fs-line{ display:flex; align-items:baseline; gap:11px; }
+.fs-tag{ font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; padding:3px 9px;
+  border-radius:999px; flex:0 0 auto; min-width:64px; text-align:center; }
+.fs-tag.you{ background:var(--ink); color:var(--paper); }
+.fs-tag.sys{ background:var(--paper2); color:var(--ink2); border:1px solid var(--rule); }
+.fs-text{ font-size:14.5px; color:var(--ink); line-height:1.45; }
+.fs-line .fs-tag.sys ~ .fs-text{ font-size:13.5px; color:var(--ink2); }
+.fs-tables{ font-size:12px; color:var(--mute); margin-top:4px; padding-left:75px; }
+.fs-tables code{ background:var(--paper2); border:1px solid var(--rule); border-radius:4px; padding:2px 6px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11.5px; color:var(--ink2); margin-right:3px; }
+
+/* ── Multi-select: marquee + selection bar ── */
+.marquee{ position:absolute; border:1.5px solid var(--persimmon); background:rgba(217,110,46,.08);
+  border-radius:4px; pointer-events:none; z-index:40; }
+.sel-bar{ position:absolute; top:14px; left:50%; transform:translateX(-50%); z-index:70;
+  display:flex; align-items:center; gap:10px; background:var(--ink); color:var(--paper);
+  padding:7px 9px 7px 15px; border-radius:var(--radius-pill); box-shadow:0 6px 20px rgba(13,23,20,.22);
+  font-size:12.5px; font-weight:600; }
+.sel-bar button{ font:inherit; font-size:12px; font-weight:700; cursor:pointer; border:none;
+  border-radius:var(--radius-pill); padding:5px 13px; transition:.15s; }
+.sel-bar #selHide{ background:var(--persimmon); color:#fff; }
+.sel-bar #selHide:hover{ background:var(--persim-deep); }
+.sel-bar #selClear{ background:rgba(243,245,242,.16); color:var(--paper); }
+.sel-bar #selClear:hover{ background:rgba(243,245,242,.30); }
+
+/* ── Hidden-elements rail list ── */
+#hiddenGroup .grp-title{ display:flex; align-items:center; justify-content:space-between; }
+.hidden-showall{ font:inherit; font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+  cursor:pointer; border:none; background:none; color:var(--persimmon); padding:0; }
+.hidden-showall:hover{ color:var(--persim-deep); text-decoration:underline; }
+.hidden-row{ display:flex; align-items:center; gap:8px; padding:4px 0; font-size:13px; color:var(--ink2); }
+.hidden-dot{ width:10px; height:10px; border-radius:3px; flex:0 0 auto; }
+.hidden-name{ flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; cursor:pointer; }
+.hidden-name:hover{ color:var(--ink); text-decoration:underline; }
+.hidden-show{ font:inherit; font-size:11px; font-weight:600; cursor:pointer; border:1px solid var(--rule);
+  background:#fff; color:var(--ink2); border-radius:6px; padding:2px 9px; flex:0 0 auto; }
+.hidden-show:hover{ border-color:var(--ink3); background:var(--paper2); }
+
+@media (max-width:720px){ aside.rail{ flex-basis:200px; } .flow-strip{ left:200px; } }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <h1>eat-thing<span class="dot">.</span></h1>
+  <span class="sub">architecture map — drag nodes, toggle layers, click for detail</span>
+  <div class="lens-tabs" role="tablist" id="lensTabs"></div>
+</header>
+
+<div class="shell">
+  <aside class="rail">
+    <h2 id="lensTitle">Deployment<span class="dot">.</span></h2>
+    <p class="lens-desc" id="lensDesc"></p>
+
+    <section id="typeGroup">
+      <div class="eyebrow grp-title" id="typeGroupTitle">Elements</div>
+      <div id="typeToggles"></div>
+    </section>
+
+    <section id="connGroup">
+      <div class="eyebrow grp-title">Connections</div>
+      <div id="connToggles"></div>
+    </section>
+
+    <section id="optGroup">
+      <div class="eyebrow grp-title">View</div>
+      <label class="opt-toggle" id="boundaryOptWrap"><input type="checkbox" id="optBoundaries" checked><span>Trust boundaries</span></label>
+      <label class="opt-toggle"><input type="checkbox" id="optLabels" checked><span>Connection labels</span></label>
+    </section>
+
+    <section id="hiddenGroup" style="display:none">
+      <div class="eyebrow grp-title">Hidden<button class="hidden-showall" id="showAllBtn">show all</button></div>
+      <div id="hiddenList"></div>
+    </section>
+
+    <section id="flowGroup" style="display:none">
+      <div class="eyebrow grp-title">Choose a flow</div>
+      <div id="flowList"></div>
+      <div class="playbar">
+        <button id="prevBtn" title="previous step">‹</button>
+        <button id="playBtn" class="play-main">▶ Play</button>
+        <button id="nextBtn" title="next step">›</button>
+      </div>
+      <button class="btn" id="restartBtn" style="margin-top:8px">↺ Restart</button>
+      <div id="flowStepCount" style="margin-top:12px;font-size:12px;color:var(--mute);text-align:center"></div>
+      <details class="flow-legend-dd" id="flowLegendDD">
+        <summary>Hop types</summary>
+        <div id="flowLegend"></div>
+      </details>
+    </section>
+
+    <section id="resetSection">
+      <button class="btn" id="exportBtn">⤓ Export PNG</button>
+      <button class="btn" id="resetBtn">Reset this layout</button>
+    </section>
+  </aside>
+
+  <div class="canvas-wrap" id="canvasWrap">
+    <div class="canvas" id="canvas">
+      <svg class="wire" id="wire"></svg>
+    </div>
+    <div class="sel-bar" id="selBar" style="display:none">
+      <span id="selCount"></span>
+      <button id="selHide">Hide</button>
+      <button id="selClear">Clear</button>
+    </div>
+    <div class="hint" id="hint">positions auto-save to this browser</div>
+  </div>
+
+  <div class="flow-strip" id="flowStrip" style="display:none">
+    <div class="fs-head">
+      <span class="fs-flowname" id="fsFlowName"></span>
+      <span class="fs-hop" id="fsHop"></span>
+      <span class="fs-counter" id="fsCounter"></span>
+    </div>
+    <div class="fs-steps" id="fsSteps"></div>
+    <div class="fs-detail">
+      <div class="fs-line"><span class="fs-tag you">You</span><span id="fsUx" class="fs-text"></span></div>
+      <div class="fs-line"><span class="fs-tag sys">System</span><span id="fsSys" class="fs-text"></span></div>
+      <div class="fs-tables" id="fsTables"></div>
+    </div>
+  </div>
+
+  <aside class="detail" id="detail">
+    <button class="close" id="detailClose" aria-label="close">×</button>
+    <div class="d-type"><span class="chip d" id="dType"></span></div>
+    <h3 id="dName"></h3>
+    <div class="d-block"><span class="eyebrow">What it is</span><div class="d-desc" id="dDesc"></div></div>
+    <div class="d-block" id="dTechBlock"><span class="eyebrow">Stack</span><div class="d-tech" id="dTech"></div></div>
+    <div class="d-block" id="dEpBlock"><span class="eyebrow">Endpoints</span><div id="dEps"></div></div>
+    <div class="d-block" id="dDecBlock"><span class="eyebrow">Decisions</span><div class="chips" id="dDec"></div></div>
+    <div class="d-block"><span class="eyebrow">Connections</span><ul class="conns" id="dConns"></ul></div>
+    <div class="d-block" id="dActions"><button class="d-hide-btn" id="dHideBtn"></button></div>
+  </aside>
+</div>
+
+<script>
+/* ────────────────────────────────────────────────────────────────────────
+   DATA — derived from ARCHITECTURE.md / DECISIONS.md (shipped-only scope).
+   Each lens: { title, desc, types{}, conns{}, hasBoundaries, boundaries{},
+                nodes[], edges[] }
+   node: { id, type, name, sub, flag?, desc, tech?, decisions?[], x, y }
+   edge: { from, to, type, label }
+─────────────────────────────────────────────────────────────────────────*/
+const C = { paper:'#f3f5f2', ink:'#0d1714', ink2:'#3a443e', ink3:'#5a6359',
+  mute:'#6e7872', green:'#1f5d33', fresh:'#5aa758', persimmon:'#d96e2e',
+  persimDeep:'#b6541d', warn:'#c2412e' };
+
+const LENSES = {
+  /* ============================= DEPLOYMENT ============================= */
+  deployment:{
+    title:'Deployment', tabLabel:'Deployment topology',
+    desc:'Where each piece runs and the network / trust boundaries between them. The Mac mini only ever talks outbound — no inbound port at home.',
+    hasBoundaries:true,
+    types:{
+      frontend:{label:'Frontend', color:C.fresh},
+      api:{label:'API', color:C.persimmon},
+      database:{label:'Database', color:C.green},
+      storage:{label:'Object storage', color:C.ink3},
+      worker:{label:'Worker', color:C.persimDeep},
+      external:{label:'External service', color:C.mute},
+    },
+    conns:{
+      'https-auth':{label:'HTTPS + auth cookies', color:C.persimmon, dashed:false},
+      postgres:{label:'Postgres (Drizzle)', color:C.green, dashed:false},
+      storage:{label:'Photo read / write', color:C.ink3, dashed:false},
+      'poll-hmac':{label:'Outbound poll (HMAC)', color:C.persimDeep, dashed:false},
+      scrape:{label:'Playwright scrape', color:C.warn, dashed:true},
+      oauth:{label:'OAuth', color:C.fresh, dashed:false},
+      mcp:{label:'HTTP MCP', color:C.ink2, dashed:false},
+      api:{label:'3rd-party API', color:C.mute, dashed:true},
+    },
+    boundaries:{
+      'Vercel':['web','server'],
+      'Supabase':['postgres','storage'],
+      'Home Mac mini · launchd':['scraper'],
+      'External':['google','gemini','themealdb','mealplanner','newworld'],
+    },
+    nodes:[
+      {id:'web',type:'frontend',name:'apps/web',sub:'mobile-first PWA',x:120,y:150,
+        desc:'Installable PWA. Reads (inventory, recipes, current list & plan) work offline from an IndexedDB cache; writes need a connection.',
+        tech:'React 19 · Vite · React Router · TanStack Query · Zustand · vite-plugin-pwa',decisions:['D6','D10']},
+      {id:'server',type:'api',name:'apps/server',sub:'Express REST + auth',x:120,y:340,
+        desc:'The only writer to Postgres. Resolves the active household per request, queues scraper jobs, and runs recipe ingestion (URL / photo / search / Meal Planner).',
+        tech:'Express · Better-Auth · Drizzle',decisions:['D5','D12','D16']},
+      {id:'postgres',type:'database',name:'Postgres',sub:'household-scoped domain data',x:470,y:250,
+        desc:'All domain tables carry household_id and are filtered by middleware. Migrations via drizzle-kit (db:migrate, not db:push).',
+        tech:'Supabase Postgres · ap-southeast-2 · transaction pooler :6543',decisions:['D8']},
+      {id:'storage',type:'storage',name:'Supabase Storage',sub:'recipe photos',x:470,y:400,
+        desc:'Recipe hero images stored and served as public URLs. Inventory photos are not implemented.',
+        tech:'Supabase Storage · eat-thing bucket',decisions:['D15']},
+      {id:'scraper',type:'worker',name:'apps/scraper',sub:'Playwright on the Mac mini',x:470,y:600,
+        desc:'Always-on worker on a residential IP. Polls the API outbound for pending jobs, scrapes New World for price / availability and builds the cart. Never places orders.',
+        tech:'Playwright · launchd-supervised · AES-256-GCM session blobs',decisions:['D3','D9','D14','D21','D27']},
+      {id:'google',type:'external',name:'Google OAuth',sub:'sign-in provider',x:880,y:110,
+        desc:'OAuth provider behind Better-Auth. No password auth — two known Google users.',decisions:['D12']},
+      {id:'gemini',type:'external',name:'Google Gemini',sub:'recipe extraction',x:880,y:235,
+        desc:'Multimodal LLM extraction for URL (schema.org fallback) and photo recipe ingestion, plus LLM-tier ingredient → canonical-food matching.',
+        tech:'gemini-2.0-flash · generativelanguage.googleapis.com · GEMINI_API_KEY'},
+      {id:'themealdb',type:'external',name:'TheMealDB',sub:'recipe search',x:880,y:360,
+        desc:'Free, key-less recipe search source surfaced in the in-app importer.'},
+      {id:'mealplanner',type:'external',name:'Meal Planner',sub:'MCP recipe import',x:880,y:485,
+        desc:'Structured recipe import. Server prefers HTTP MCP when configured, falls back to local stdio in dev.',decisions:['D19','D20']},
+      {id:'newworld',type:'external',name:'New World NZ',sub:'live supermarket site',x:880,y:625,
+        desc:'The only wired store for MVP. Scraped read-only in V3, build-to-cart in V4. Pak’nSave / Woolworths adapters exist but are deferred.',decisions:['D3','D21']},
+    ],
+    edges:[
+      {from:'web',to:'server',type:'https-auth',label:'REST'},
+      {from:'web',to:'storage',type:'storage',label:'img'},
+      {from:'server',to:'postgres',type:'postgres',label:''},
+      {from:'server',to:'storage',type:'storage',label:'upload'},
+      {from:'server',to:'google',type:'oauth',label:''},
+      {from:'server',to:'gemini',type:'api',label:''},
+      {from:'server',to:'themealdb',type:'api',label:''},
+      {from:'server',to:'mealplanner',type:'mcp',label:''},
+      {from:'scraper',to:'server',type:'poll-hmac',label:'jobs'},
+      {from:'scraper',to:'newworld',type:'scrape',label:''},
+    ],
+  },
+
+  /* ============================= COMPONENTS ============================= */
+  components:{
+    title:'Components', tabLabel:'Logical components',
+    desc:'The Turborepo workspaces and how they depend on each other — build-time package imports vs runtime HTTP calls.',
+    hasBoundaries:true,
+    types:{
+      app:{label:'App (deployable)', color:C.persimmon},
+      package:{label:'Shared package', color:C.green},
+    },
+    conns:{
+      imports:{label:'imports (build-time)', color:C.green, dashed:false},
+      http:{label:'runtime HTTP', color:C.persimmon, dashed:true},
+    },
+    boundaries:{
+      'apps/':['web','server','scraper'],
+      'packages/':['shared','taxonomy','mealpkg'],
+    },
+    nodes:[
+      {id:'web',type:'app',name:'apps/web',sub:'PWA',x:160,y:150,
+        desc:'React PWA. Consumes shared types and taxonomy labels; talks to the server over REST.',
+        tech:'React 19 · Vite',decisions:['D6']},
+      {id:'server',type:'app',name:'apps/server',sub:'Express API',x:160,y:330,
+        desc:'REST + auth. Owns the DB. Pulls in shared schemas, taxonomy, and the Meal Planner adapter.',
+        tech:'Express · Better-Auth · Drizzle'},
+      {id:'scraper',type:'app',name:'apps/scraper',sub:'Playwright worker',x:160,y:510,
+        desc:'Runs on the Mac mini. Shares types with the server and polls it for jobs.',
+        tech:'Playwright',decisions:['D9','D21']},
+      {id:'shared',type:'package',name:'packages/shared',sub:'types & zod schemas',x:560,y:130,
+        desc:'Cross-cutting TypeScript types and zod validation shared by every app.'},
+      {id:'taxonomy',type:'package',name:'packages/taxonomy',sub:'foods & units',x:560,y:310,
+        desc:'Curated canonical-food seed, unit conversion (g / ml / count), and AISLE_LABEL / CATEGORY_LABEL maps.',decisions:['D4']},
+      {id:'mealpkg',type:'package',name:'packages/meal-planning',sub:'import adapter',x:560,y:490,
+        desc:'Meal Planner MCP import adapter — keeps recipe-import transport out of the app code.',decisions:['D19']},
+    ],
+    edges:[
+      {from:'web',to:'shared',type:'imports',label:''},
+      {from:'web',to:'taxonomy',type:'imports',label:''},
+      {from:'web',to:'server',type:'http',label:'REST'},
+      {from:'server',to:'shared',type:'imports',label:''},
+      {from:'server',to:'taxonomy',type:'imports',label:''},
+      {from:'server',to:'mealpkg',type:'imports',label:''},
+      {from:'scraper',to:'shared',type:'imports',label:''},
+      {from:'scraper',to:'server',type:'http',label:'poll'},
+    ],
+  },
+
+  /* ============================= DATA MODEL ============================= */
+  data:{
+    title:'Data model', tabLabel:'Data model',
+    desc:'Postgres tables and their foreign keys. Almost every domain table also carries household_id — toggle the dashed "household scope" lines to see (or hide) that web.',
+    hasBoundaries:false,
+    types:{
+      household:{label:'Household-scoped', color:C.persimmon},
+      global:{label:'Global reference', color:C.green},
+      auth:{label:'Better-Auth owned', color:C.ink2},
+      append:{label:'Append-only audit', color:C.persimDeep},
+    },
+    conns:{
+      fk:{label:'foreign key', color:C.ink3, dashed:false},
+      scope:{label:'household scope', color:C.persimmon, dashed:true},
+    },
+    boundaries:{},
+    nodes:[
+      {id:'households',type:'household',name:'households',sub:'one per household',x:760,y:40,
+        desc:'Root tenant row. Every scoped table points back here via household_id.',decisions:['D5']},
+      {id:'memberships',type:'household',name:'memberships',sub:'users ↔ households',x:380,y:60,
+        desc:'n:m join of users to households with role (owner / member). Middleware takes the first row while single-household.',decisions:['D5']},
+      {id:'user',type:'auth',name:'user',sub:'Better-Auth',x:120,y:60,
+        desc:'Better-Auth account identity. Global — an exception to household scoping.',decisions:['D12']},
+      {id:'session',type:'auth',name:'session',sub:'Better-Auth',x:120,y:200,
+        desc:'Active sessions, cookie-backed. Owned by Better-Auth.',decisions:['D12']},
+      {id:'account',type:'auth',name:'account',sub:'Better-Auth',x:120,y:330,
+        desc:'OAuth provider account links. Owned by Better-Auth.',decisions:['D12']},
+      {id:'canonical_foods',type:'global',name:'canonical_foods',sub:'curated taxonomy',x:380,y:470,
+        desc:'Global curated reference: name, default_unit, aliases[], density, category. Source of inventory / aisle grouping. New rows require explicit taxonomy review — never silent inserts.',decisions:['D4','D26']},
+      {id:'inventory_items',type:'household',name:'inventory_items',sub:'mutable balances',x:380,y:230,
+        desc:'Mutable balance rows: canonical_food_id, qty, unit (g/ml/count only), brand, expiry. No location column — grouping derives from category.',decisions:['D25']},
+      {id:'recipes',type:'household',name:'recipes',sub:'',x:620,y:230,
+        desc:'name, source_url / image, instructions, servings, total_time_minutes, tags[].',decisions:['D25']},
+      {id:'recipe_ingredients',type:'household',name:'recipe_ingredients',sub:'',x:620,y:370,
+        desc:'Per recipe: canonical_food_id, original qty + unit text preserved, metric_value annotation, section.',decisions:['D25']},
+      {id:'meal_plan_entries',type:'household',name:'meal_plan_entries',sub:'date-keyed',x:860,y:230,
+        desc:'date, recipe_id, servings, status. Date-keyed directly — the meal_plans parent was dropped. Max 4 recipes/day enforced server-side.'},
+      {id:'cook_events',type:'append',name:'cook_events',sub:'append-only',x:860,y:370,
+        desc:'Append-only cooking audit: meal_plan_entry_id, cooked_at, deductions JSONB, prompts_resolved. Never edited — emit new rows.'},
+      {id:'shopping_lists',type:'household',name:'shopping_lists',sub:'one editable / household',x:1120,y:90,
+        desc:'One current list per household, with optional scheduled_for date. Built from planned recipes.',decisions:['D29']},
+      {id:'shopping_list_items',type:'household',name:'shopping_list_items',sub:'',x:1120,y:230,
+        desc:'canonical_food_id, qty, unit, source (recipe / staple / manual), source_recipe_id.'},
+      {id:'shopping_list_prices',type:'household',name:'shopping_list_prices',sub:'per item · per store',x:1120,y:370,
+        desc:'One row per (item, store): price, matched, in_stock, candidates JSONB, chosen_sku. Carries its own household_id.',decisions:['D23','D24']},
+      {id:'staples',type:'household',name:'staples',sub:'thresholds',x:620,y:500,
+        desc:'canonical_food_id + threshold; surfaces in the list when inventory is low.',decisions:['D7']},
+      {id:'supermarket_credentials',type:'household',name:'supermarket_credentials',sub:'encrypted sessions',x:1120,y:510,
+        desc:'store, encrypted_session_blob (AES-256-GCM, key on the mini only), last_login_at.',decisions:['D17']},
+      {id:'supermarket_products',type:'household',name:'supermarket_products',sub:'catalog cache',x:860,y:510,
+        desc:'store, sku, canonical_food_id, brand, last_seen_price, preferred.'},
+      {id:'scraper_jobs',type:'household',name:'scraper_jobs',sub:'job queue',x:860,y:640,
+        desc:'type, status (pending → in_progress → done / failed), payload, result JSONB. Drives the Mac-mini worker.',decisions:['D23','D27']},
+    ],
+    edges:[
+      {from:'memberships',to:'user',type:'fk',label:''},
+      {from:'memberships',to:'households',type:'fk',label:''},
+      {from:'session',to:'user',type:'fk',label:''},
+      {from:'account',to:'user',type:'fk',label:''},
+      {from:'inventory_items',to:'canonical_foods',type:'fk',label:''},
+      {from:'recipe_ingredients',to:'recipes',type:'fk',label:''},
+      {from:'recipe_ingredients',to:'canonical_foods',type:'fk',label:''},
+      {from:'meal_plan_entries',to:'recipes',type:'fk',label:''},
+      {from:'cook_events',to:'meal_plan_entries',type:'fk',label:''},
+      {from:'shopping_list_items',to:'shopping_lists',type:'fk',label:''},
+      {from:'shopping_list_items',to:'canonical_foods',type:'fk',label:''},
+      {from:'shopping_list_items',to:'recipes',type:'fk',label:'source'},
+      {from:'shopping_list_prices',to:'shopping_list_items',type:'fk',label:''},
+      {from:'staples',to:'canonical_foods',type:'fk',label:''},
+      {from:'supermarket_products',to:'canonical_foods',type:'fk',label:''},
+      /* household scope (dashed) */
+      {from:'inventory_items',to:'households',type:'scope',label:''},
+      {from:'recipes',to:'households',type:'scope',label:''},
+      {from:'recipe_ingredients',to:'households',type:'scope',label:''},
+      {from:'meal_plan_entries',to:'households',type:'scope',label:''},
+      {from:'shopping_lists',to:'households',type:'scope',label:''},
+      {from:'shopping_list_items',to:'households',type:'scope',label:''},
+      {from:'shopping_list_prices',to:'households',type:'scope',label:''},
+      {from:'staples',to:'households',type:'scope',label:''},
+      {from:'cook_events',to:'households',type:'scope',label:''},
+      {from:'supermarket_credentials',to:'households',type:'scope',label:''},
+      {from:'supermarket_products',to:'households',type:'scope',label:''},
+      {from:'scraper_jobs',to:'households',type:'scope',label:''},
+    ],
+  },
+
+  /* =========================== SERVER ANATOMY =========================== */
+  serveranatomy:{
+    title:'Server anatomy', tabLabel:'Server anatomy',
+    desc:'apps/server, by the actual file. Express mounts nine routers (every endpoint listed); withHousehold and the HMAC guard gate them; lib/ modules do the work and call Drizzle / Gemini / Storage. Toggle a layer off to thin it out.',
+    hasBoundaries:true,
+    types:{
+      entry:{label:'Entry', color:C.ink2},
+      auth:{label:'Auth & guard', color:C.persimDeep},
+      router:{label:'Router', color:C.persimmon},
+      lib:{label:'Lib module', color:C.fresh},
+      db:{label:'Data', color:C.green},
+      external:{label:'External', color:C.mute},
+    },
+    conns:{
+      mount:{label:'mounts', color:C.persimmon, dashed:false},
+      guard:{label:'guard / middleware', color:C.persimDeep, dashed:false},
+      uses:{label:'route → lib', color:C.fresh, dashed:false},
+      calls:{label:'lib → lib', color:C.green, dashed:false},
+      db:{label:'→ Drizzle / Postgres', color:C.ink3, dashed:false},
+      ext:{label:'→ external', color:C.mute, dashed:true},
+    },
+    boundaries:{
+      'Entry':['index','app'],
+      'Auth & guards':['auth','withHousehold','verifyHmac'],
+      'Routers':['foods','inventory','recipes','mealplans','staples','shoppinglists','cookevents','ingest','scraper'],
+      'Lib':['gemini','foodmatcher','findcreate','foodamounts','recipequant','recipeextract','photoextract','themealdb','storage','lowstock','listfromplan','mealplannerimport'],
+      'Data & external':['db','taxonomy','gemini_ext','storage_ext','themealdb_ext','mealplanner_ext'],
+    },
+    nodes:[
+      // ── entry ──
+      {id:'index',type:'entry',name:'index.ts',sub:'http · PORT 3001',x:40,y:30,
+        desc:'createServer(app); listens on PORT (default 3001) unless NODE_ENV=test.',tech:'src/index.ts'},
+      {id:'app',type:'entry',name:'app.ts',sub:'Express app',x:40,y:150,
+        desc:'Builds the Express app: cors(getAllowedWebOrigins, credentials), mounts Better-Auth at /api/auth/*, json({limit:"10mb"}) (scoped first for /api/ingest), GET /api/health, then the nine domain routers.',tech:'src/app.ts'},
+      // ── auth & guards ──
+      {id:'auth',type:'auth',name:'auth.ts',sub:'Better-Auth · /api/auth/*',x:40,y:320,
+        desc:'Better-Auth instance with the Google provider, mounted via toNodeHandler. auth-config.ts supplies the allowed web origins.',tech:'src/auth.ts · src/auth-config.ts'},
+      {id:'withHousehold',type:'auth',name:'withHousehold',sub:'session → household_id',x:40,y:450,
+        desc:'The sole household-scoping enforcement point. Resolves the Better-Auth session, looks up the first memberships row, and attaches req.userId + req.householdId. 401 if no session, 403 if no household.',tech:'src/middleware/with-household.ts'},
+      {id:'verifyHmac',type:'auth',name:'verifyHmac',sub:'SCRAPER_HMAC_SECRET',x:40,y:580,
+        desc:'Inline guard on the scraper job/session endpoints. HMAC-SHA256 over `method\\npath\\ntimestamp\\nbody`, compared with timingSafeEqual.',tech:'src/routes/scraper.ts (requireHmac)'},
+      // ── routers (every endpoint listed) ──
+      {id:'foods',type:'router',name:'foods',sub:'/api/foods',x:300,y:20,tech:'src/routes/foods.ts',
+        desc:'Canonical-food search + the explicit create endpoint used by taxonomy review.',
+        endpoints:[{m:'GET',p:'/'},{m:'POST',p:'/'}]},
+      {id:'inventory',type:'router',name:'inventory',sub:'/api/inventory',x:300,y:150,tech:'src/routes/inventory.ts',
+        desc:'Inventory CRUD. POST routes new foods through findExistingFoodOrRequireReview (taxonomy gate).',
+        endpoints:[{m:'GET',p:'/'},{m:'POST',p:'/'},{m:'PUT',p:'/:id'},{m:'DEL',p:'/:id'}]},
+      {id:'recipes',type:'router',name:'recipes',sub:'/api/recipes',x:300,y:330,tech:'src/routes/recipes.ts',
+        desc:'Recipe CRUD in one transaction. Uploads hero images and normalizes ingredient amounts on write.',
+        endpoints:[{m:'GET',p:'/'},{m:'GET',p:'/:id'},{m:'POST',p:'/'},{m:'PUT',p:'/:id'},{m:'DEL',p:'/:id'}]},
+      {id:'mealplans',type:'router',name:'meal-plans',sub:'/api/meal-plans',x:300,y:520,tech:'src/routes/meal-plans.ts',
+        desc:'Date-keyed plan entries. Enforces the max-4-recipes-per-day invariant.',
+        endpoints:[{m:'GET',p:'/entries'},{m:'POST',p:'/entries'},{m:'PUT',p:'/entries/:id'},{m:'DEL',p:'/entries/:id'}]},
+      {id:'staples',type:'router',name:'staples',sub:'/api/staples',x:300,y:700,tech:'src/routes/staples.ts',
+        desc:'Staple thresholds + the low-stock read backed by listLowStockStaples.',
+        endpoints:[{m:'GET',p:'/'},{m:'GET',p:'/low-stock'},{m:'POST',p:'/'},{m:'PUT',p:'/:id'},{m:'DEL',p:'/:id'}]},
+      {id:'shoppinglists',type:'router',name:'shopping-lists',sub:'/api/shopping-lists',x:300,y:880,tech:'src/routes/shopping-lists.ts',
+        desc:'The largest router: list derivation from plan, item CRUD, purchase/batch-delete, and the price/cart pipeline (refresh-prices, chosen-sku, send-to-cart, cart-result, prices).',
+        endpoints:[{m:'POST',p:'/from-plan'},{m:'POST',p:'/preview-from-plan'},{m:'GET',p:'/current'},{m:'PATCH',p:'/:listId'},{m:'PUT',p:'/:listId/items/:itemId'},{m:'POST',p:'/:listId/items'},{m:'DEL',p:'/:listId/items/:itemId'},{m:'POST',p:'/:listId/items/purchase'},{m:'POST',p:'/:listId/items/batch-delete'},{m:'POST',p:'/:id/refresh-prices'},{m:'PATCH',p:'/items/:itemId/chosen-sku'},{m:'POST',p:'/:id/send-to-cart'},{m:'GET',p:'/:id/cart-result'},{m:'GET',p:'/:id/prices'}]},
+      {id:'cookevents',type:'router',name:'cook-events',sub:'/api/cook-events',x:300,y:1240,tech:'src/routes/cook-events.ts',
+        desc:'Cook preview (proposed deductions) + append-only cook event that updates inventory balances.',
+        endpoints:[{m:'GET',p:'/preview'},{m:'POST',p:'/'}]},
+      {id:'ingest',type:'router',name:'ingest',sub:'/api/ingest',x:300,y:1370,tech:'src/routes/ingest.ts',
+        desc:'Recipe ingestion: URL / photo / text extraction, MealDB search, and Meal Planner list + parse. Hero-image resolve.',
+        endpoints:[{m:'POST',p:'/url'},{m:'POST',p:'/photo'},{m:'POST',p:'/text'},{m:'GET',p:'/search'},{m:'GET',p:'/meal-planner'},{m:'POST',p:'/meal-planner/parse'},{m:'POST',p:'/hero-image'}]},
+      {id:'scraper',type:'router',name:'scraper',sub:'/api/scraper',x:300,y:1610,tech:'src/routes/scraper.ts',
+        desc:'Mac-mini worker contract: encrypted session in/out and the job lifecycle (pending → claim → progress → result), plus import-past-orders. HMAC-guarded.',
+        endpoints:[{m:'POST',p:'/session'},{m:'GET',p:'/session/:householdId/:store'},{m:'GET',p:'/jobs/pending'},{m:'POST',p:'/jobs/:id/claim'},{m:'POST',p:'/jobs/:id/progress'},{m:'POST',p:'/jobs/:id/result'},{m:'POST',p:'/import-past-orders'}]},
+      // ── lib ──
+      {id:'gemini',type:'lib',name:'gemini.ts',sub:'gemini-2.0-flash',x:640,y:20,tech:'src/lib/gemini.ts',
+        desc:'generateGeminiJson() — posts prompt (+ optional image) to generativelanguage.googleapis.com, retries 429/5xx, extracts JSON. Uses GEMINI_API_KEY / GEMINI_MODEL.'},
+      {id:'foodmatcher',type:'lib',name:'food-matcher.ts',sub:'ingredient → canonical_food',x:640,y:120,tech:'src/lib/food-matcher.ts',
+        desc:'Tiered matcher: exact / alias / contains over canonical_foods, then a Gemini LLM tier. Returns confidence.'},
+      {id:'findcreate',type:'lib',name:'find-or-create-food.ts',sub:'taxonomy review gate',x:640,y:220,tech:'src/lib/find-or-create-food.ts',
+        desc:'findExistingFoodOrRequireReview — reuse a strong match or return taxonomy_review_required instead of silently inserting.'},
+      {id:'foodamounts',type:'lib',name:'food-amounts.ts',sub:'unit math',x:640,y:320,tech:'src/lib/food-amounts.ts',
+        desc:'Add/subtract canonical quantities via @eat/taxonomy unit conversion.'},
+      {id:'recipequant',type:'lib',name:'recipe-quantities.ts',sub:'metric normalize',x:640,y:420,tech:'src/lib/recipe-quantities.ts',
+        desc:'normalizeRecipeAmount — preserves original qty/unit text and adds a metric annotation via @eat/taxonomy.'},
+      {id:'recipeextract',type:'lib',name:'recipe-extractor.ts',sub:'URL → recipe',x:640,y:520,tech:'src/lib/recipe-extractor.ts',
+        desc:'extractFromUrl / extractFromText / resolveHeroImage — schema.org first, else Gemini; matches ingredients and normalizes amounts.'},
+      {id:'photoextract',type:'lib',name:'photo-extractor.ts',sub:'photo → recipe',x:640,y:620,tech:'src/lib/photo-extractor.ts',
+        desc:'extractFromPhoto — multimodal Gemini extraction, then ingredient matching + amount normalization.'},
+      {id:'themealdb',type:'lib',name:'themealdb.ts',sub:'recipe search',x:640,y:720,tech:'src/lib/themealdb.ts',
+        desc:'searchMealDb — queries TheMealDB and maps results through the food matcher.'},
+      {id:'storage',type:'lib',name:'supabase-storage.ts',sub:'uploadPhoto',x:640,y:820,tech:'src/lib/supabase-storage.ts',
+        desc:'uploadPhoto — pushes recipe images to the Supabase Storage bucket and returns the public URL.'},
+      {id:'lowstock',type:'lib',name:'low-stock-staples.ts',sub:'staples below threshold',x:640,y:920,tech:'src/lib/low-stock-staples.ts',
+        desc:'listLowStockStaples — shared derivation reused by the staples route and list generation.'},
+      {id:'listfromplan',type:'lib',name:'shopping-list-from-plan.ts',sub:'list derivation',x:640,y:1020,tech:'src/lib/shopping-list-from-plan.ts',
+        desc:'deriveShoppingListFromPlanPreview — Σ recipe ingredients − inventory + low staples; backs both preview and confirm.'},
+      {id:'mealplannerimport',type:'lib',name:'meal-planner-importer.ts',sub:'Meal Planner import',x:640,y:1140,tech:'src/lib/meal-planner-importer.ts',
+        desc:'listMealPlannerRecipes / parseMealPlannerRecipe via @eat/meal-planning, then ingredient matching.'},
+      // ── data & external ──
+      {id:'db',type:'db',name:'db/index.ts',sub:'Drizzle → Postgres',x:960,y:40,tech:'src/db/index.ts · src/db/schema/*',
+        desc:'Drizzle client over Supabase Postgres. Schema split: auth, foods, households, inventory, meal-plans, prices, recipes, shopping, supermarket, enums.'},
+      {id:'taxonomy',type:'external',name:'@eat/taxonomy',sub:'foods + unit conv',x:960,y:240,tech:'packages/taxonomy',
+        desc:'Canonical-food seed and unit conversion used by the amount/quantity libs.'},
+      {id:'gemini_ext',type:'external',name:'Google Gemini',sub:'LLM API',x:960,y:360,tech:'generativelanguage.googleapis.com',
+        desc:'gemini-2.0-flash. The only LLM provider — no Anthropic in the server.'},
+      {id:'storage_ext',type:'external',name:'Supabase Storage',sub:'recipe photos',x:960,y:480,tech:'eat-thing bucket',
+        desc:'Public-URL recipe image storage.'},
+      {id:'themealdb_ext',type:'external',name:'TheMealDB',sub:'recipe search API',x:960,y:600,tech:'themealdb.com',
+        desc:'Free, key-less recipe source.'},
+      {id:'mealplanner_ext',type:'external',name:'Meal Planner (MCP)',sub:'@eat/meal-planning',x:960,y:720,tech:'HTTP MCP · stdio fallback',
+        desc:'Structured recipe import source over MCP.'},
+    ],
+    edges:[
+      // mounts
+      {from:'index',to:'app',type:'mount',label:''},
+      {from:'app',to:'auth',type:'mount',label:'/api/auth/*'},
+      {from:'app',to:'foods',type:'mount',label:''},
+      {from:'app',to:'inventory',type:'mount',label:''},
+      {from:'app',to:'recipes',type:'mount',label:''},
+      {from:'app',to:'mealplans',type:'mount',label:''},
+      {from:'app',to:'staples',type:'mount',label:''},
+      {from:'app',to:'shoppinglists',type:'mount',label:''},
+      {from:'app',to:'cookevents',type:'mount',label:''},
+      {from:'app',to:'ingest',type:'mount',label:''},
+      {from:'app',to:'scraper',type:'mount',label:''},
+      // guards
+      {from:'foods',to:'withHousehold',type:'guard',label:''},
+      {from:'inventory',to:'withHousehold',type:'guard',label:''},
+      {from:'recipes',to:'withHousehold',type:'guard',label:''},
+      {from:'mealplans',to:'withHousehold',type:'guard',label:''},
+      {from:'staples',to:'withHousehold',type:'guard',label:''},
+      {from:'shoppinglists',to:'withHousehold',type:'guard',label:''},
+      {from:'cookevents',to:'withHousehold',type:'guard',label:''},
+      {from:'ingest',to:'withHousehold',type:'guard',label:''},
+      {from:'scraper',to:'verifyHmac',type:'guard',label:''},
+      // route → lib
+      {from:'inventory',to:'findcreate',type:'uses',label:''},
+      {from:'recipes',to:'storage',type:'uses',label:''},
+      {from:'recipes',to:'recipequant',type:'uses',label:''},
+      {from:'staples',to:'lowstock',type:'uses',label:''},
+      {from:'shoppinglists',to:'findcreate',type:'uses',label:''},
+      {from:'shoppinglists',to:'listfromplan',type:'uses',label:''},
+      {from:'cookevents',to:'recipequant',type:'uses',label:''},
+      {from:'cookevents',to:'foodamounts',type:'uses',label:''},
+      {from:'ingest',to:'recipeextract',type:'uses',label:''},
+      {from:'ingest',to:'photoextract',type:'uses',label:''},
+      {from:'ingest',to:'themealdb',type:'uses',label:''},
+      {from:'ingest',to:'mealplannerimport',type:'uses',label:''},
+      // lib → lib
+      {from:'foodmatcher',to:'gemini',type:'calls',label:''},
+      {from:'recipeextract',to:'foodmatcher',type:'calls',label:''},
+      {from:'recipeextract',to:'gemini',type:'calls',label:''},
+      {from:'recipeextract',to:'recipequant',type:'calls',label:''},
+      {from:'photoextract',to:'foodmatcher',type:'calls',label:''},
+      {from:'photoextract',to:'gemini',type:'calls',label:''},
+      {from:'photoextract',to:'recipequant',type:'calls',label:''},
+      {from:'themealdb',to:'foodmatcher',type:'calls',label:''},
+      {from:'mealplannerimport',to:'foodmatcher',type:'calls',label:''},
+      {from:'lowstock',to:'foodamounts',type:'calls',label:''},
+      {from:'listfromplan',to:'foodamounts',type:'calls',label:''},
+      {from:'listfromplan',to:'lowstock',type:'calls',label:''},
+      {from:'listfromplan',to:'recipequant',type:'calls',label:''},
+      // → db
+      {from:'withHousehold',to:'db',type:'db',label:'memberships'},
+      {from:'auth',to:'db',type:'db',label:''},
+      {from:'foods',to:'db',type:'db',label:''},
+      {from:'inventory',to:'db',type:'db',label:''},
+      {from:'recipes',to:'db',type:'db',label:''},
+      {from:'mealplans',to:'db',type:'db',label:''},
+      {from:'staples',to:'db',type:'db',label:''},
+      {from:'shoppinglists',to:'db',type:'db',label:''},
+      {from:'cookevents',to:'db',type:'db',label:''},
+      {from:'scraper',to:'db',type:'db',label:''},
+      {from:'foodmatcher',to:'db',type:'db',label:''},
+      {from:'findcreate',to:'db',type:'db',label:''},
+      {from:'lowstock',to:'db',type:'db',label:''},
+      {from:'listfromplan',to:'db',type:'db',label:''},
+      // → external
+      {from:'gemini',to:'gemini_ext',type:'ext',label:''},
+      {from:'storage',to:'storage_ext',type:'ext',label:''},
+      {from:'themealdb',to:'themealdb_ext',type:'ext',label:''},
+      {from:'mealplannerimport',to:'mealplanner_ext',type:'ext',label:''},
+      {from:'foodamounts',to:'taxonomy',type:'ext',label:''},
+      {from:'recipequant',to:'taxonomy',type:'ext',label:''},
+    ],
+  },
+
+  /* ============================== KEY FLOWS ============================== */
+  flows:{
+    title:'Key flows', tabLabel:'Key flows',
+    desc:'Pick a flow and press Play. The canvas lights up the request / component path hop-by-hop; the strip below tracks the matching user-facing journey.',
+    hasBoundaries:false,
+    types:{
+      actor:{label:'Person', color:C.ink2},
+      frontend:{label:'Frontend', color:C.fresh},
+      api:{label:'API', color:C.persimmon},
+      database:{label:'Database', color:C.green},
+      storage:{label:'Storage', color:C.ink3},
+      worker:{label:'Worker', color:C.persimDeep},
+      external:{label:'External', color:C.mute},
+    },
+    conns:{
+      request:{label:'request', color:C.persimmon, dashed:false},
+      response:{label:'response', color:C.ink3, dashed:false},
+      llm:{label:'LLM call', color:C.mute, dashed:true},
+      db:{label:'DB read / write', color:C.green, dashed:false},
+      storage:{label:'photo upload', color:C.ink3, dashed:false},
+      poll:{label:'job poll (HMAC)', color:C.persimDeep, dashed:false},
+      scrape:{label:'scrape', color:C.warn, dashed:true},
+    },
+    boundaries:{},
+    nodes:[
+      {id:'user',type:'actor',name:'You',sub:'household member',x:70,y:190,
+        desc:'One of the two household users, on a phone or laptop.'},
+      {id:'web',type:'frontend',name:'apps/web',sub:'PWA',x:280,y:190,
+        desc:'React PWA. Captures input, shows drafts and review steps, renders results.'},
+      {id:'server',type:'api',name:'apps/server',sub:'Express API',x:530,y:190,
+        desc:'Owns the DB; runs ingestion, derivation, and job queueing.'},
+      {id:'postgres',type:'database',name:'Postgres',sub:'Supabase',x:800,y:50,
+        desc:'Household-scoped domain tables. The step detail names exactly which tables each hop touches.'},
+      {id:'storage',type:'storage',name:'Supabase Storage',sub:'recipe photos',x:800,y:170,
+        desc:'Hero images stored / served as public URLs.'},
+      {id:'gemini',type:'external',name:'Google Gemini',sub:'LLM extract',x:800,y:290,
+        desc:'Multimodal extraction (gemini-2.0-flash) when a page has no schema.org Recipe data, plus LLM-tier ingredient matching.'},
+      {id:'scraper',type:'worker',name:'apps/scraper',sub:'Mac mini',x:530,y:360,
+        desc:'Playwright worker. Polls the API outbound, scrapes New World, never places orders.'},
+      {id:'newworld',type:'external',name:'New World NZ',sub:'supermarket',x:800,y:410,
+        desc:'Live store: price / availability lookups and build-to-cart.'},
+    ],
+    edges:[],
+    flows:[
+      {id:'add-recipe', name:'Add a recipe (URL)', summary:'paste a link → reviewed import',
+        steps:[
+          {from:'user',to:'web',type:'request', ux:'Paste a recipe URL into the importer', sys:'ImportModal (URL tab) captures the link'},
+          {from:'web',to:'server',type:'request', ux:'Submit it for import', sys:'POST /api/ingest/url'},
+          {from:'server',to:'gemini',type:'llm', ux:'Wait a moment while it reads the page', sys:'Fetch + Readability clean → schema.org Recipe if present, else Gemini extract'},
+          {from:'server',to:'postgres',type:'db', ux:'(matching ingredients)', sys:'Map each ingredient to a canonical food (exact / alias / contains / LLM)', tables:['canonical_foods']},
+          {from:'server',to:'web',type:'response', ux:'Review the draft — edit & confirm (no silent import)', sys:'Returns a draft; low-confidence matches flagged amber'},
+          {from:'web',to:'server',type:'request', ux:'Save the recipe', sys:'POST /api/recipes'},
+          {from:'server',to:'storage',type:'storage', ux:'(saving)', sys:'Upload the hero image to Supabase Storage'},
+          {from:'server',to:'postgres',type:'db', ux:'The recipe appears in your library', sys:'Insert recipe + ingredients in one transaction', tables:['recipes','recipe_ingredients']},
+        ]},
+      {id:'plan-list', name:'Plan → shopping list', summary:'planned meals become a buy list',
+        steps:[
+          {from:'user',to:'web',type:'request', ux:'Drag recipes onto days in the plan', sys:'PlanPage drop targets — up to 4 recipes/day'},
+          {from:'web',to:'server',type:'request', ux:'(placing the meal)', sys:'POST /api/meal-plans/entries', tables:['meal_plan_entries']},
+          {from:'user',to:'web',type:'request', ux:'Open “Add from planned recipes”', sys:'Modal pre-ticks days already on the list'},
+          {from:'web',to:'server',type:'request', ux:'Add the chosen days', sys:'POST /api/shopping-lists/from-plan'},
+          {from:'server',to:'postgres',type:'db', ux:'(working out what you need)', sys:'List = Σ recipe ingredients − on-hand inventory + low staples', tables:['recipes','recipe_ingredients','inventory_items','staples']},
+          {from:'server',to:'postgres',type:'db', ux:'(writing the list)', sys:'Refresh recipe/staple rows; manual rows stay put', tables:['shopping_list_items']},
+          {from:'server',to:'web',type:'response', ux:'The list shows what to buy, grouped by aisle', sys:'Reason chips: needs shop · staple'},
+        ]},
+      {id:'compare-cart', name:'Compare prices → cart', summary:'New World prices, build the trolley',
+        steps:[
+          {from:'user',to:'web',type:'request', ux:'Tap “compare prices” on the list', sys:'ShoppingListPage action'},
+          {from:'web',to:'server',type:'request', ux:'(queuing)', sys:'Server enqueues a compare_prices job'},
+          {from:'server',to:'postgres',type:'db', ux:'(queued)', sys:'Insert a pending scraper_jobs row', tables:['scraper_jobs']},
+          {from:'scraper',to:'server',type:'poll', ux:'(working in the background)', sys:'Mac-mini worker polls & claims the job (HMAC-signed)'},
+          {from:'scraper',to:'newworld',type:'scrape', ux:'(working in the background)', sys:'Log in (cached cookies), look up each item'},
+          {from:'scraper',to:'server',type:'poll', ux:'(working in the background)', sys:'Return top-N candidates per item, ranked by per-unit price', tables:['shopping_list_prices']},
+          {from:'server',to:'web',type:'response', ux:'See price & availability; pick a product for ambiguous items', sys:'Per-row candidate picker for manual items'},
+          {from:'web',to:'server',type:'request', ux:'Build the cart', sys:'Enqueue an add_to_cart job'},
+          {from:'scraper',to:'newworld',type:'scrape', ux:'(working in the background)', sys:'Diff the live trolley (idempotent) and add the items'},
+          {from:'server',to:'web',type:'response', ux:'Open the trolley link — you click “place order”', sys:'Reconcile view; the app never places the order'},
+        ]},
+      {id:'cook-meal', name:'Cook a meal', summary:'deduct what you used',
+        steps:[
+          {from:'user',to:'web',type:'request', ux:'Mark a planned meal cooked', sys:'CookModal opens'},
+          {from:'web',to:'server',type:'request', ux:'(computing)', sys:'POST /api/cook-events'},
+          {from:'server',to:'postgres',type:'db', ux:'(computing deductions)', sys:'Propose deductions from recipe ingredients vs on-hand', tables:['recipe_ingredients','inventory_items']},
+          {from:'server',to:'web',type:'response', ux:'Answer any ambiguous-unit prompt (“how many bulbs left?”)', sys:'Prompts only on ambiguous units'},
+          {from:'web',to:'server',type:'request', ux:'Confirm', sys:'Resolved answers posted back'},
+          {from:'server',to:'postgres',type:'db', ux:'Inventory reflects what’s left', sys:'Append a cook_event (audit) + update inventory balances', tables:['cook_events','inventory_items']},
+        ]},
+    ],
+  },
+
+  /* =========================== FRONTEND FLOWS =========================== */
+  frontendflows:{
+    title:'Frontend flows', tabLabel:'Frontend flows',
+    desc:'The frontend only. A user interaction travels down the React layers — component → TanStack Query → cache → IndexedDB / API client — out to the network, and back. Nothing past the network boundary is shown.',
+    hasBoundaries:false,
+    types:{
+      actor:{label:'Person', color:C.ink2},
+      ui:{label:'UI component', color:C.fresh},
+      local:{label:'Local state (Zustand)', color:C.persimDeep},
+      query:{label:'TanStack Query', color:C.persimmon},
+      cache:{label:'Query cache', color:C.green},
+      idb:{label:'IndexedDB', color:C.ink3},
+      apiclient:{label:'API client', color:C.ink2},
+      auth:{label:'Auth client', color:C.mute},
+      boundary:{label:'Network edge', color:C.warn},
+    },
+    conns:{
+      action:{label:'user action / render', color:C.persimmon, dashed:false},
+      call:{label:'function call', color:C.green, dashed:false},
+      cache:{label:'cache read / write', color:C.ink3, dashed:false},
+      persist:{label:'IndexedDB persist', color:C.persimDeep, dashed:false},
+      local:{label:'local UI state', color:C.persimDeep, dashed:false},
+      fetch:{label:'fetch → network', color:C.warn, dashed:true},
+      response:{label:'response back', color:C.ink3, dashed:true},
+    },
+    boundaries:{},
+    nodes:[
+      {id:'user',type:'actor',name:'You',sub:'in the browser',x:60,y:200,
+        desc:'One of the household users interacting with the installed PWA on a phone or laptop.'},
+      {id:'component',type:'ui',name:'Page / Component',sub:'React + React Router',x:250,y:200,
+        desc:'Pages (Home, Inventory, Plan, Recipes, Shopping list) and shared components. React Router picks the page; components read data through hooks and hold purely-local UI state in Zustand.',
+        tech:'React 19 · React Router · CSS Modules'},
+      {id:'store',type:'local',name:'Zustand store',sub:'appStore — local UI',x:250,y:350,
+        desc:'Zustand store for purely-local UI state (e.g. theme). Synchronous get/set; never touches the query cache, the network, or the server.',
+        tech:'zustand · src/store/appStore.ts'},
+      {id:'hook',type:'query',name:'Query hook',sub:'useQuery / useMutation',x:470,y:110,
+        desc:'TanStack Query hooks — useInventory, useRecipes, useShoppingList, useMealPlan, useCookEvents, useStaples, usePricesForList, useIngest. useQuery reads through the cache; useMutation writes then invalidates.',
+        tech:'@tanstack/react-query · src/hooks/*'},
+      {id:'auth',type:'auth',name:'Auth client',sub:'Better-Auth · useSession',x:470,y:300,
+        desc:'Better-Auth browser client behind useSession(). Resolves the signed-in session; the session query is excluded from offline persistence so a stale session is never restored.',
+        tech:'better-auth/react · src/lib/auth-client.ts'},
+      {id:'cache',type:'cache',name:'Query cache',sub:'QueryClient · in-memory',x:700,y:50,
+        desc:'In-memory QueryClient cache keyed by query key (e.g. ["inventory", params]). Serves reads instantly when fresh; invalidateQueries marks entries stale to trigger a background refetch. gcTime 24h.',
+        tech:'QueryClient · src/main.tsx'},
+      {id:'idb',type:'idb',name:'IndexedDB',sub:'offline persistence',x:700,y:190,
+        desc:'persistQueryClient dehydrates successful queries to IndexedDB and rehydrates them on cold start, so inventory / recipes / list / plan read offline. maxAge 24h; restore runs in the background and never blocks render.',
+        tech:'idb-keyval · src/lib/queryPersistence.ts'},
+      {id:'apiclient',type:'apiclient',name:'API client',sub:'fetch wrapper',x:700,y:330,
+        desc:'apiFetch wraps fetch: credentials:"include", JSON headers, ApiError on non-2xx (carries codes like taxonomy_review_required), and a dev-session mock for GETs.',
+        tech:'src/api/client.ts'},
+      {id:'network',type:'boundary',name:'Network',sub:'fetch → HTTPS · /api/*',flag:'API boundary',x:990,y:210,
+        desc:'The outbound HTTPS fetch to /api/*. This is the frontend boundary — what happens on the server is intentionally not shown here. See the Key flows lens for the full server-side path.'},
+    ],
+    edges:[],
+    flows:[
+      {id:'load', name:'Load a screen', summary:'read: cache → network → render',
+        steps:[
+          {from:'user',to:'component',type:'action', ux:'Open the Inventory tab', sys:'React Router renders InventoryPage'},
+          {from:'component',to:'hook',type:'call', ux:'(loading)', sys:'Component calls useInventory() — a TanStack Query useQuery'},
+          {from:'hook',to:'cache',type:'cache', ux:'(loading)', sys:'Cache checked for key ["inventory", params]'},
+          {from:'cache',to:'apiclient',type:'call', ux:'(loading)', sys:'Miss or stale → queryFn runs api.get("/api/inventory")'},
+          {from:'apiclient',to:'network',type:'fetch', ux:'(loading)', sys:'fetch() with credentials:"include" → HTTPS GET. ← frontend ends here'},
+          {from:'network',to:'apiclient',type:'response', ux:'(loading)', sys:'Response returns; apiFetch parses JSON (throws ApiError on !ok)'},
+          {from:'apiclient',to:'cache',type:'cache', ux:'(loading)', sys:'Result written into the query cache under its key'},
+          {from:'cache',to:'idb',type:'persist', ux:'(saving for offline)', sys:'Successful query dehydrated to IndexedDB in the background'},
+          {from:'cache',to:'component',type:'call', ux:'The inventory list renders', sys:'Hook returns { data } → component re-renders'},
+        ]},
+      {id:'save', name:'Save a change', summary:'write: mutate → invalidate → refetch',
+        steps:[
+          {from:'user',to:'component',type:'action', ux:'Fill the Add form and submit', sys:'ItemForm onSubmit handler'},
+          {from:'component',to:'hook',type:'call', ux:'(saving)', sys:'useAddInventoryItem().mutate(data) — a useMutation'},
+          {from:'hook',to:'apiclient',type:'call', ux:'(saving)', sys:'mutationFn → api.post("/api/inventory", data)'},
+          {from:'apiclient',to:'network',type:'fetch', ux:'(saving)', sys:'fetch() POST → HTTPS. ← frontend ends here'},
+          {from:'network',to:'apiclient',type:'response', ux:'(saving)', sys:'Response parsed; ApiError on failure (e.g. taxonomy_review_required → review UI)'},
+          {from:'apiclient',to:'hook',type:'response', ux:'(updating)', sys:'Promise resolves → mutation onSuccess fires'},
+          {from:'hook',to:'cache',type:'cache', ux:'(updating)', sys:'qc.invalidateQueries(["inventory"]) marks the cached list stale'},
+          {from:'cache',to:'apiclient',type:'call', ux:'(refreshing)', sys:'Invalidation triggers a background refetch of the query'},
+          {from:'apiclient',to:'network',type:'fetch', ux:'(refreshing)', sys:'fetch() GET /api/inventory. ← frontend ends here'},
+          {from:'network',to:'cache',type:'response', ux:'(refreshing)', sys:'Refetched list returns → cache updated'},
+          {from:'cache',to:'component',type:'call', ux:'The new item appears in the list', sys:'Component re-renders with fresh data — no manual state juggling'},
+        ]},
+      {id:'offline', name:'Open offline', summary:'IndexedDB hydrates the cache — no network',
+        steps:[
+          {from:'user',to:'component',type:'action', ux:'Open the app with no connection', sys:'PWA boots from the service-worker precache'},
+          {from:'component',to:'hook',type:'call', ux:'(restoring)', sys:'Pages mount; hooks subscribe to their query keys'},
+          {from:'idb',to:'cache',type:'persist', ux:'(restoring)', sys:'persistQueryClient rehydrates the cache from IndexedDB'},
+          {from:'cache',to:'component',type:'call', ux:'Inventory, recipes, list & plan show last-saved data', sys:'Cached queries resolve — reads work offline; writes wait for a connection (no offline queue yet)'},
+        ]},
+      {id:'session', name:'Check session', summary:'auth client → network → guarded routes',
+        steps:[
+          {from:'user',to:'component',type:'action', ux:'Load the app', sys:'App mounts; the route guard checks auth'},
+          {from:'component',to:'hook',type:'call', ux:'(checking)', sys:'useSession() runs'},
+          {from:'hook',to:'auth',type:'call', ux:'(checking)', sys:'Better-Auth client requests the current session'},
+          {from:'auth',to:'network',type:'fetch', ux:'(checking)', sys:'fetch() GET session → HTTPS with cookies. ← frontend ends here'},
+          {from:'network',to:'auth',type:'response', ux:'(checking)', sys:'Session JSON returns (or 401)'},
+          {from:'auth',to:'component',type:'response', ux:'Signed in → app shell · signed out → Login page', sys:'Session resolves; guarded routes render'},
+        ]},
+      {id:'local', name:'Local UI state', summary:'Zustand — never reaches the network',
+        steps:[
+          {from:'user',to:'component',type:'action', ux:'Toggle a purely-visual control', sys:'Component event handler'},
+          {from:'component',to:'store',type:'local', ux:'(instant)', sys:'Calls a Zustand action on useAppStore'},
+          {from:'store',to:'component',type:'local', ux:'The UI updates instantly — nothing leaves the browser', sys:'Subscribed components re-render. No cache, no fetch, no server.'},
+        ]},
+    ],
+  },
+};
+
+/* ──────────────────────────── STATE / PERSISTENCE ──────────────────────── */
+const LS = {
+  pos:(lens,id)=>`archmap:pos:${lens}:${id}`,
+  type:(lens)=>`archmap:types:${lens}`,
+  conn:(lens)=>`archmap:conns:${lens}`,
+  opt:(lens)=>`archmap:opts:${lens}`,
+  hidden:(lens)=>`archmap:hidden:${lens}`,
+  lens:'archmap:lens',
+};
+let currentLens = localStorage.getItem(LS.lens) || 'deployment';
+const enabled = { types:new Set(), conns:new Set() };
+const hidden = new Set();            // individually-hidden node ids (this lens)
+const selectedIds = new Set();       // current multi-selection
+let showBoundaries = true, showLabels = true;
+let activeFlowIdx = 0, currentStep = 0, playing = false, playTimer = null;
+const isFlowsLens = ()=> !!LENSES[currentLens].flows;
+
+/* ──────────────────────────────── DOM refs ────────────────────────────── */
+const $ = (s)=>document.querySelector(s);
+const canvas = $('#canvas'), wire = $('#wire'), wrap = $('#canvasWrap');
+const detail = $('#detail');
+let selectedId = null;
+let nodeEls = {};
+
+/* ──────────────────────────── SVG defs (arrow) ─────────────────────────── */
+function ensureDefs(){
+  const NS='http://www.w3.org/2000/svg';
+  const defs=document.createElementNS(NS,'defs');
+  const allConns={};
+  Object.values(LENSES).forEach(l=>Object.assign(allConns,l.conns));
+  Object.entries(allConns)
+    .forEach(([k,c])=>{
+      const m=document.createElementNS(NS,'marker');
+      m.setAttribute('id',`arr-${k}`); m.setAttribute('viewBox','0 0 10 10');
+      m.setAttribute('refX','9'); m.setAttribute('refY','5');
+      m.setAttribute('markerWidth','7'); m.setAttribute('markerHeight','7');
+      m.setAttribute('orient','auto-start-reverse');
+      const p=document.createElementNS(NS,'path');
+      p.setAttribute('d','M0,0 L10,5 L0,10 z'); p.setAttribute('fill',c.color);
+      m.appendChild(p); defs.appendChild(m);
+    });
+  wire.appendChild(defs);
+}
+
+/* ──────────────────────────────── BUILD UI ────────────────────────────── */
+function buildTabs(){
+  const wrap=$('#lensTabs'); wrap.innerHTML='';
+  Object.entries(LENSES).forEach(([key,l])=>{
+    const b=document.createElement('button');
+    b.className='lens-tab'; b.textContent=l.tabLabel; b.setAttribute('role','tab');
+    b.setAttribute('aria-selected', key===currentLens);
+    b.onclick=()=>switchLens(key);
+    wrap.appendChild(b);
+  });
+}
+
+function loadToggleState(lens){
+  const L=LENSES[lens];
+  const savedT=JSON.parse(localStorage.getItem(LS.type(lens))||'null');
+  const savedC=JSON.parse(localStorage.getItem(LS.conn(lens))||'null');
+  const savedO=JSON.parse(localStorage.getItem(LS.opt(lens))||'null');
+  enabled.types=new Set(savedT||Object.keys(L.types));
+  enabled.conns=new Set(savedC||Object.keys(L.conns));
+  showBoundaries = savedO ? savedO.boundaries : true;
+  showLabels = savedO ? savedO.labels : true;
+  const savedH=JSON.parse(localStorage.getItem(LS.hidden(lens))||'null');
+  hidden.clear(); (savedH||[]).forEach(id=>hidden.add(id));
+}
+function saveToggleState(){
+  localStorage.setItem(LS.type(currentLens),JSON.stringify([...enabled.types]));
+  localStorage.setItem(LS.conn(currentLens),JSON.stringify([...enabled.conns]));
+  localStorage.setItem(LS.opt(currentLens),JSON.stringify({boundaries:showBoundaries,labels:showLabels}));
+  localStorage.setItem(LS.hidden(currentLens),JSON.stringify([...hidden]));
+}
+
+function buildToggles(){
+  const L=LENSES[currentLens];
+  // count nodes per type / edges per conn
+  const typeCount={}, connCount={};
+  L.nodes.forEach(n=>typeCount[n.type]=(typeCount[n.type]||0)+1);
+  L.edges.forEach(e=>connCount[e.type]=(connCount[e.type]||0)+1);
+
+  const tWrap=$('#typeToggles'); tWrap.innerHTML='';
+  Object.entries(L.types).forEach(([k,t])=>{
+    const lab=document.createElement('label'); lab.className='toggle'; lab.style.color=t.color;
+    lab.innerHTML=`<input type="checkbox" ${enabled.types.has(k)?'checked':''}>
+      <span class="swatch"></span><span class="lbl">${t.label}</span><span class="cnt">${typeCount[k]||0}</span>`;
+    lab.querySelector('input').onchange=(e)=>{
+      e.target.checked?enabled.types.add(k):enabled.types.delete(k);
+      saveToggleState(); render();
+    };
+    tWrap.appendChild(lab);
+  });
+
+  const cWrap=$('#connToggles'); cWrap.innerHTML='';
+  Object.entries(L.conns).forEach(([k,c])=>{
+    const lab=document.createElement('label'); lab.className='toggle'; lab.style.color=c.color;
+    lab.innerHTML=`<input type="checkbox" ${enabled.conns.has(k)?'checked':''}>
+      <span class="line-swatch ${c.dashed?'dashed':''}"></span><span class="lbl">${c.label}</span><span class="cnt">${connCount[k]||0}</span>`;
+    lab.querySelector('input').onchange=(e)=>{
+      e.target.checked?enabled.conns.add(k):enabled.conns.delete(k);
+      saveToggleState(); render();
+    };
+    cWrap.appendChild(lab);
+  });
+
+  // boundaries option only when the lens has them
+  $('#boundaryOptWrap').style.display = L.hasBoundaries ? '' : 'none';
+  $('#optBoundaries').checked = showBoundaries;
+  $('#optLabels').checked = showLabels;
+
+  buildHiddenList();
+}
+
+/* ── Individually-hidden elements: rail list + restore ── */
+function buildHiddenList(){
+  const sec=$('#hiddenGroup'), host=$('#hiddenList'); if(!sec||!host) return;
+  const L=LENSES[currentLens];
+  if(isFlowsLens() || !hidden.size){ sec.style.display='none'; host.innerHTML=''; return; }
+  sec.style.display=''; host.innerHTML='';
+  [...hidden].forEach(id=>{
+    const n=L.nodes.find(x=>x.id===id); if(!n) return;
+    const t=L.types[n.type];
+    const row=document.createElement('div'); row.className='hidden-row';
+    row.innerHTML=`<span class="hidden-dot" style="background:${t.color}"></span>`+
+      `<span class="hidden-name">${n.name}</span><button class="hidden-show">show</button>`;
+    row.querySelector('.hidden-name').onclick=()=>openDetail(n);
+    row.querySelector('.hidden-show').onclick=()=>showNodes([id]);
+    host.appendChild(row);
+  });
+}
+function showNodes(ids){
+  ids.forEach(id=>hidden.delete(id));
+  saveToggleState(); buildNodes(); buildHiddenList(); growCanvas(); updateSelectionStyles(); renderWire();
+}
+
+/* ──────────────────────────────── NODES ───────────────────────────────── */
+function nodePos(lens,n){
+  const saved=localStorage.getItem(LS.pos(lens,n.id));
+  if(saved){ try{ const p=JSON.parse(saved); return {x:p.x,y:p.y}; }catch(e){} }
+  return {x:n.x,y:n.y};
+}
+function buildNodes(){
+  // remove old nodes (keep svg)
+  Object.values(nodeEls).forEach(el=>el.remove()); nodeEls={};
+  const L=LENSES[currentLens];
+  L.nodes.forEach(n=>{
+    if(hidden.has(n.id)) return;
+    const t=L.types[n.type];
+    const el=document.createElement('div');
+    el.className='node'+(n.endpoints?' node--rich':''); el.dataset.id=n.id; el.dataset.type=n.type;
+    el.style.borderLeftColor=t.color;
+    const flag = n.flag ? `<span class="n-flag" style="background:${t.color}1a;color:${t.color}">${n.flag}</span>` : '';
+    const eps = n.endpoints ? `<div class="n-eps">`+n.endpoints.map(e=>
+      `<div class="ep"><span class="ep-m ep-${e.m}">${e.m}</span><span class="ep-p">${e.p}</span></div>`).join('')+`</div>` : '';
+    el.innerHTML=`<div class="n-type" style="color:${t.color}">${t.label}</div>
+      <div class="n-name">${n.name}</div>${n.sub?`<div class="n-sub">${n.sub}</div>`:''}${flag}${eps}`;
+    const p=nodePos(currentLens,n);
+    el.style.left=p.x+'px'; el.style.top=p.y+'px';
+    canvas.appendChild(el);
+    nodeEls[n.id]=el;
+    makeDraggable(el,n);
+  });
+  updateSelectionStyles();
+}
+
+function makeDraggable(el,n){
+  let sx,sy,moved=false,dragging=false,group=[];
+  el.addEventListener('pointerdown',(e)=>{
+    if(e.button!==0) return;
+    const multiKey = e.shiftKey||e.metaKey||e.ctrlKey;
+    if(!isFlowsLens() && multiKey){
+      // toggle this node in/out of the selection — no drag, no detail
+      toggleSel(n.id); e.stopPropagation(); return;
+    }
+    // a plain grab on an unselected node makes it the sole selection
+    if(!isFlowsLens() && !selectedIds.has(n.id)) selectOnly(n.id);
+    dragging=true; moved=false; sx=e.clientX; sy=e.clientY;
+    // move the whole selection when grabbing one of several selected nodes
+    const ids = (!isFlowsLens() && selectedIds.has(n.id) && selectedIds.size>1)
+      ? [...selectedIds] : [n.id];
+    group = ids.map(id=>nodeEls[id]).filter(Boolean).map(g=>({
+      el:g, id:g.dataset.id, ox:parseFloat(g.style.left), oy:parseFloat(g.style.top) }));
+    el.setPointerCapture(e.pointerId); el.classList.add('dragging');
+  });
+  el.addEventListener('pointermove',(e)=>{
+    if(!dragging) return;
+    const dx=e.clientX-sx, dy=e.clientY-sy;
+    if(Math.abs(dx)>3||Math.abs(dy)>3) moved=true;
+    group.forEach(g=>{ g.el.style.left=Math.max(0,g.ox+dx)+'px'; g.el.style.top=Math.max(0,g.oy+dy)+'px'; });
+    renderWire();
+  });
+  el.addEventListener('pointerup',(e)=>{
+    if(!dragging) return; dragging=false; el.classList.remove('dragging');
+    if(moved){
+      group.forEach(g=>localStorage.setItem(LS.pos(currentLens,g.id),
+        JSON.stringify({x:parseFloat(g.el.style.left),y:parseFloat(g.el.style.top)})));
+      growCanvas();
+    } else {
+      if(!isFlowsLens()) selectOnly(n.id);
+      openDetail(n);
+    }
+  });
+}
+
+/* ── Selection helpers ─────────────────────────────────────────────────── */
+function updateSelectionStyles(){
+  Object.entries(nodeEls).forEach(([id,el])=>el.classList.toggle('selected', selectedIds.has(id)));
+}
+function updateSelBar(){
+  const bar=$('#selBar'); if(!bar) return;
+  if(isFlowsLens() || !selectedIds.size){ bar.style.display='none'; return; }
+  bar.style.display=''; $('#selCount').textContent=`${selectedIds.size} selected`;
+}
+function selectOnly(id){ selectedIds.clear(); selectedIds.add(id); updateSelectionStyles(); updateSelBar(); renderWire(); }
+function toggleSel(id){
+  selectedIds.has(id)?selectedIds.delete(id):selectedIds.add(id);
+  updateSelectionStyles(); updateSelBar(); renderWire();
+}
+function clearSelection(){ selectedIds.clear(); updateSelectionStyles(); updateSelBar(); renderWire(); }
+function selectAllVisible(){
+  selectedIds.clear();
+  LENSES[currentLens].nodes.forEach(n=>{ if(isVisible(n.id)) selectedIds.add(n.id); });
+  updateSelectionStyles(); updateSelBar(); renderWire();
+}
+function hideSelected(){
+  if(isFlowsLens() || !selectedIds.size) return;
+  selectedIds.forEach(id=>hidden.add(id)); selectedIds.clear();
+  saveToggleState(); closeDetail();
+  buildNodes(); buildHiddenList(); growCanvas(); updateSelBar(); renderWire();
+}
+
+/* ─────────────────────────── WIRE (edges + boundaries) ─────────────────── */
+const NS='http://www.w3.org/2000/svg';
+function centerOf(id){
+  const el=nodeEls[id]; if(!el) return null;
+  return { x:el.offsetLeft+el.offsetWidth/2, y:el.offsetTop+el.offsetHeight/2,
+           w:el.offsetWidth, h:el.offsetHeight, l:el.offsetLeft, t:el.offsetTop };
+}
+// where a line from a→b crosses a's rectangle border
+function edgePoint(a,b){
+  const dx=b.x-a.x, dy=b.y-a.y;
+  if(dx===0&&dy===0) return {x:a.x,y:a.y};
+  const hw=a.w/2+4, hh=a.h/2+4;
+  const sx=dx===0?Infinity:hw/Math.abs(dx);
+  const sy=dy===0?Infinity:hh/Math.abs(dy);
+  const s=Math.min(sx,sy);
+  return { x:a.x+dx*s, y:a.y+dy*s };
+}
+function isVisible(id){
+  const n=LENSES[currentLens].nodes.find(x=>x.id===id);
+  return n && enabled.types.has(n.type) && !hidden.has(id);
+}
+function renderWire(){
+  if(LENSES[currentLens].flows) return renderFlowWire();
+  const L=LENSES[currentLens];
+  // wipe everything except defs
+  [...wire.querySelectorAll('.edge,.edge-label,.boundary-rect,.boundary-label')].forEach(e=>e.remove());
+
+  // boundaries first (behind)
+  if(L.hasBoundaries && showBoundaries){
+    Object.entries(L.boundaries).forEach(([name,ids])=>{
+      const pts=ids.filter(isVisible).map(centerOf).filter(Boolean);
+      if(!pts.length) return;
+      let minX=1e9,minY=1e9,maxX=-1e9,maxY=-1e9;
+      pts.forEach(p=>{ minX=Math.min(minX,p.l); minY=Math.min(minY,p.t);
+        maxX=Math.max(maxX,p.l+p.w); maxY=Math.max(maxY,p.t+p.h); });
+      const pad=22;
+      const r=document.createElementNS(NS,'rect');
+      r.setAttribute('class','boundary-rect');
+      r.setAttribute('x',minX-pad); r.setAttribute('y',minY-pad-12);
+      r.setAttribute('width',(maxX-minX)+pad*2); r.setAttribute('height',(maxY-minY)+pad*2+12);
+      r.setAttribute('rx',16);
+      wire.appendChild(r);
+      const lab=document.createElementNS(NS,'text');
+      lab.setAttribute('class','boundary-label');
+      lab.setAttribute('x',minX-pad+4); lab.setAttribute('y',minY-pad-12+2);
+      lab.textContent=name; wire.appendChild(lab);
+    });
+  }
+
+  // edges
+  L.edges.forEach(e=>{
+    if(!enabled.conns.has(e.type)) return;
+    if(!isVisible(e.from)||!isVisible(e.to)) return;
+    const a=centerOf(e.from), b=centerOf(e.to); if(!a||!b) return;
+    const c=L.conns[e.type];
+    const p1=edgePoint(a,b), p2=edgePoint(b,a);
+    const line=document.createElementNS(NS,'path');
+    line.setAttribute('class','edge');
+    line.setAttribute('d',`M${p1.x},${p1.y} L${p2.x},${p2.y}`);
+    line.setAttribute('stroke',c.color);
+    if(c.dashed) line.setAttribute('stroke-dasharray','6 5');
+    line.setAttribute('marker-end',`url(#arr-${e.type})`);
+    const hasSel=selectedIds.size>0;
+    const isSel=selectedIds.has(e.from)||selectedIds.has(e.to);
+    line.style.opacity = !hasSel ? .85 : (isSel?1:.18);
+    if(isSel) line.setAttribute('stroke-width','2.6');
+    wire.appendChild(line);
+    if(showLabels && e.label){
+      const lab=document.createElementNS(NS,'text');
+      lab.setAttribute('class','edge-label');
+      lab.setAttribute('x',(p1.x+p2.x)/2); lab.setAttribute('y',(p1.y+p2.y)/2-3);
+      lab.setAttribute('text-anchor','middle'); lab.textContent=e.label;
+      lab.style.opacity = !hasSel||isSel?1:.2;
+      wire.appendChild(lab);
+    }
+  });
+}
+
+function growCanvas(){
+  // make sure canvas extends past the furthest node
+  let maxX=1200,maxY=700;
+  Object.values(nodeEls).forEach(el=>{
+    maxX=Math.max(maxX,el.offsetLeft+el.offsetWidth);
+    maxY=Math.max(maxY,el.offsetTop+el.offsetHeight);
+  });
+  canvas.style.width=(maxX+120)+'px';
+  canvas.style.height=(maxY+160)+'px';
+}
+
+/* ──────────────────────────────── FLOWS ───────────────────────────────── */
+function buildFlowControls(){
+  const host=$('#flowList'); host.innerHTML='';
+  LENSES[currentLens].flows.forEach((f,i)=>{
+    const b=document.createElement('button');
+    b.className='flow-pick'; b.setAttribute('aria-selected', i===activeFlowIdx);
+    b.innerHTML=`<span class="fp-name">${f.name}</span><span class="fp-sum">${f.summary}</span>`;
+    b.onclick=()=>{ stopPlay(); setFlow(i,true); buildFlowControls(); };
+    host.appendChild(b);
+  });
+  const leg=$('#flowLegend'); leg.innerHTML='';
+  Object.values(LENSES[currentLens].conns).forEach(c=>{
+    const row=document.createElement('div'); row.className='fl-leg-row'; row.style.color=c.color;
+    row.innerHTML=`<span class="line-swatch ${c.dashed?'dashed':''}" style="opacity:1"></span><span style="color:var(--ink2)">${c.label}</span>`;
+    leg.appendChild(row);
+  });
+}
+function buildStepPills(){
+  const host=$('#fsSteps'); host.innerHTML='';
+  LENSES[currentLens].flows[activeFlowIdx].steps.forEach((s,i)=>{
+    const p=document.createElement('button');
+    p.className='fs-pill'; p.textContent=i+1; p.title=s.ux;
+    p.onclick=()=>{ stopPlay(); setStep(i); };
+    host.appendChild(p);
+  });
+}
+function setFlow(i,reset){
+  activeFlowIdx=i;
+  if(reset) currentStep=0;
+  buildStepPills();
+  renderFlowStep();
+}
+function setStep(i){
+  const len=LENSES[currentLens].flows[activeFlowIdx].steps.length;
+  currentStep=Math.max(0,Math.min(len-1,i));
+  renderFlowStep();
+}
+function renderFlowStep(){
+  const flow=LENSES[currentLens].flows[activeFlowIdx];
+  const step=flow.steps[currentStep];
+  Object.entries(nodeEls).forEach(([id,el])=>{
+    el.classList.remove('fl-active','fl-dim');
+    if(id===step.from||id===step.to) el.classList.add('fl-active'); else el.classList.add('fl-dim');
+  });
+  renderFlowWire();
+  [...document.querySelectorAll('.fs-pill')].forEach((p,i)=>{
+    p.classList.toggle('active', i===currentStep);
+    p.classList.toggle('done', i<currentStep);
+  });
+  $('#fsUx').textContent=step.ux;
+  $('#fsSys').textContent=step.sys;
+  $('#fsTables').innerHTML = step.tables&&step.tables.length
+    ? 'touches '+step.tables.map(t=>`<code>${t}</code>`).join(' ') : '';
+  // header: flow name · current hop (layer → layer · kind) · counter
+  const L=LENSES[currentLens];
+  const nameOf=(id)=>{ const n=L.nodes.find(x=>x.id===id); return n?n.name:id; };
+  const c=L.conns[step.type];
+  $('#fsFlowName').textContent=flow.name;
+  $('#fsHop').innerHTML=`<span class="fs-dot" style="background:${c.color}"></span>`+
+    `<span>${nameOf(step.from)}</span><span class="fs-hop-arrow">→</span><span>${nameOf(step.to)}</span>`+
+    `<span class="fs-hop-kind">${c.label}</span>`;
+  $('#fsCounter').textContent=`Step ${currentStep+1} / ${flow.steps.length}`;
+  const sc=$('#flowStepCount'); if(sc) sc.textContent=`Step ${currentStep+1} / ${flow.steps.length}`;
+}
+function renderFlowWire(){
+  [...wire.querySelectorAll('.edge,.edge-label,.boundary-rect,.boundary-label')].forEach(e=>e.remove());
+  const flow=LENSES[currentLens].flows[activeFlowIdx];
+  const drawEdge=(s,state)=>{
+    const a=centerOf(s.from), b=centerOf(s.to); if(!a||!b) return;
+    const c=LENSES[currentLens].conns[s.type];
+    const p1=edgePoint(a,b), p2=edgePoint(b,a);
+    const line=document.createElementNS(NS,'path');
+    line.setAttribute('class','edge fl-'+state);
+    line.setAttribute('d',`M${p1.x},${p1.y} L${p2.x},${p2.y}`);
+    line.setAttribute('stroke',c.color);
+    if(state==='active') line.setAttribute('stroke-dasharray','7 5');
+    else if(c.dashed) line.setAttribute('stroke-dasharray','6 5');
+    line.setAttribute('marker-end',`url(#arr-${s.type})`);
+    wire.appendChild(line);
+  };
+  // draw order ensures the active hop sits on top of any overlapping path
+  flow.steps.forEach((s,i)=>{ if(i>currentStep) drawEdge(s,'todo'); });
+  flow.steps.forEach((s,i)=>{ if(i<currentStep) drawEdge(s,'done'); });
+  flow.steps.forEach((s,i)=>{ if(i===currentStep) drawEdge(s,'active'); });
+}
+function updatePlayBtn(){ const b=$('#playBtn'); if(b) b.textContent = playing ? '⏸ Pause' : '▶ Play'; }
+function play(){
+  const steps=LENSES[currentLens].flows[activeFlowIdx].steps;
+  if(currentStep>=steps.length-1) setStep(0); // restart from the top
+  playing=true; updatePlayBtn();
+  clearInterval(playTimer);
+  playTimer=setInterval(()=>{
+    const steps=LENSES[currentLens].flows[activeFlowIdx].steps;
+    if(currentStep>=steps.length-1){ stopPlay(); return; }
+    setStep(currentStep+1);
+  },1700);
+}
+function stopPlay(){ playing=false; clearInterval(playTimer); playTimer=null; updatePlayBtn(); }
+function togglePlay(){ playing?stopPlay():play(); }
+
+/* ──────────────────────────────── EXPORT ──────────────────────────────── */
+function exportPNG(){
+  const svgNS='http://www.w3.org/2000/svg';
+  // tight bounds around visible nodes (+ margin) so the export isn't mostly empty canvas
+  let minX=1e9,minY=1e9,maxX=-1e9,maxY=-1e9;
+  const vis=Object.entries(nodeEls).filter(([,el])=>el.style.display!=='none');
+  vis.forEach(([,el])=>{ minX=Math.min(minX,el.offsetLeft); minY=Math.min(minY,el.offsetTop);
+    maxX=Math.max(maxX,el.offsetLeft+el.offsetWidth); maxY=Math.max(maxY,el.offsetTop+el.offsetHeight); });
+  const m=48; minX-=m; minY-=m; maxX+=m; maxY+=m;
+  const w=Math.ceil(maxX-minX), h=Math.ceil(maxY-minY);
+
+  const out=document.createElementNS(svgNS,'svg');
+  out.setAttribute('xmlns',svgNS); out.setAttribute('width',w); out.setAttribute('height',h);
+  out.setAttribute('viewBox',`${minX} ${minY} ${w} ${h}`);
+  const bg=document.createElementNS(svgNS,'rect');
+  bg.setAttribute('x',minX); bg.setAttribute('y',minY); bg.setAttribute('width',w); bg.setAttribute('height',h);
+  bg.setAttribute('fill','#f3f5f2'); out.appendChild(bg);
+  // wires (defs + edges + boundaries) exactly as drawn
+  [...wire.childNodes].forEach(n=>{ if(n.nodeType===1) out.appendChild(n.cloneNode(true)); });
+  // nodes as rect + text
+  const L=LENSES[currentLens];
+  const mkText=(g,tx,x,y,size,weight,color,italic)=>{ const e=document.createElementNS(svgNS,'text');
+    e.setAttribute('x',x); e.setAttribute('y',y); e.setAttribute('fill',color);
+    e.setAttribute('font-family', italic?'Lora, Georgia, serif':'Schibsted Grotesk, system-ui, sans-serif');
+    e.setAttribute('font-size',size); e.setAttribute('font-weight',weight);
+    if(italic) e.setAttribute('font-style','italic'); e.textContent=tx; g.appendChild(e); };
+  vis.forEach(([id,el])=>{
+    const n=L.nodes.find(z=>z.id===id); if(!n) return; const t=L.types[n.type];
+    const x=el.offsetLeft, y=el.offsetTop, nw=el.offsetWidth, nh=el.offsetHeight;
+    const g=document.createElementNS(svgNS,'g');
+    const r=document.createElementNS(svgNS,'rect');
+    r.setAttribute('x',x); r.setAttribute('y',y); r.setAttribute('width',nw); r.setAttribute('height',nh);
+    r.setAttribute('rx',12); r.setAttribute('fill','#ffffff'); r.setAttribute('stroke','rgba(13,23,20,.10)'); g.appendChild(r);
+    const bar=document.createElementNS(svgNS,'rect');
+    bar.setAttribute('x',x); bar.setAttribute('y',y); bar.setAttribute('width',4); bar.setAttribute('height',nh);
+    bar.setAttribute('fill',t.color); g.appendChild(bar);
+    mkText(g, t.label.toUpperCase(), x+13, y+19, 9, 700, t.color, false);
+    mkText(g, n.name, x+13, y+38, 14, 700, '#0d1714', false);
+    if(n.sub) mkText(g, n.sub, x+13, y+54, 11, 400, '#5a6359', true);
+    if(n.endpoints){
+      const mc={GET:C.fresh,POST:C.persimmon,PUT:C.green,PATCH:C.ink3,DEL:C.warn};
+      [...el.querySelectorAll('.ep')].forEach((epEl,idx)=>{
+        const ep=n.endpoints[idx]; const ey=y+epEl.offsetTop, mw=34;
+        const mr=document.createElementNS(svgNS,'rect');
+        mr.setAttribute('x',x+13); mr.setAttribute('y',ey); mr.setAttribute('width',mw); mr.setAttribute('height',13);
+        mr.setAttribute('rx',3); mr.setAttribute('fill',mc[ep.m]||C.mute); g.appendChild(mr);
+        const mt=document.createElementNS(svgNS,'text');
+        mt.setAttribute('x',x+13+mw/2); mt.setAttribute('y',ey+9.5); mt.setAttribute('text-anchor','middle');
+        mt.setAttribute('font-family','Schibsted Grotesk, sans-serif'); mt.setAttribute('font-size',8); mt.setAttribute('font-weight',800); mt.setAttribute('fill','#fff');
+        mt.textContent=ep.m; g.appendChild(mt);
+        mkText(g, ep.p, x+13+mw+6, ey+10, 10, 400, '#3a443e', false);
+      });
+    }
+    out.appendChild(g);
+  });
+
+  const xml=new XMLSerializer().serializeToString(out);
+  const url=URL.createObjectURL(new Blob([xml],{type:'image/svg+xml;charset=utf-8'}));
+  const img=new Image(); const scale=2;
+  img.onload=()=>{
+    const cv=document.createElement('canvas'); cv.width=w*scale; cv.height=h*scale;
+    const ctx=cv.getContext('2d'); ctx.scale(scale,scale); ctx.drawImage(img,0,0);
+    URL.revokeObjectURL(url);
+    cv.toBlob(b=>{ const a=document.createElement('a'); a.href=URL.createObjectURL(b);
+      a.download=`eat-thing-${currentLens}.png`; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(a.href),2000); });
+  };
+  img.onerror=()=>{ URL.revokeObjectURL(url); alert('Export failed — try again.'); };
+  img.src=url;
+}
+
+/* ──────────────────────────────── DETAIL ──────────────────────────────── */
+function openDetail(n){
+  const L=LENSES[currentLens]; const t=L.types[n.type];
+  selectedId=n.id;
+  $('#dType').textContent=t.label; $('#dType').style.color=t.color; $('#dType').style.borderColor=t.color;
+  $('#dName').textContent=n.name;
+  $('#dDesc').textContent=n.desc||'';
+  if(n.tech){ $('#dTechBlock').style.display=''; $('#dTech').textContent=n.tech; }
+  else $('#dTechBlock').style.display='none';
+  if(n.endpoints&&n.endpoints.length){
+    $('#dEpBlock').style.display='';
+    $('#dEps').innerHTML=n.endpoints.map(e=>{
+      const full=(n.sub||'')+(e.p==='/'?'':e.p);
+      return `<div class="ep d-ep"><span class="ep-m ep-${e.m}">${e.m}</span><span class="ep-p">${full}</span></div>`;
+    }).join('');
+  } else $('#dEpBlock').style.display='none';
+  if(n.decisions&&n.decisions.length){
+    $('#dDecBlock').style.display='';
+    $('#dDec').innerHTML=n.decisions.map(d=>`<span class="chip d">${d}</span>`).join('');
+  } else $('#dDecBlock').style.display='none';
+  // connections
+  const conns=[];
+  L.edges.forEach(e=>{
+    if(e.from===n.id){ const o=L.nodes.find(x=>x.id===e.to); if(o) conns.push({dir:'→',name:o.name,ct:L.conns[e.type].label}); }
+    if(e.to===n.id){ const o=L.nodes.find(x=>x.id===e.from); if(o) conns.push({dir:'←',name:o.name,ct:L.conns[e.type].label}); }
+  });
+  $('#dConns').innerHTML = conns.length
+    ? conns.map(c=>`<li><span class="arrow">${c.dir}</span><span>${c.name}</span><span class="ct">${c.ct}</span></li>`).join('')
+    : '<li style="color:var(--mute)">no connections in this lens</li>';
+  // hide / show toggle (not on flow lenses)
+  const actions=$('#dActions'), hideBtn=$('#dHideBtn');
+  if(isFlowsLens()){ actions.style.display='none'; }
+  else {
+    actions.style.display='';
+    const isHidden=hidden.has(n.id);
+    hideBtn.classList.toggle('is-hidden', isHidden);
+    hideBtn.innerHTML = isHidden
+      ? `${EYE_SVG}<span>Show element</span>`
+      : `${EYE_OFF_SVG}<span>Hide element</span>`;
+    hideBtn.onclick=()=>toggleHideFromDetail(n);
+  }
+  detail.classList.add('open');
+  renderWire();
+}
+const EYE_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+const EYE_OFF_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+function toggleHideFromDetail(n){
+  if(hidden.has(n.id)){
+    hidden.delete(n.id); saveToggleState();
+    buildNodes(); buildHiddenList(); growCanvas();
+    selectOnly(n.id);
+  } else {
+    hidden.add(n.id); selectedIds.delete(n.id); saveToggleState();
+    buildNodes(); buildHiddenList(); growCanvas();
+  }
+  openDetail(n); // refresh the button label + canvas state, keep panel open
+}
+function closeDetail(){
+  detail.classList.remove('open'); selectedId=null;
+  renderWire();
+}
+$('#detailClose').onclick=()=>{ closeDetail(); clearSelection(); };
+
+/* ──────────────────────────────── RENDER ──────────────────────────────── */
+function render(){ renderWire(); }
+
+function switchLens(key){
+  stopPlay();
+  currentLens=key; localStorage.setItem(LS.lens,key);
+  closeDetail(); clearSelection();
+  document.querySelectorAll('.lens-tab').forEach((b,i)=>{
+    b.setAttribute('aria-selected', Object.keys(LENSES)[i]===key);
+  });
+  const L=LENSES[key];
+  $('#lensTitle').innerHTML=`${L.title}<span class="dot">.</span>`;
+  $('#lensDesc').textContent=L.desc;
+  loadToggleState(key);
+
+  const isFlows = !!LENSES[key].flows;
+  if(isFlows){ activeFlowIdx=0; currentStep=0; }
+  $('#typeGroup').style.display   = isFlows?'none':'';
+  $('#connGroup').style.display   = isFlows?'none':'';
+  $('#optGroup').style.display    = isFlows?'none':'';
+  $('#flowGroup').style.display   = isFlows?'':'none';
+  $('#flowStrip').style.display   = isFlows?'':'none';
+  $('#hint').style.display        = isFlows?'none':'';
+  $('#hint').textContent          = 'drag to box-select · ⇧/⌘-click to add · H hides · positions auto-save';
+
+  if(isFlows){ $('#hiddenGroup').style.display='none'; buildFlowControls(); }
+  else buildToggles();
+  buildNodes();
+  growCanvas();
+  if(isFlows) setFlow(activeFlowIdx,true); else renderWire();
+  wrap.scrollTo(0,0);
+}
+
+/* options */
+$('#optBoundaries').onchange=(e)=>{ showBoundaries=e.target.checked; saveToggleState(); renderWire(); };
+$('#optLabels').onchange=(e)=>{ showLabels=e.target.checked; saveToggleState(); renderWire(); };
+$('#resetBtn').onclick=()=>{
+  LENSES[currentLens].nodes.forEach(n=>localStorage.removeItem(LS.pos(currentLens,n.id)));
+  buildNodes(); growCanvas(); renderWire();
+};
+
+/* ── Marquee box-select on empty canvas ─────────────────────────────────── */
+let marquee=null, mqStart=null, mqBase=null;
+function canvasCoords(e){ const r=canvas.getBoundingClientRect(); return {x:e.clientX-r.left, y:e.clientY-r.top}; }
+function marqueeHits(x,y,w,h){
+  const hits=new Set();
+  Object.entries(nodeEls).forEach(([id,el])=>{
+    const l=el.offsetLeft, t=el.offsetTop, r=l+el.offsetWidth, b=t+el.offsetHeight;
+    if(l<x+w && r>x && t<y+h && b>y) hits.add(id);
+  });
+  return hits;
+}
+wrap.addEventListener('pointerdown',(e)=>{
+  if(e.button!==0) return;
+  if(!(e.target===wrap||e.target===canvas||e.target===wire)) return; // empty space only
+  if(isFlowsLens()){ closeDetail(); clearSelection(); return; }
+  mqBase = (e.shiftKey||e.metaKey||e.ctrlKey) ? new Set(selectedIds) : new Set();
+  mqStart = canvasCoords(e);
+  marquee=document.createElement('div'); marquee.className='marquee';
+  marquee.style.left=mqStart.x+'px'; marquee.style.top=mqStart.y+'px';
+  canvas.appendChild(marquee);
+  wrap.setPointerCapture(e.pointerId);
+});
+wrap.addEventListener('pointermove',(e)=>{
+  if(!marquee) return;
+  const c=canvasCoords(e);
+  const x=Math.min(c.x,mqStart.x), y=Math.min(c.y,mqStart.y);
+  const w=Math.abs(c.x-mqStart.x), h=Math.abs(c.y-mqStart.y);
+  marquee.style.left=x+'px'; marquee.style.top=y+'px'; marquee.style.width=w+'px'; marquee.style.height=h+'px';
+  selectedIds.clear(); mqBase.forEach(id=>selectedIds.add(id));
+  marqueeHits(x,y,w,h).forEach(id=>selectedIds.add(id));
+  updateSelectionStyles(); updateSelBar(); renderWire();
+});
+wrap.addEventListener('pointerup',()=>{
+  if(!marquee) return;
+  const wasClick = parseFloat(marquee.style.width||0)<4 && parseFloat(marquee.style.height||0)<4;
+  marquee.remove(); marquee=null;
+  if(wasClick){ clearSelection(); closeDetail(); }
+});
+
+/* selection-bar actions */
+$('#selHide').onclick=hideSelected;
+$('#selClear').onclick=()=>{ clearSelection(); closeDetail(); };
+$('#showAllBtn').onclick=()=>{ if(hidden.size) showNodes([...hidden]); };
+
+/* keyboard: H hides selection, Esc clears, ⌘/Ctrl-A selects all visible */
+window.addEventListener('keydown',(e)=>{
+  if(/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+  if(isFlowsLens()) return;
+  if(e.key==='Escape'){ clearSelection(); closeDetail(); return; }
+  if((e.metaKey||e.ctrlKey) && (e.key==='a'||e.key==='A')){ e.preventDefault(); selectAllVisible(); return; }
+  if((e.key==='h'||e.key==='H'||e.key==='Backspace'||e.key==='Delete') && selectedIds.size){
+    e.preventDefault(); hideSelected();
+  }
+});
+
+/* flow playback controls */
+$('#playBtn').onclick=togglePlay;
+$('#prevBtn').onclick=()=>{ stopPlay(); setStep(currentStep-1); };
+$('#nextBtn').onclick=()=>{ stopPlay(); setStep(currentStep+1); };
+$('#restartBtn').onclick=()=>{ stopPlay(); setStep(0); };
+$('#exportBtn').onclick=exportPNG;
+
+/* ──────────────────────────────── INIT ────────────────────────────────── */
+ensureDefs();
+buildTabs();
+switchLens(currentLens);
+window.addEventListener('resize',renderWire);
+</script>
+</body>
+</html>
