@@ -5,6 +5,13 @@ dist
 package-lock.json
 .DS_Store
 
+# .NET build output
+[Bb]in/
+[Oo]bj/
+
+# JetBrains IDE state
+.idea/
+
 # Environment — never commit real keys
 .env
 .env.local

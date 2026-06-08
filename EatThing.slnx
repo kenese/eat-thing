@@ -1,0 +1,8 @@
+<Solution>
+    <Folder Name="/apps/dotnet-server/src/">
+        <Project Path="apps/dotnet-server/src/EatThing.Api/EatThing.Api.csproj" />
+    </Folder>
+    <Folder Name="/apps/dotnet-server/tests/">
+        <Project Path="apps/dotnet-server/tests/EatThing.Api.Tests/EatThing.Api.Tests.csproj" />
+    </Folder>
+</Solution>

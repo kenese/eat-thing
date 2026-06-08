@@ -7,7 +7,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
-var connectionString = builder.Configuration.GetConnectionString("EatThing") + ";Pooling=false";
+var connectionString = builder.Configuration.GetConnectionString("EatThing");
 
 if (string.IsNullOrWhiteSpace(connectionString))
 {
