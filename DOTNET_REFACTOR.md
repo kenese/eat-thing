@@ -189,7 +189,7 @@ Do not attempt a big-bang rewrite.
 
 ## Phase 0: Learning And Groundwork
 
-- [ ] Install or confirm the local .NET SDK.
+- [x] Install or confirm the local .NET SDK.
 
   Run:
 
@@ -203,7 +203,7 @@ Do not attempt a big-bang rewrite.
   - Confirm whether the installed SDK is suitable.
   - Avoid changing repo files in this step.
 
-- [ ] Create a small scratch ASP.NET Core API outside the repo or in a disposable folder.
+- [x] Create a small scratch ASP.NET Core API outside the repo or in a disposable folder.
 
   Purpose:
 
@@ -217,7 +217,7 @@ Do not attempt a big-bang rewrite.
   - Keep this separate from eat-thing.
   - Do not introduce architecture yet.
 
-- [ ] Read the current backend shape.
+- [x] Read the current backend shape.
 
   Files to inspect:
 
@@ -239,14 +239,22 @@ Do not attempt a big-bang rewrite.
 
 ## Phase 1: Scaffold The .NET Server
 
-- [ ] Create `apps/dotnet-server`.
+- [x] Create `apps/dotnet-server`.
+
+  Status:
+
+  - `apps/dotnet-server/EatThing.slnx` exists.
+  - `src/EatThing.Api/EatThing.Api.csproj` exists.
+  - `tests/EatThing.Api.Tests/EatThing.Api.Tests.csproj` exists.
+  - The eat-thing health endpoint exists.
 
   Target responsibilities:
 
   - ASP.NET Core entrypoint.
-  - Health endpoint.
   - Configuration loading.
   - Test project.
+
+- [x] Add the first eat-thing endpoint: `GET /healthz`.
 
   Expected first endpoint:
 
@@ -260,7 +268,7 @@ Do not attempt a big-bang rewrite.
   { "status": "ok" }
   ```
 
-- [ ] Add repo scripts without replacing the TypeScript server.
+- [x] Add repo scripts without replacing the TypeScript server.
 
   Candidate root scripts:
 
@@ -276,7 +284,7 @@ Do not attempt a big-bang rewrite.
   - Check existing `package.json` scripts first.
   - Avoid breaking `pnpm dev`, `pnpm test`, or `pnpm test:e2e`.
 
-- [ ] Add a first test for `/healthz`.
+- [x] Add a first test for `/healthz`.
 
   Learning goal:
 
@@ -292,7 +300,7 @@ Do not attempt a big-bang rewrite.
 
 ## Phase 2: Database Connectivity
 
-- [ ] Connect to the existing Postgres database read-only first.
+- [x] Connect to the existing Postgres database read-only first.
 
   Learning goal:
 
@@ -305,7 +313,7 @@ Do not attempt a big-bang rewrite.
   - Do not create migrations yet.
   - Do not write data yet.
 
-- [ ] Model only the first required tables.
+- [x] Model only the first required tables.
 
   Start with:
 
@@ -703,4 +711,3 @@ Given a proposed food name, category, and default unit:
 - otherwise return review with the proposed food and up to five partial matches;
 - never create a canonical food implicitly.
 ```
-

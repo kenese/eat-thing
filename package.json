@@ -4,11 +4,13 @@
   "scripts": {
     "dev": "turbo dev --filter=!@eat/scraper",
     "dev:scraper": "turbo dev --filter=@eat/scraper",
+    "dev:dotnet": "dotnet watch --project apps/dotnet-server/src/EatThing.Api",
     "build": "turbo build",
     "lint": "turbo lint",
     "clean": "turbo clean",
     "test": "turbo test",
     "test:e2e": "turbo test:e2e",
+    "test:dotnet": "dotnet test apps/dotnet-server",
     "storybook": "turbo storybook"
   },
   "devDependencies": {
