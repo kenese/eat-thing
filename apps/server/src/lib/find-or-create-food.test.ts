@@ -4,7 +4,6 @@ const mocks = vi.hoisted(() => ({
   selectResult: [] as Array<{ id: string; name?: string; defaultUnit?: string; category?: string | null }>,
   insertResult: [{ id: 'new-uuid' }] as { id: string }[],
 }));
-
 vi.mock('uuid', () => ({ v4: () => 'new-uuid' }));
 vi.mock('../db/index.js', () => {
   const selectChain = {
