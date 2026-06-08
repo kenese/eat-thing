@@ -1,9 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
 using EatThing.Api.Data;
-using Microsoft.AspNetCore.Hosting;
+using EatThing.Api.Tests.Infrastructure;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Testcontainers.PostgreSql;
 
@@ -11,8 +10,7 @@ namespace EatThing.Api.Tests;
 
 public sealed class FoodsEndpointTests : IAsyncLifetime
 {
-    private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder()
-        .WithImage("postgres:16-alpine")
+    private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:16-alpine")
         .WithDatabase("eatthing_test")
         .WithUsername("postgres")
         .WithPassword("postgres")
@@ -23,6 +21,7 @@ public sealed class FoodsEndpointTests : IAsyncLifetime
     public async Task InitializeAsync()
     {
         await _postgres.StartAsync();
+        await DrizzleTestSchema.PushAsync(_postgres.GetConnectionString());
 
         _factory = new WebApplicationFactory<Program>()
             .WithWebHostBuilder(builder =>
@@ -34,24 +33,10 @@ public sealed class FoodsEndpointTests : IAsyncLifetime
                     using var scope = services.BuildServiceProvider().CreateScope();
                     var db = scope.ServiceProvider.GetRequiredService<EatThingDbContext>();
 
-                    db.Database.ExecuteSqlRaw("""
-                        CREATE TABLE canonical_foods (
-                            id uuid PRIMARY KEY,
-                            name text NOT NULL UNIQUE,
-                            default_unit text NOT NULL,
-                            category text NOT NULL DEFAULT 'other',
-                            aliases text[] NOT NULL DEFAULT ARRAY[]::text[],
-                            density_g_per_ml double precision,
-                            count_to_grams double precision,
-                            created_at timestamp NOT NULL DEFAULT now()
-                        );
-                    """);
-
                     db.CanonicalFoods.AddRange(
                         new CanonicalFood { Id = Guid.Parse("11111111-1111-1111-1111-111111111111"), Name = "Tomato", DefaultUnit = "g", Category = "produce" },
                         new CanonicalFood { Id = Guid.Parse("22222222-2222-2222-2222-222222222222"), Name = "Flour", DefaultUnit = "g", Category = "pantry" }
                     );
-
                     db.SaveChanges();
                 });
             });
