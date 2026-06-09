@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ItemForm } from './ItemForm';
+import type { InventoryRow } from '@eat/shared';
 
 const hooks = vi.hoisted(() => ({
   useFoodSearch: vi.fn(),
@@ -55,6 +56,39 @@ describe('ItemForm taxonomy review', () => {
       canonicalFoodId: 'food-1',
       qty: 1,
       unit: 'g',
+    })));
+  });
+
+  it('submits category changes when editing an inventory item', async () => {
+    const mutateAsync = vi.fn().mockResolvedValue({});
+    hooks.useAddInventoryItem.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
+    hooks.useUpdateInventoryItem.mockReturnValue({ mutateAsync, isPending: false });
+    hooks.useCreateFood.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
+
+    const item: InventoryRow = {
+      id: 'item-1',
+      householdId: 'hh-1',
+      canonicalFoodId: 'food-1',
+      foodName: 'firm tofu',
+      qty: 2,
+      unit: 'count',
+      brand: null,
+      category: 'other',
+      purchasedAt: null,
+      expiresAt: null,
+      createdAt: '2026-06-09T00:00:00.000Z',
+      updatedAt: '2026-06-09T00:00:00.000Z',
+    };
+
+    render(<ItemForm mode="edit" item={item} onClose={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText(/category/i), { target: { value: 'pantry' } });
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
+
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalledWith(expect.objectContaining({
+      qty: 2,
+      unit: 'count',
+      category: 'pantry',
     })));
   });
 });

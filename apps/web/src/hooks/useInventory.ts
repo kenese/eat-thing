@@ -33,7 +33,10 @@ export function useUpdateInventoryItem(id: string) {
   return useMutation({
     mutationFn: (data: UpdateInventoryItemInput) =>
       api.put<InventoryRow>(`/api/inventory/${id}`, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['inventory'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['inventory'] });
+      qc.invalidateQueries({ queryKey: ['shopping-list'] });
+    },
   });
 }
 

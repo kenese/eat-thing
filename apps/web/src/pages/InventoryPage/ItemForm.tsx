@@ -163,6 +163,7 @@ export function ItemForm({ mode, item, onClose }: ItemFormProps) {
         await updateMutation.mutateAsync({
           qty,
           unit: form.unit,
+          category: form.category,
           brand: form.brand.trim() || null,
           purchasedAt: form.purchasedAt || null,
           expiresAt: form.expiresAt || null,
@@ -214,9 +215,9 @@ export function ItemForm({ mode, item, onClose }: ItemFormProps) {
             </div>
           )}
 
-          {isNewFood && (
+          {(isNewFood || mode === 'edit') && (
             <div className="form-field">
-              <label className="form-label" htmlFor="category">Category *</label>
+              <label className="form-label" htmlFor="category">Category{isNewFood ? ' *' : ''}</label>
               <select
                 id="category"
                 className="form-select"

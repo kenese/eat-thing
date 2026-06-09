@@ -5,6 +5,10 @@ import request from 'supertest';
 const mocks = vi.hoisted(() => ({
   getSession: vi.fn(),
   membershipLimit: vi.fn(),
+  selectQueue: [] as unknown[],
+  updateSet: vi.fn(),
+  updateWhere: vi.fn(),
+  dbUpdate: vi.fn(),
 }));
 
 vi.mock('../auth.js', () => ({
@@ -35,15 +39,31 @@ vi.mock('../db/index.js', () => {
   };
   return {
     db: {
-      select: () => membershipChain,
+      select: vi.fn(() => mocks.selectQueue.shift() ?? membershipChain),
+      update: mocks.dbUpdate,
     },
   };
 });
 
 vi.mock('../db/schema/index.js', () => ({
   memberships: { householdId: 'householdId', userId: 'userId' },
-  inventoryItems: {},
-  canonicalFoods: {},
+  inventoryItems: {
+    id: 'inventoryItems.id',
+    householdId: 'inventoryItems.householdId',
+    canonicalFoodId: 'inventoryItems.canonicalFoodId',
+    qty: 'inventoryItems.qty',
+    unit: 'inventoryItems.unit',
+    brand: 'inventoryItems.brand',
+    purchasedAt: 'inventoryItems.purchasedAt',
+    expiresAt: 'inventoryItems.expiresAt',
+    createdAt: 'inventoryItems.createdAt',
+    updatedAt: 'inventoryItems.updatedAt',
+  },
+  canonicalFoods: {
+    id: 'canonicalFoods.id',
+    name: 'canonicalFoods.name',
+    category: 'canonicalFoods.category',
+  },
 }));
 
 vi.mock('../lib/find-or-create-food.js', () => ({
@@ -59,6 +79,12 @@ describe('inventory router', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.selectQueue = [];
+    mocks.dbUpdate.mockReturnValue({
+      set: mocks.updateSet.mockReturnValue({
+        where: mocks.updateWhere.mockResolvedValue(undefined),
+      }),
+    });
     app = express();
     app.use(express.json());
     app.use('/api/inventory', inventoryRouter);
@@ -122,5 +148,56 @@ describe('inventory router', () => {
     expect(res.body.code).toBe('taxonomy_review_required');
     expect(res.body.proposed).toEqual({ name: 'Dish Soap', category: 'other', defaultUnit: 'count' });
     expect(res.body.matches).toHaveLength(1);
+  });
+
+  it('updates the canonical food category when an inventory item category changes', async () => {
+    mocks.getSession.mockResolvedValue({ user: { id: 'user-1' } });
+    mocks.membershipLimit.mockResolvedValue([{ householdId: 'hh-1' }]);
+    mocks.selectQueue = [
+      {
+        from: () => ({
+          where: () => ({
+            limit: mocks.membershipLimit,
+          }),
+        }),
+      },
+      {
+        from: () => ({
+          where: () => ({
+            limit: vi.fn().mockResolvedValue([{
+              householdId: 'hh-1',
+              canonicalFoodId: 'food-1',
+            }]),
+          }),
+        }),
+      },
+      {
+        from: () => ({
+          innerJoin: () => ({
+            where: () => Promise.resolve([{
+              id: 'item-1',
+              householdId: 'hh-1',
+              canonicalFoodId: 'food-1',
+              foodName: 'firm tofu',
+              category: 'pantry',
+              qty: 2,
+              unit: 'count',
+              brand: null,
+              purchasedAt: null,
+              expiresAt: null,
+              createdAt: new Date('2026-06-09T00:00:00.000Z'),
+              updatedAt: new Date('2026-06-09T00:00:00.000Z'),
+            }]),
+          }),
+        }),
+      },
+    ];
+
+    const res = await request(app)
+      .put('/api/inventory/item-1')
+      .send({ qty: 2, unit: 'count', category: 'pantry' });
+
+    expect(res.status).toBe(200);
+    expect(mocks.updateSet).toHaveBeenCalledWith(expect.objectContaining({ category: 'pantry' }));
   });
 });

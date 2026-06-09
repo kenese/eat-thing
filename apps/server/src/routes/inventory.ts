@@ -29,6 +29,7 @@ const createSchema = z.object({
 const updateSchema = z.object({
   qty: z.number().positive().optional(),
   unit: canonicalUnitSchema.optional(),
+  category: z.enum(CATEGORIES).optional(),
   brand: z.string().trim().max(100).nullable().optional(),
   purchasedAt: z.string().nullable().optional(),
   expiresAt: z.string().nullable().optional(),
@@ -147,7 +148,10 @@ router.put('/:id', withHousehold, async (req, res) => {
 
   try {
     const [existing] = await db
-      .select({ householdId: inventoryItems.householdId })
+      .select({
+        householdId: inventoryItems.householdId,
+        canonicalFoodId: inventoryItems.canonicalFoodId,
+      })
       .from(inventoryItems)
       .where(eq(inventoryItems.id, id))
       .limit(1);
@@ -167,6 +171,13 @@ router.put('/:id', withHousehold, async (req, res) => {
         updatedAt: new Date(),
       })
       .where(eq(inventoryItems.id, id));
+
+    if (d.category !== undefined) {
+      await db
+        .update(canonicalFoods)
+        .set({ category: d.category })
+        .where(eq(canonicalFoods.id, existing.canonicalFoodId));
+    }
 
     const [full] = await db
       .select(cols)

@@ -68,6 +68,7 @@ export interface CreateInventoryItemInput {
 export interface UpdateInventoryItemInput {
   qty?: number;
   unit?: string;
+  category?: Category;
   brand?: string | null;
   purchasedAt?: string | null;
   expiresAt?: string | null;

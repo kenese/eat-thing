@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page, type Route } from '@playwright/test';
 
 function isoDate(d: Date) { return d.toISOString().slice(0, 10); }
 function localIsoDate(d: Date) {
@@ -281,6 +281,72 @@ test.describe('authenticated routes load', () => {
       canonicalFoodId: 'food-1',
       qty: 1,
       unit: 'count',
+    });
+  });
+
+  test('inventory edit can change an item category', async ({ page }) => {
+    let updateBody: unknown;
+
+    const handleInventoryRoute = async (route: Route) => {
+      if (route.request().method() === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify([
+            {
+              id: 'inv-tofu',
+              householdId: 'h-1',
+              canonicalFoodId: 'food-tofu',
+              foodName: 'firm tofu',
+              brand: null,
+              qty: 2,
+              unit: 'count',
+              category: 'other',
+              purchasedAt: null,
+              expiresAt: null,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            },
+          ]),
+        });
+        return;
+      }
+
+      updateBody = route.request().postDataJSON();
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'inv-tofu',
+          householdId: 'h-1',
+          canonicalFoodId: 'food-tofu',
+          foodName: 'firm tofu',
+          brand: null,
+          qty: 2,
+          unit: 'count',
+          category: 'pantry',
+          purchasedAt: null,
+          expiresAt: null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }),
+      });
+    };
+
+    await page.route('**/api/inventory/**', handleInventoryRoute);
+    await page.route('**/api/inventory*', handleInventoryRoute);
+
+    await page.goto('/inventory');
+    await page.getByRole('button', { name: /^edit$/i }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByLabel('Category').selectOption('pantry');
+    await dialog.getByRole('button', { name: /save changes/i }).click();
+
+    await expect.poll(() => updateBody).not.toBeUndefined();
+    expect(updateBody).toMatchObject({
+      qty: 2,
+      unit: 'count',
+      category: 'pantry',
     });
   });
 
