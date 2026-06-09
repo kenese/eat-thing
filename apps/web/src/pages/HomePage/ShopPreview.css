@@ -137,3 +137,9 @@
   font-style: italic;
   font-size: 18px;   /* CTA arrow glyph — between --text-body and --text-card-title */
 }
+
+@media (min-width: 1280px) {
+  .shop-preview {
+    height: 100%;
+  }
+}

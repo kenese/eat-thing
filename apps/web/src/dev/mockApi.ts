@@ -164,6 +164,9 @@ export function getDevMockResponse(path: string): unknown | null {
       sourceUrl: r.sourceUrl,
       sourceImage: r.sourceImage,
       ingredientCount: r.ingredients.length,
+      totalTimeMinutes: r.totalTimeMinutes,
+      tags: r.tags,
+      canonicalFoodIds: r.ingredients.map((ingredient) => ingredient.canonicalFoodId),
       createdAt: r.createdAt,
       updatedAt: r.updatedAt,
     }));

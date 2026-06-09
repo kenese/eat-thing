@@ -1,9 +1,5 @@
 .hero-band {
-  padding: var(--space-section) var(--gutter) var(--space-6);
-  display: grid;
-  grid-template-columns: 1.4fr 1fr;
-  gap: var(--space-section);
-  align-items: end;
+  min-width: 0;
 }
 
 /* ── Left column ── */
@@ -61,10 +57,5 @@
 
 
 @media (max-width: 768px) {
-  .hero-band {
-    grid-template-columns: 1fr;
-    gap: var(--space-6);
-    padding: var(--space-6) var(--gutter-mobile);
-  }
   .hero-headline { font-size: 48px; }   /* 48px mobile hero — no --text-hero-mobile token */
 }

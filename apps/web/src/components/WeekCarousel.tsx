@@ -295,6 +295,7 @@ export interface WeekCarouselProps {
   entriesByDay: Record<string, DayEntry[]>;
   loading?: boolean;
   scrollRef?: React.MutableRefObject<HTMLDivElement | null>;
+  initialScrollIso?: string | null;
   onDropRecipe?: (date: string, recipeId: string) => void;
   onMoveEntry?: (entryId: string, targetDate: string) => void;
   onUpdateEntry?: (id: string, patch: { servings?: number; status?: MealPlanEntry['status'] }) => void;
@@ -308,6 +309,7 @@ export function WeekCarousel({
   entriesByDay,
   loading,
   scrollRef: externalRef,
+  initialScrollIso,
   onDropRecipe,
   onMoveEntry,
   onUpdateEntry,
@@ -318,8 +320,19 @@ export function WeekCarousel({
   const internalRef = useRef<HTMLDivElement | null>(null);
   const scrollRef = externalRef ?? internalRef;
   const [expanded, setExpanded] = useState<ExpandedState | null>(null);
+  const lastInitialScrollIso = useRef<string | null>(null);
 
   const closeTray = useCallback(() => setExpanded(null), []);
+
+  const scrollToIso = useCallback((iso: string) => {
+    if (!scrollRef.current) return;
+    const target = scrollRef.current.querySelector<HTMLDivElement>(`.day-col[data-iso="${iso}"]`);
+    if (!target) return;
+
+    const parentLeft = scrollRef.current.getBoundingClientRect().left;
+    const targetLeft = target.getBoundingClientRect().left;
+    scrollRef.current.scrollLeft += targetLeft - parentLeft;
+  }, [scrollRef]);
 
   const toggleExpand = useCallback((iso: string, el: HTMLElement) => {
     setExpanded((cur) => {
@@ -344,6 +357,12 @@ export function WeekCarousel({
       window.removeEventListener('keydown', onKey);
     };
   }, [expanded, closeTray]);
+
+  useEffect(() => {
+    if (loading || !initialScrollIso || lastInitialScrollIso.current === initialScrollIso) return;
+    scrollToIso(initialScrollIso);
+    lastInitialScrollIso.current = initialScrollIso;
+  }, [initialScrollIso, loading, scrollToIso]);
 
   return (
     <>

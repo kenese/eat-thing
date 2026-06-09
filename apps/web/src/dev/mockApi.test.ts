@@ -16,6 +16,12 @@ describe('getDevMockResponse', () => {
     const plan = getDevMockResponse('/api/meal-plans/entries?from=2026-05-11&to=2026-05-27') as {
       entries: Array<{ recipeId: string; recipeName: string; date: string }>;
     };
+    const summaries = getDevMockResponse('/api/recipes') as Array<{
+      name: string;
+      canonicalFoodIds: string[];
+      tags: string[];
+      totalTimeMinutes: number | null;
+    }>;
     const recipe = getDevMockResponse('/api/recipes/recipe-risotto') as {
       name: string;
       ingredients: Array<{ foodName: string }>;
@@ -23,6 +29,9 @@ describe('getDevMockResponse', () => {
 
     expect(plan.entries.map((entry) => entry.recipeName)).toContain('Spinach risotto');
     expect(plan.entries.find((entry) => entry.recipeName === 'Mushroom pasta')?.date).toBe('2026-05-13');
+    expect(summaries.find((summary) => summary.name === 'Spinach risotto')?.canonicalFoodIds).toContain('food-spinach');
+    expect(summaries.find((summary) => summary.name === 'Spinach risotto')?.tags).toEqual([]);
+    expect(summaries.find((summary) => summary.name === 'Spinach risotto')?.totalTimeMinutes).toBeNull();
     expect(recipe.name).toBe('Spinach risotto');
     expect(recipe.ingredients.map((ingredient) => ingredient.foodName)).toContain('arborio rice');
   });

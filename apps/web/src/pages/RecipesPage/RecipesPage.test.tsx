@@ -4,6 +4,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { RecipeCard } from './RecipesPage';
 import { HeroPlanButton } from './RecipesPage';
 import { RecipesPage } from './RecipesPage';
+import { CookTonightSection } from './CookTonightSection';
 
 const pageHooks = vi.hoisted(() => ({
   useRecipes: vi.fn(),
@@ -219,6 +220,43 @@ describe('HeroPlanButton', () => {
     await waitFor(() =>
       expect(screen.getByRole('button', { name: 'added to Thu, 4 Jun' })).toBeInTheDocument(),
     );
+  });
+});
+
+describe('CookTonightSection', () => {
+  it('renders cookable recipes and preserves open/select actions', () => {
+    const onOpenRecipe = vi.fn();
+    const onSelectRecipe = vi.fn();
+
+    render(
+      <CookTonightSection
+        items={[{ recipe, match: { bucket: 'cookable', missing: [] } }]}
+        selectedIds={new Set(['r1'])}
+        onOpenRecipe={onOpenRecipe}
+        onSelectRecipe={onSelectRecipe}
+      />,
+    );
+
+    expect(screen.getByText('Ready to cook tonight')).toBeInTheDocument();
+    expect(screen.getByText('1 recipe')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /pasta carbonara/i }));
+    expect(onOpenRecipe).toHaveBeenCalledWith('r1');
+
+    fireEvent.click(screen.getByRole('button', { name: /deselect recipe/i }));
+    expect(onSelectRecipe).toHaveBeenCalledWith('r1');
+  });
+
+  it('renders nothing when no cookable recipes are available', () => {
+    const { container } = render(
+      <CookTonightSection
+        items={[]}
+        selectedIds={new Set()}
+        onOpenRecipe={vi.fn()}
+        onSelectRecipe={vi.fn()}
+      />,
+    );
+
+    expect(container).toBeEmptyDOMElement();
   });
 });
 

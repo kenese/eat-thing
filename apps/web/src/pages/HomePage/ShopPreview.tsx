@@ -15,10 +15,10 @@ export function ShopPreview({ shop }: ShopPreviewProps) {
       <div className="shop-preview-head">
         <div>
           <div className="shop-preview-eyebrow">
-            shopping list · {isEmpty ? 'empty' : 'ready'}
+            {isEmpty ? 'no list yet' : shop.builtLabel}
           </div>
           <div className="shop-preview-headline">
-            {isEmpty ? 'no list yet' : shop.builtLabel}
+            shopping list · {isEmpty ? 'empty' : 'ready'}
           </div>
           {!isEmpty && <div className="shop-preview-sub">this week</div>}
         </div>

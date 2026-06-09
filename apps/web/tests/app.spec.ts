@@ -126,7 +126,8 @@ test.describe('unauthenticated', () => {
     await page.goto('/');
     await page.getByRole('button', { name: /continue locally/i }).click();
     await expect(page.getByRole('heading', { level: 1, name: /cook from what's already/i })).toBeVisible();
-    await expect(page.getByText('baby spinach')).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'this weeks plan.' })).toHaveCount(1);
+    await expect(page.locator('.home-plan-section').getByRole('button', { name: /spinach risotto/i })).toBeVisible();
     await expect(page.getByText('shopping list · ready')).toBeVisible();
     await expect(page.locator('.shop-preview-total')).toBeVisible();
   });
@@ -223,8 +224,7 @@ test.describe('authenticated routes load', () => {
     let finalInventoryBody: unknown;
 
     await page.route('**/api/inventory*', async (route) => {
-      const { method } = route.request();
-      if (method() === 'GET') {
+      if (route.request().method() === 'GET') {
         await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
         return;
       }

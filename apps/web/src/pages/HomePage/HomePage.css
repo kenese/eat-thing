@@ -1,23 +1,36 @@
 .home-page {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-areas:
+    "hero shop"
+    "plan plan"
+    "cook cook";
+  grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr);
+  gap: var(--space-6);
   flex: 1;
   min-height: 0;
+  padding: var(--space-section) var(--gutter) 28px;
 }
 
-.home-lower {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  padding: var(--space-2) var(--gutter) 28px;
-  min-height: 0;
+.hero-band {
+  grid-area: hero;
+}
+
+.shop-preview {
+  grid-area: shop;
 }
 
 .home-plan-section {
+  grid-area: plan;
   display: flex;
   flex-direction: column;
   min-height: 0;
   min-width: 0;
+}
+
+.home-cook-section {
+  grid-area: cook;
+  margin-bottom: 0;
+  padding-top: var(--space-3);
 }
 
 .home-plan-head {
@@ -42,8 +55,34 @@
 }
 .home-plan-link:hover { color: var(--ink); }
 
+@media (min-width: 1281px) {
+  .home-page {
+    grid-template-areas:
+      "hero shop"
+      "plan shop"
+      "cook cook";
+    grid-template-columns: minmax(0, 1.4fr) minmax(360px, 1fr);
+    column-gap: var(--space-section);
+    row-gap: var(--space-6);
+    align-items: end;
+  }
+
+  .home-plan-section {
+    align-self: start;
+  }
+
+  .shop-preview {
+    align-self: stretch;
+  }
+}
+
 @media (max-width: 768px) {
-  .home-lower {
-    padding: var(--space-2) var(--gutter-mobile) var(--space-6);
+  .home-page {
+    grid-template-areas:
+      "hero hero"
+      "plan plan"
+      "shop shop"
+      "cook cook";
+    padding: var(--space-6) var(--gutter-mobile);
   }
 }

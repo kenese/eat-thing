@@ -5,6 +5,8 @@ import { useAddToNextEmptyDays } from '../../hooks/useMealPlan';
 import { useCurrentShoppingList } from '../../hooks/useShoppingList';
 import { RecipeForm } from './RecipeForm';
 import { ImportModal } from './ImportModal';
+import { CookTonightSection } from './CookTonightSection';
+import { RecipeCard, type MatchInfo } from './RecipeCard';
 import { PageTitle } from '../../components/PageTitle';
 import { FilterStrip } from '../../components/FilterStrip';
 import { StatusChip } from '../../components/StatusChip';
@@ -12,13 +14,10 @@ import { computeMissing, computeMissingFromIds, bucketRecipe } from '../../lib/r
 import type { Recipe, RecipeSummary } from '@eat/shared';
 import './RecipesPage.css';
 
+export { RecipeCard } from './RecipeCard';
+
 type Tab = 'all' | 'cookable' | 'shoppable';
 type SortOrder = 'cookable-first' | 'recently-added' | 'name-az';
-
-interface MatchInfo {
-  bucket: 'cookable' | 'shoppable' | 'library';
-  missing: string[];
-}
 
 function formatShoppingDate(iso: string) {
   const [year, month, day] = iso.split('-').map(Number);
@@ -64,79 +63,6 @@ export function HeroPlanButton({
     >
       {label}
     </button>
-  );
-}
-
-export function RecipeCard({
-  recipe,
-  match,
-  dense,
-  selected,
-  onOpen,
-  onSelect,
-}: {
-  recipe: RecipeSummary;
-  match: MatchInfo;
-  dense?: boolean;
-  selected?: boolean;
-  onOpen: () => void;
-  onSelect?: () => void;
-}) {
-  return (
-    <div className={`rx-card-wrapper${selected ? ' rx-card-wrapper--selected' : ''}`}>
-      <button
-        className={`rx-card${dense ? ' rx-card--dense' : ''}`}
-        onClick={onOpen}
-        aria-label={recipe.name}
-      >
-        <div className="rx-card-image">
-          {recipe.sourceImage ? (
-            <img src={recipe.sourceImage} alt="" />
-          ) : (
-            <span className="rx-card-image-fallback">{recipe.name}</span>
-          )}
-          <div className="rx-card-badge">
-            {match.bucket === 'cookable' ? (
-              <StatusChip kind="cook" />
-            ) : (
-              <StatusChip kind="shop" missingCount={match.missing.length} />
-            )}
-          </div>
-          <div className="rx-card-meta-overlay">
-            {recipe.totalTimeMinutes ? `${recipe.totalTimeMinutes} min · ` : ''}serves {recipe.servings}
-          </div>
-        </div>
-        <div className="rx-card-body">
-          <div className="rx-card-title">{recipe.name}</div>
-          {!dense && match.missing.length > 0 && (
-            <div className="rx-card-need">
-              need {match.missing.slice(0, 2).join(', ')}
-              {match.missing.length > 2 ? ` & ${match.missing.length - 2} more` : ''}
-            </div>
-          )}
-          <div className="rx-card-footer">
-            <span>{recipe.ingredientCount} ingr</span>
-            {recipe.tags.length > 0 && (
-              <span className="rx-card-tags">
-                {recipe.tags.slice(0, 2).map(t => (
-                  <span key={t} className="rx-card-tag">{t}</span>
-                ))}
-              </span>
-            )}
-          </div>
-        </div>
-      </button>
-      {onSelect && (
-        <button
-          className={`rx-card-select-btn${selected ? ' rx-card-select-btn--active' : ''}`}
-          onClick={e => { e.stopPropagation(); onSelect(); }}
-          aria-label={selected ? 'Deselect recipe' : 'Select recipe'}
-          aria-pressed={selected}
-        >
-          {selected ? '✓' : ''}
-        </button>
-      )}
-    </div>
   );
 }
 
@@ -545,27 +471,12 @@ export function RecipesPage() {
       {!isLoading && tab === 'all' && sortOrder === 'cookable-first' ? (
         <>
           {cookable.length > 0 && (
-            <section className="rx-section">
-              <div className="rx-section-header">
-                <span className="rx-section-title">
-                  Cook tonight<span className="dot" style={{ color: 'var(--fresh)' }}>.</span>
-                </span>
-                <span className="rx-section-count">{cookable.length} {cookable.length === 1 ? 'recipe' : 'recipes'}</span>
-                <span className="rx-section-hint">uses what's on hand</span>
-              </div>
-              <div className="rx-grid">
-                {cookable.map(({ recipe, match }) => (
-                  <RecipeCard
-                    key={recipe.id}
-                    recipe={recipe}
-                    match={match}
-                    selected={selectedIds.has(recipe.id)}
-                    onSelect={() => toggleSelection(recipe.id)}
-                    onOpen={() => setModal({ mode: 'edit', id: recipe.id })}
-                  />
-                ))}
-              </div>
-            </section>
+            <CookTonightSection
+              items={cookable}
+              selectedIds={selectedIds}
+              onSelectRecipe={toggleSelection}
+              onOpenRecipe={(id) => setModal({ mode: 'edit', id })}
+            />
           )}
 
           {shoppable.length > 0 && (
