@@ -159,6 +159,44 @@ Detailed roadmap: [docs/superpowers/plans/2026-06-01-handoff-backlog-roadmap.md]
 - [~] Plan day-card redesign (D30): collapse-to-tray, click-to-expand floating overlay, draggable cards, `--text-chip-sm`. Code + e2e + decision log updated on top of current main — **pending `pnpm test` / `pnpm test:e2e` before Done.**
 - [-] Restore inventory `location` field — defer until category-derived counts cause a demonstrated problem
 
+## Upcoming work
+
+### Bug — inventory category change not reflected in shopping list
+
+The shopping list groups items by aisle/category derived from `canonical_foods.category`. When a user edits an inventory item's category, the shopping list should re-group that item under the new aisle — but it reportedly isn't. Done entry 2026-06-09 says the fix landed and shopping-list cache invalidation was wired, but the bug is still observed.
+
+**Goal:** Trace the full path from "user edits category on inventory item" → `canonical_foods.category` update → shopping-list query → aisle grouping in UI. Find and fix the gap (stale cache? category not written? frontend not reading from canonical_foods?).
+
+- [ ] Reproduce the bug — verify the symptom
+- [ ] Trace server: confirm `PUT /api/inventory/:id` updates `canonical_foods.category` correctly
+- [ ] Trace client: confirm TanStack Query invalidation hits the shopping-list query
+- [ ] Trace UI: confirm shopping list reads category from canonical_foods (not a stale local field)
+- [ ] Fix, add regression test, pass `pnpm test` + `pnpm test:e2e`
+
+### Feature — canonical food editing (brainstorm + build)
+
+`canonical_foods` is the global curated reference driving inventory grouping, shopping-list aisles, recipe matching, and price lookups. Currently there's no first-class UI to edit it — category changes go through an inventory item side-effect, and there's no way to fix a name, add an alias, change a default unit, or correct density.
+
+**Goal:** Design and build a way to view and edit canonical foods. Needs a brainstorm session first (how does editing a canonical food propagate? what fields are safe to change? should changes be household-scoped or global? is there a risk of desync with recipe_ingredients or shopping_list_items pointing to the old id?).
+
+- [ ] Brainstorm session: map out all downstream tables/queries that depend on canonical_foods fields, decide which fields are safe to edit vs. requiring a migration
+- [ ] Design the editing surface (dedicated admin-style route? inline from inventory? separate sheet?)
+- [ ] Implement editing: at minimum name, aliases[], category, default_unit; density_g_per_ml if safe
+- [ ] Ensure all downstream reads (inventory, shopping list, recipe ingredients, price lookup) reflect the change immediately
+- [ ] Add tests, pass `pnpm test` + `pnpm test:e2e`
+
+### Feature — add to inventory from photo (batch add)
+
+Allow a user to photograph a set of items (e.g. a full spice rack) and have all visible items identified and added to inventory in one flow. Counterpart to the existing single-item and shopping-list-purchase paths.
+
+**Goal:** POST a photo to an LLM, get back a list of identified foods with estimated quantities and units, run each through the canonical food matcher (exact/alias/fuzzy/new-food review), confirm in a batch edit step, then save all to inventory.
+
+- [ ] Design the confirm-and-edit step for multi-item batch (similar to recipe edit-and-confirm but for an inventory list)
+- [ ] Implement `/api/ingest/inventory-photo` endpoint: multimodal LLM → structured list of {name, qty, unit}
+- [ ] Match each item to canonical_foods (reuse existing matcher); flag taxonomy_review_required items
+- [ ] Build batch confirm UI: editable rows, inline new-food review, bulk submit
+- [ ] Add tests, pass `pnpm test` + `pnpm test:e2e`
+
 ## Deferred
 
 - [-] Native mobile shell (Capacitor / React Native) — defer unless PWA limitations hurt

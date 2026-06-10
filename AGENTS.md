@@ -2,10 +2,9 @@
 
 Household food management app. Inventory ↔ recipes ↔ meal plans ↔ shopping lists, with later integration with NZ supermarkets via Playwright. One household (two users) initially; designed multi-tenant-clean from day one.
 
-## Read these first
-- [PLAN.md](./PLAN.md) — current phase, task list, what's done. **Always read before starting work.** Update as tasks change state; move done work to the Done log with the date.
-- [ARCHITECTURE.md](./ARCHITECTURE.md) — topology, data model, key flows, hosting.
-- [DECISIONS.md](./DECISIONS.md) — numbered log of decisions and the reasoning behind them.
+## Session start
+- **Use dev-context MCP first.** Call `connect` with `repo=kenese/eat-thing` and the current branch/worktree. It returns architecture, all active plans with phases and steps, and the current focus. Do not read PLAN.md or ARCHITECTURE.md directly — dev-context is the source of truth for both. Show **all** active plans returned by connect, not just the branch-matched one.
+- [DECISIONS.md](./DECISIONS.md) — numbered log of decisions and reasoning. Still read directly when working on anything architectural.
 
 ## How to work in this repo
 - Any new architectural decision goes in DECISIONS.md as a new numbered entry. Don't silently change ARCHITECTURE.md without a corresponding decision.
